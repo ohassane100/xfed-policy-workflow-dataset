@@ -1,9 +1,0 @@
-{
-  "status": "needs_review",
-  "human_verified": false,
-  "version": 1,
-  "review_notes": [],
-  "drafting_method": "modal_baseline_v1; requires completeness and semantic review",
-  "policy_sha256": "45108c0588888975667bd9962cffcf1f6a6bd91bde0c76e571f9d8b8d42b3e24",
-  "text_sha256": "9bd5cc62f684fc3714af4605b8512f4545b5638bae873a8596d0da2a06711b1a"
-}

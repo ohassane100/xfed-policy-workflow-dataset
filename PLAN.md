@@ -1,407 +1,227 @@
-# PLAN.md — Contract → POLICY.md → WORKFLOW.md Prototype
+# PLAN.md — Friday MVP, No spaCy Model Required
 
 ## Goal
 
-Build a practical prototype using real data-sharing/data-use/data-transfer contracts.
-
-No LLM fine-tuning.
-
-The system compares:
-1. human ground-truth `POLICY.md`;
-2. algorithmic contract → `POLICY.md`;
-3. LLM contract → `POLICY.md` using the same template;
-4. algorithmic policy/request → `WORKFLOW.md`;
-5. LLM policy/request → `WORKFLOW.md` using the same workflow template;
-6. policy compliance of both workflows;
-7. LLM review of both workflows.
-
-## Core pipeline
+Keep the MVP minimal:
 
 ```text
-REAL CONTRACT
-↓
 contract.pdf
 ↓
-contract.txt + metadata.json
-↓
-Human ground_truth/POLICY.md
-↓
-┌──────────────────────┬──────────────────────┐
-│ Algorithm extractor  │ LLM extractor        │
-│ → POLICY.md          │ → POLICY.md          │
-└──────────────────────┴──────────────────────┘
-↓
-Compare both against human POLICY.md
-
-POLICY.md + REQUEST.md + WORKFLOW.template.md
-↓
-┌──────────────────────┬──────────────────────┐
-│ Algorithm workflow   │ LLM workflow         │
-│ → WORKFLOW.md        │ → WORKFLOW.md        │
-└──────────────────────┴──────────────────────┘
-↓
-Check both workflows against POLICY.md
-↓
-LLM reviewer:
-APPROVE / DENY / REQUIRES_CHANGES
-```
-
-## Important: REQUEST.md
-
-A policy does not uniquely tell us what task the companies want to run.
-
-Therefore both workflow generators must receive the same:
-
-```text
-POLICY.md
-REQUEST.md
-WORKFLOW.template.md
-```
-
-This makes the workflow comparison fair.
-
-## Real contracts
-
-Use:
-
-```text
-data/contract_sources/source.json
-```
-
-This contains the 50 real public contract sources already collected.
-
-Do not generate synthetic replacement contracts.
-
-Start with 3–5 contracts. Expand toward 50 only after the complete pipeline works.
-
-## Per-contract structure
-
-```text
-data/contracts/contract_001/
-├── source/
-│   ├── original.*
-│   ├── contract.pdf
-│   ├── contract.txt
-│   └── metadata.json
-├── ground_truth/
-│   ├── POLICY.md
-│   └── review.json
-├── policy_extractions/
-│   ├── algorithmic/
-│   │   ├── v1/
-│   │   │   ├── POLICY.md
-│   │   │   ├── eval.json
-│   │   │   └── run_config.json
-│   │   └── v2/
-│   └── llm/
-│       ├── qwen/
-│       └── deepseek/
-├── requests/
-│   └── request_001/
-│       ├── REQUEST.md
-│       ├── workflows/
-│       │   ├── algorithmic_v1/
-│       │   │   ├── WORKFLOW.md
-│       │   │   ├── compliance.json
-│       │   │   └── run_config.json
-│       │   └── qwen/
-│       │       ├── WORKFLOW.md
-│       │       ├── compliance.json
-│       │       └── run_config.json
-│       └── reviews/
-│           ├── algorithmic_workflow_llm_review.json
-│           └── llm_workflow_llm_review.json
-└── comparisons/
-    ├── policy_comparison.json
-    └── workflow_comparison.json
-```
-
-## POLICY.md
-
-Canonical policy representation:
-
-```text
-allow
-deny
-require
-```
-
-Example:
-
-```markdown
-- `deny` **raw_data_export** — Raw data must not leave the host company.
-- `allow` **approved_analysis** — The partner may analyze the dataset for the agreed purpose.
-- `require` **output_review** — Outputs must be approved before release.
-```
-
-Each rule should also include:
-- scope;
-- source clause;
-- exact source text.
-
-## Ground truth
-
-For each contract:
-
-```text
 contract.txt
-↓
-manual interpretation
 ↓
 ground_truth/POLICY.md
+↓
+algorithmic V1 → algo1/POLICY.md
+↓
+manual comparison
 ```
 
-This is the reference answer.
+No workflow.
+No LLM execution yet.
+No fine-tuning.
+No large dataset pipeline.
 
-Agents may draft it, but only a human may mark it verified.
+---
 
-## Algorithmic policy extractor
+## Important environment constraint
 
-### V1
-Use deterministic modal/deontic patterns:
+Do **not** require:
 
 ```text
-may / permitted / allowed → allow
-shall not / must not / prohibited → deny
-shall / must / required → require
+en_core_web_sm
 ```
 
-### V2
-Add non-LLM NLP:
-- clause/sentence segmentation;
-- dependency parsing;
-- subject/action/object extraction;
-- negation;
-- conditions;
-- exceptions;
-- deadlines;
-- defined-term resolution.
+The user cannot install it.
 
-Both versions must output the same `POLICY.md` template.
+Algorithm V1 must therefore work without a downloaded spaCy model.
 
-## LLM policy extractor
+If spaCy itself is installed, `spacy.blank("en")` with a sentencizer may be used.
 
-Input:
+If spaCy is not installed, fall back to standard-library sentence splitting.
+
+Do not require dependency parsing in V1.
+
+Dependency parsing can be introduced later in V2 when the environment supports a language model.
+
+---
+
+## Minimal required source files
+
+Recreate only:
+
+```text
+src/
+├── __init__.py
+├── preprocessing/
+│   ├── __init__.py
+│   └── pdf_to_text.py
+└── policy/
+    ├── __init__.py
+    └── algorithmic/
+        ├── __init__.py
+        └── v1.py
+```
+
+Do not generate extra utility modules, schemas, configs, logging modules, or framework abstractions for this MVP.
+
+---
+
+## Preprocessing
+
+`src/preprocessing/pdf_to_text.py` must:
+
+```text
+contract.pdf → contract.txt
+```
+
+Use `pypdf`.
+
+Preserve page order and paragraph spacing as much as practical.
+
+Do not:
+- create metadata automatically;
+- create caches/logs;
+- OCR;
+- create intermediate files.
+
+`scripts/preprocess_contract.py` should be only a thin runner that imports the preprocessing function.
+
+---
+
+## Algorithmic policy V1
+
+`src/policy/algorithmic/v1.py` must be simple and deterministic.
+
+Pipeline:
 
 ```text
 contract.txt
-POLICY.template.md
-```
-
-Output:
-
-```text
+↓
+numbered-clause reconstruction
+↓
+sentence splitting
+↓
+filter relevant legal/data sentences
+↓
+detect deontic phrase
+↓
+extract rough actor/action/object using word-pattern heuristics
+↓
 POLICY.md
 ```
 
-Use zero-shot or few-shot prompting only. No training.
-
-Start with Qwen and DeepSeek if available.
-
-## Policy evaluation
-
-Compare:
+Effects:
 
 ```text
-algorithmic POLICY.md vs ground_truth/POLICY.md
-LLM POLICY.md         vs ground_truth/POLICY.md
+may / permitted / entitled / have access
+→ allow
+
+shall not / must not / prohibited / may not
+→ deny
+
+shall / must / required / obligation
+→ require
 ```
 
-Measure:
-- matched rules;
-- missing rules;
-- hallucinated rules;
-- allow/deny/require correctness;
-- source grounding;
-- precision;
-- recall;
-- F1.
+Use conservative heuristics.
 
-## REQUEST.md
+If actor/action/object extraction is uncertain, keep the original sentence as the policy description instead of inventing meaning.
 
-Example:
+---
 
-```markdown
-## Goal
-Detect abnormal valve behaviour.
+## Sentence segmentation without en_core_web_sm
 
-## Requested Dataset
-Anti-surge valve telemetry.
+Preferred:
 
-## Requested Computation
-Run anomaly detection inside the host environment.
-
-## Requested Outputs
-- anomaly counts
-- feature statistics
-- sanitized event patterns
+```python
+import spacy
+nlp = spacy.blank("en")
+nlp.add_pipe("sentencizer")
 ```
 
-## Algorithmic workflow generator
+This does not require a downloaded model.
 
-Input:
+Fallback if spaCy is unavailable:
 
 ```text
-POLICY.md
+regex split on punctuation / line boundaries
+```
+
+---
+
+## run_policies.py
+
+Keep one runner:
+
+```python
+VERSION = "v1"
+CONTRACT_ID = "contract_001"
+```
+
+Mapping:
+
+```text
+v1
+→ src/policy/algorithmic/v1.py
+→ data/contracts/contract_001/policy_extractions/algo1/POLICY.md
+```
+
+Future:
+
+```text
+v2 → algo2/
+v3 → algo3/
+```
+
+Create output folders only when the version is actually run.
+
+---
+
+## Cleanup rule
+
+Do not recreate removed old architecture.
+
+Do not generate:
+
+```text
+workflow/
 REQUEST.md
-WORKFLOW.template.md
-```
-
-Simple deterministic mapping:
-
-```text
-request goal → Purpose
-request dataset → Dataset
-requested outputs → candidate Shared Outputs
-
-deny raw data export
-→ raw data goes to Stays Private
-
-require sandbox execution
-→ Purpose specifies execution in host sandbox
-
-deny an output
-→ remove/block it from Shared Outputs
-
-require approval
-→ preserve approval requirement
-```
-
-This is a transparent baseline, not a perfect planner.
-
-## LLM workflow generator
-
-Input exactly the same:
-
-```text
-POLICY.md
-REQUEST.md
-WORKFLOW.template.md
-```
-
-Output:
-
-```text
 WORKFLOW.md
+training scripts
+fine-tuning scripts
+dataset builders
+evaluation framework
+JSON policy schema
+extra config files
+extra helper modules
+debug outputs
+logs
+temporary files
 ```
 
-No training.
+Only recreate files required by this MVP.
 
-## Workflow evaluation
+---
 
-Do not compare workflows mainly by text similarity.
+## Commands
 
-Different workflows can both be correct.
+Install only:
 
-Evaluate each workflow against the policy:
-
-```text
-POLICY.md + WORKFLOW.md → compliance
+```bash
+pip install pypdf
 ```
 
-Check:
-- prohibited data in Shared Outputs;
-- required private data in Stays Private;
-- allowed purpose;
-- allowed dataset;
-- sandbox/local execution requirements;
-- approval requirements;
-- other explicit policy rules.
+spaCy is optional:
 
-Output:
-
-```json
-{
-  "decision": "APPROVE",
-  "satisfied_rules": [],
-  "violated_rules": [],
-  "missing_requirements": []
-}
+```bash
+pip install spacy
 ```
 
-## LLM workflow reviewer
+No model download is required.
 
-Input:
+Run:
 
-```text
-POLICY.md
-WORKFLOW.md
+```bash
+python scripts/preprocess_contract.py
+python scripts/algorithmic/run_policies.py
 ```
-
-Output:
-- `APPROVE`, `DENY`, or `REQUIRES_CHANGES`;
-- satisfied rule IDs;
-- violated rule IDs;
-- explanation;
-- suggested corrections.
-
-Run the reviewer separately on the algorithmic workflow and the LLM-generated workflow.
-
-## Comparison
-
-Policy:
-```text
-Algorithm policy → ground truth
-LLM policy       → ground truth
-```
-
-Workflow:
-```text
-Algorithm workflow → policy compliance
-LLM workflow       → policy compliance
-```
-
-Also compare the LLM reviewer's decisions against deterministic/human labels where available.
-
-## Cleanup
-
-Before implementation, remove files that belong only to old project versions.
-
-Remove if unused:
-- synthetic contract generators;
-- generated synthetic contracts;
-- fine-tuning scripts;
-- training JSONL builders;
-- train/validation/test logic used only for fine-tuning;
-- JSON-first policy pipelines;
-- unused policy JSON schemas;
-- duplicate preprocessing/model scripts;
-- stale outputs;
-- old source manifests;
-- documentation contradicting this plan.
-
-Keep:
-- `data/contract_sources/source.json`;
-- real contracts;
-- preprocessing;
-- `POLICY.md`, `REQUEST.md`, `WORKFLOW.md` templates;
-- verified ground truth;
-- current experiment results.
-
-Before deletion:
-1. search references;
-2. confirm unused;
-3. remove stale imports/references;
-4. run tests;
-5. report what was deleted.
-
-## Recommended build order
-
-1. Clean repository.
-2. Select 3–5 real contracts.
-3. Download and preprocess them.
-4. Manually create ground-truth `POLICY.md`.
-5. Implement algorithmic policy V1.
-6. Run one LLM policy extractor.
-7. Evaluate both against ground truth.
-8. Create `REQUEST.md`.
-9. Implement algorithmic workflow generator.
-10. Implement LLM workflow generator.
-11. Implement deterministic workflow compliance checker.
-12. Implement LLM workflow reviewer.
-13. Compare results.
-14. Expand toward 50 contracts only after this works.
-
-## Short meeting explanation
-
-> I use real data-sharing agreements and manually create a reference POLICY.md using a fixed template. A deterministic extractor and an LLM independently produce the same policy format and are evaluated against the reference. For workflow generation, both methods receive the same policy, task request, and workflow template. Their workflows are evaluated primarily by policy compliance rather than textual similarity. An LLM is also used as a reviewer to identify violations and required changes. I am not fine-tuning the LLMs.

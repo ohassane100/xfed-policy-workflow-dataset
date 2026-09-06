@@ -1,9 +1,0 @@
-{
-  "status": "awaiting_human_verification",
-  "reason": "awaiting_human_verification",
-  "format_valid": true,
-  "precision": null,
-  "recall": null,
-  "f1": null,
-  "candidate_sha256": "76c806d380555a8156c8689ef6e51614ba7b9f5b779c816466c83d67487bd028"
-}
