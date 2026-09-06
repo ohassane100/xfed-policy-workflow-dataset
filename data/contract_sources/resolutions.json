@@ -1,0 +1,64 @@
+{
+  "contract_001": {
+    "download_url": "https://dash.nichd.nih.gov/sites/dash/files/2025-07/nichd-dash-data-use-agreement.pdf",
+    "evidence_url": "https://dash.nichd.nih.gov/resource/request",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "contract_017": {
+    "download_url": "https://ncats.nih.gov/sites/default/files/NCATS_Data_Transfer_Agreement_508.pdf",
+    "evidence_url": "https://ncats.nih.gov/research/research-activities/n3c/resources",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "contract_024": {
+    "download_url": "https://zenodo.org/records/7537396/files/SA%20DTA%20v1.0.docx?download=1",
+    "evidence_url": "https://zenodo.org/records/7537396",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "contract_029": {
+    "download_url": "https://healthservice.hse.ie/documents/5884/Independent_Controller_Agreement_Data_Sharing_template_V1.0.docx",
+    "evidence_url": "https://healthservice.hse.ie/staff/procedures-guidelines/data-protection/data-sharing-agreements/",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "contract_030": {
+    "download_url": "https://healthservice.hse.ie/documents/6007/Joint_controller_Agreement_Data_Sharing_template_V1.0.docx",
+    "evidence_url": "https://healthservice.hse.ie/staff/procedures-guidelines/data-protection/data-sharing-agreements/",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "contract_034": {
+    "download_url": "https://ncats.nih.gov/sites/default/files/NCATS_N3C_Data_Use_Agreement.pdf",
+    "evidence_url": "https://ncats.nih.gov/research/research-activities/n3c/resources",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "contract_035": {
+    "download_url": "https://ncats.nih.gov/sites/default/files/NCATS_LHBA-508.pdf",
+    "evidence_url": "https://ncats.nih.gov/research/research-activities/n3c/resources",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "contract_037": {
+    "download_url": "https://www.plu.edu/risk-services/wp-content/uploads/sites/423/2023/11/data-sharing-agreement-dsa-revised-2023.protected.docx",
+    "evidence_url": "https://www.plu.edu/risk-services/documents/data-sharing-agreement-revised-2023/",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "contract_039": {
+    "download_url": "https://depts.washington.edu/comply/docs/307_F1.pdf",
+    "evidence_url": "https://depts.washington.edu/comply/policy-resources/",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "contract_048": {
+    "download_url": "https://zenodo.org/records/8256235/files/TRE%20DAA%20v2.0%2020.07.2023.pdf?download=1",
+    "evidence_url": "https://zenodo.org/records/8256235",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "contract_003": {
+    "download_url": "https://ldbase.org/data-sharing-resources/templates/example-data-sharing-agreement",
+    "evidence_url": "https://ldbase.org/data-sharing-resources/templates/example-data-sharing-agreement",
+    "agreement_html": true,
+    "method": "Inspected official page contains the agreement itself; preserve complete original HTML; page boilerplate needs normalization review"
+  },
+  "contract_033": {
+    "download_url": "https://www.ncbi.nlm.nih.gov/books/NBK574757/",
+    "evidence_url": "https://www.ncbi.nlm.nih.gov/books/NBK574757/",
+    "agreement_html": true,
+    "method": "Inspected official page contains the agreement itself; preserve complete original HTML; page boilerplate needs normalization review"
+  }
+}

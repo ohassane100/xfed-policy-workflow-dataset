@@ -1,0 +1,39 @@
+{
+  "contract_id": "contract_039",
+  "title": "Data Use Agreement for University of Washington Recipients",
+  "organization": "UW Medicine",
+  "agreement_type": "DUA",
+  "source_url": "https://depts.washington.edu/comply/policy-resources/",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:51.334752+00:00",
+  "ingestion_status": "normalized",
+  "preprocessing_status": "complete",
+  "resolved_url": "https://depts.washington.edu/comply/docs/307_F1.pdf",
+  "download_url": "https://depts.washington.edu/comply/docs/307_F1.pdf",
+  "original_sha256": "33ad41fb6bd78d10f516bddefd91e77b1122c9c3dd388e8ecab5321d7b443aa0",
+  "original_filename": "307_F1.pdf",
+  "content_type": "application/pdf",
+  "content_disposition": "",
+  "resolution": {
+    "download_url": "https://depts.washington.edu/comply/docs/307_F1.pdf",
+    "evidence_url": "https://depts.washington.edu/comply/policy-resources/",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "normalization_engine": "original_pdf_byte_copy",
+  "pdf_sha256": "33ad41fb6bd78d10f516bddefd91e77b1122c9c3dd388e8ecab5321d7b443aa0",
+  "text_sha256": "7d6679fa2dd6abf7906014eea15785b9b999a2160818293228a6811f763d021a",
+  "page_count": 4,
+  "empty_text_pages": [],
+  "preprocessing": {
+    "engine": "pypdf",
+    "mode": "layout",
+    "ocr": false
+  },
+  "text_quality": {
+    "control_characters": 0,
+    "replacement_characters": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "contract_id": "contract_035",
+  "title": "Linkage Honest Broker Agreement",
+  "organization": "NCATS / NIH N3C",
+  "agreement_type": "LHBA",
+  "source_url": "https://ncats.nih.gov/research/research-activities/n3c/resources",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:48.962349+00:00",
+  "ingestion_status": "normalized",
+  "preprocessing_status": "complete",
+  "resolved_url": "https://ncats.nih.gov/sites/default/files/NCATS_LHBA-508.pdf",
+  "download_url": "https://ncats.nih.gov/sites/default/files/NCATS_LHBA-508.pdf",
+  "original_sha256": "2fdcf2b8e572ea07f9e7defcd258ed5ea50e7605ec05d9920f82d085c953d658",
+  "original_filename": "NCATS_LHBA-508.pdf",
+  "content_type": "application/pdf",
+  "content_disposition": "",
+  "resolution": {
+    "download_url": "https://ncats.nih.gov/sites/default/files/NCATS_LHBA-508.pdf",
+    "evidence_url": "https://ncats.nih.gov/research/research-activities/n3c/resources",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "normalization_engine": "original_pdf_byte_copy",
+  "pdf_sha256": "2fdcf2b8e572ea07f9e7defcd258ed5ea50e7605ec05d9920f82d085c953d658",
+  "text_sha256": "dea6469a25244c6f057f94e39a9352a661c0deef85df02c4e14009002f09cc5e",
+  "page_count": 10,
+  "empty_text_pages": [],
+  "preprocessing": {
+    "engine": "pypdf",
+    "mode": "layout",
+    "ocr": false
+  },
+  "text_quality": {
+    "control_characters": 0,
+    "replacement_characters": 0
+  }
+}

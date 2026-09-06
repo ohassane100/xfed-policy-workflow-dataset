@@ -1,0 +1,15 @@
+{
+  "contract_id": "contract_013",
+  "title": "Data Transfer Agreement",
+  "organization": "Indian Society of Critical Care Medicine",
+  "agreement_type": "DTA",
+  "source_url": "https://isccm.org/isccm_v1/pdf/data_transfer_agreement.pdf",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:45.380162+00:00",
+  "ingestion_status": "manual_download_required",
+  "preprocessing_status": "not_ready",
+  "error": "HTTPError: HTTP Error 404: Not Found"
+}

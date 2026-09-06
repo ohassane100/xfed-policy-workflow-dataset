@@ -1,0 +1,15 @@
+{
+  "contract_id": "contract_015",
+  "title": "Data Transfer and Use Agreement",
+  "organization": "Johns Hopkins University",
+  "agreement_type": "DTUA",
+  "source_url": "https://jhura.jhu.edu/wp-content/uploads/2022/03/DUATemplate_Updated.pdf",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:45.807344+00:00",
+  "ingestion_status": "manual_download_required",
+  "preprocessing_status": "not_ready",
+  "error": "HTTPError: HTTP Error 403: Forbidden"
+}

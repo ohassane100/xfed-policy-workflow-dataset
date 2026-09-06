@@ -1,0 +1,31 @@
+{
+  "contract_id": "contract_002",
+  "title": "Template Data Sharing Agreement",
+  "organization": "HDR UK / Zenodo",
+  "agreement_type": "DSA",
+  "source_url": "https://zenodo.org/records/11056327",
+  "original_format": "DOCX",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:10:47.590062+00:00",
+  "ingestion_status": "normalization_required",
+  "preprocessing_status": "not_ready",
+  "download_candidates": [
+    {
+      "url": "https://zenodo.org/records/11056327/files/Template%20Data%20Sharing%20Agreement.docx?download=1",
+      "label": "Download",
+      "score": 0
+    }
+  ],
+  "resolved_url": "https://zenodo.org/records/11056327/files/Template%20Data%20Sharing%20Agreement.docx?download=1",
+  "download_url": "https://zenodo.org/records/11056327/files/Template%20Data%20Sharing%20Agreement.docx?download=1",
+  "original_sha256": "b86694f959ec6d77887088ead8922a81668a0785ffee44026565bd82889e26b3",
+  "original_filename": "Template Data Sharing Agreement.docx",
+  "content_type": "application/octet-stream",
+  "content_disposition": "attachment; filename=\"Template Data Sharing Agreement.docx\"",
+  "resolution": {
+    "method": "direct_or_unique_official_link"
+  },
+  "normalization_error": "LibreOffice required for DOC/DOCX/HTML: set LIBREOFFICE_PATH"
+}

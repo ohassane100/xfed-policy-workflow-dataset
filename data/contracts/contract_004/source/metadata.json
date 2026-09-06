@@ -1,0 +1,15 @@
+{
+  "contract_id": "contract_004",
+  "title": "Sample Data Sharing Agreement",
+  "organization": "Bristol Myers Squibb",
+  "agreement_type": "DSA",
+  "source_url": "https://www.bms.com/assets/bms/us/english-documents/independent-research/sample-data-sharing-agreement.docx",
+  "original_format": "DOCX",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:44.136400+00:00",
+  "ingestion_status": "manual_download_required",
+  "preprocessing_status": "not_ready",
+  "error": "HTTPError: HTTP Error 404: Not Found"
+}

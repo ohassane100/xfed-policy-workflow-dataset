@@ -1,0 +1,37 @@
+{
+  "contract_id": "contract_032",
+  "title": "Data Use and Transfer Agreement Sample",
+  "organization": "Rutgers iPHD",
+  "agreement_type": "DUA/DTUA",
+  "source_url": "https://iphd.rutgers.edu/sites/default/files/2022-05/iPHD_DUA_EndUsers_Sample_FINAL.pdf",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:10:55.197238+00:00",
+  "ingestion_status": "normalized",
+  "preprocessing_status": "complete",
+  "resolved_url": "https://iphd.rutgers.edu/sites/default/files/2022-05/iPHD_DUA_EndUsers_Sample_FINAL.pdf",
+  "download_url": "https://iphd.rutgers.edu/sites/default/files/2022-05/iPHD_DUA_EndUsers_Sample_FINAL.pdf",
+  "original_sha256": "b840d3f2f8725d60ba8e4c0da61fe15a88ed5318c7c66cbee3e2228828748069",
+  "original_filename": "iPHD_DUA_EndUsers_Sample_FINAL.pdf",
+  "content_type": "application/pdf",
+  "content_disposition": "",
+  "resolution": {
+    "method": "direct_or_unique_official_link"
+  },
+  "normalization_engine": "original_pdf_byte_copy",
+  "pdf_sha256": "b840d3f2f8725d60ba8e4c0da61fe15a88ed5318c7c66cbee3e2228828748069",
+  "text_sha256": "3834ebad9e014986828e51224ec4da2be37ca42a0c869c34b200776e4d7b71c4",
+  "page_count": 13,
+  "empty_text_pages": [],
+  "preprocessing": {
+    "engine": "pypdf",
+    "mode": "layout",
+    "ocr": false
+  },
+  "text_quality": {
+    "control_characters": 0,
+    "replacement_characters": 0
+  }
+}

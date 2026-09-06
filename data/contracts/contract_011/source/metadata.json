@@ -1,0 +1,37 @@
+{
+  "contract_id": "contract_011",
+  "title": "External Data Access Agreement",
+  "organization": "Growing Up in New Zealand / University of Auckland",
+  "agreement_type": "DAA",
+  "source_url": "https://cdn.auckland.ac.nz/assets/growingup/access-to-data/External%20DA%20Agreement_1003a_V2.pdf",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:10:49.408245+00:00",
+  "ingestion_status": "normalized",
+  "preprocessing_status": "complete",
+  "resolved_url": "https://cdn.auckland.ac.nz/assets/growingup/access-to-data/External%20DA%20Agreement_1003a_V2.pdf",
+  "download_url": "https://cdn.auckland.ac.nz/assets/growingup/access-to-data/External%20DA%20Agreement_1003a_V2.pdf",
+  "original_sha256": "0e08b06b7ed69ec77ee8304fb71f6cb7131a06cf85ebd26fa2379d74d7476d69",
+  "original_filename": "External DA Agreement_1003a_V2.pdf",
+  "content_type": "application/pdf",
+  "content_disposition": "",
+  "resolution": {
+    "method": "direct_or_unique_official_link"
+  },
+  "normalization_engine": "original_pdf_byte_copy",
+  "pdf_sha256": "0e08b06b7ed69ec77ee8304fb71f6cb7131a06cf85ebd26fa2379d74d7476d69",
+  "text_sha256": "0f37d6343e325ca288660e03e824f34e8f4f77db378cb812a7cba9bd210512eb",
+  "page_count": 10,
+  "empty_text_pages": [],
+  "preprocessing": {
+    "engine": "pypdf",
+    "mode": "layout",
+    "ocr": false
+  },
+  "text_quality": {
+    "control_characters": 0,
+    "replacement_characters": 0
+  }
+}

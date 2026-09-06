@@ -1,0 +1,20 @@
+{
+  "contract_id": "contract_014",
+  "ranking": [],
+  "methods": [
+    {
+      "status": "awaiting_human_verification",
+      "reason": "awaiting_human_verification",
+      "format_valid": true,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "candidate_sha256": "e2977d6ac14625c4df4932e6fb4e287d7188908e11ed3c1ae517bb14778b2234",
+      "method": "algorithmic/v1",
+      "stale": false,
+      "offline_fixture": false
+    }
+  ],
+  "agreement": [],
+  "agreement_is_ground_truth": false
+}

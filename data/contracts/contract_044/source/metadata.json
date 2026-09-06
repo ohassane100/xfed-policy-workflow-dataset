@@ -1,0 +1,37 @@
+{
+  "contract_id": "contract_044",
+  "title": "Data Use Agreement",
+  "organization": "Pediatric Cardiac Care Consortium",
+  "agreement_type": "DUA",
+  "source_url": "https://pedsresearch.org/uploads/pages/img/DUA_PCCC_to_Researcher-_LDS_11-2015.pdf",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:11:02.543172+00:00",
+  "ingestion_status": "normalized",
+  "preprocessing_status": "complete",
+  "resolved_url": "https://pedsresearch.org/uploads/pages/img/DUA_PCCC_to_Researcher-_LDS_11-2015.pdf",
+  "download_url": "https://pedsresearch.org/uploads/pages/img/DUA_PCCC_to_Researcher-_LDS_11-2015.pdf",
+  "original_sha256": "255d1956929e19038cc6eb92e1ec4c941ce68dd47457231c66cde94ba4ea0d0f",
+  "original_filename": "DUA_PCCC_to_Researcher-_LDS_11-2015.pdf",
+  "content_type": "application/pdf",
+  "content_disposition": "",
+  "resolution": {
+    "method": "direct_or_unique_official_link"
+  },
+  "normalization_engine": "original_pdf_byte_copy",
+  "pdf_sha256": "255d1956929e19038cc6eb92e1ec4c941ce68dd47457231c66cde94ba4ea0d0f",
+  "text_sha256": "8bfc87c0f947ebf15fb124f59685870d6381fc3122ae50e278c9c381f9974680",
+  "page_count": 3,
+  "empty_text_pages": [],
+  "preprocessing": {
+    "engine": "pypdf",
+    "mode": "layout",
+    "ocr": false
+  },
+  "text_quality": {
+    "control_characters": 0,
+    "replacement_characters": 0
+  }
+}

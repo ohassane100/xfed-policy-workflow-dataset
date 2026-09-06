@@ -1,0 +1,9 @@
+{
+  "extractor": "algorithmic",
+  "version": "v1",
+  "modal_pattern": "\\b(may\\s+not|shall\\s+not|must\\s+not|not\\s+(?:be\\s+)?(?:permitted|allowed)|prohibited|may|shall|must|required|permitted|allowed)\\b",
+  "schema_version": "2.0",
+  "created_at": "2026-09-06T00:31:13.445217+00:00",
+  "contract_id": "contract_032",
+  "input_sha256": "3834ebad9e014986828e51224ec4da2be37ca42a0c869c34b200776e4d7b71c4"
+}

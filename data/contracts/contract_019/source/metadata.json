@@ -1,0 +1,15 @@
+{
+  "contract_id": "contract_019",
+  "title": "Data Transfer Agreement for Researchers/Organizations",
+  "organization": "National Institute for Medical Research Tanzania",
+  "agreement_type": "DTA",
+  "source_url": "http://reims.nimr.or.tz:8010/guides/DTA.pdf",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:46.056474+00:00",
+  "ingestion_status": "manual_download_required",
+  "preprocessing_status": "not_ready",
+  "error": "URLError: <urlopen error [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
+}

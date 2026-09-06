@@ -1,0 +1,26 @@
+{
+  "contract_id": "contract_024",
+  "title": "Data Transfer Agreement Template for South Africa",
+  "organization": "University of KwaZulu-Natal / Zenodo",
+  "agreement_type": "DTA",
+  "source_url": "https://zenodo.org/records/7537396",
+  "original_format": "DOCX",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:46.757181+00:00",
+  "ingestion_status": "normalization_required",
+  "preprocessing_status": "not_ready",
+  "resolved_url": "https://zenodo.org/records/7537396/files/SA%20DTA%20v1.0.docx?download=1",
+  "download_url": "https://zenodo.org/records/7537396/files/SA%20DTA%20v1.0.docx?download=1",
+  "original_sha256": "aa4db985437e4c67291b18920de5684549bce3c2ef219bfa6d42124f963af73f",
+  "original_filename": "SA DTA v1.0.docx",
+  "content_type": "application/octet-stream",
+  "content_disposition": "attachment; filename=\"SA DTA v1.0.docx\"",
+  "resolution": {
+    "download_url": "https://zenodo.org/records/7537396/files/SA%20DTA%20v1.0.docx?download=1",
+    "evidence_url": "https://zenodo.org/records/7537396",
+    "method": "Exact agreement link inspected on official landing page; manifest unchanged"
+  },
+  "normalization_error": "LibreOffice required for DOC/DOCX/HTML: set LIBREOFFICE_PATH"
+}

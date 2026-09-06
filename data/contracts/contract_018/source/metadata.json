@@ -1,0 +1,15 @@
+{
+  "contract_id": "contract_018",
+  "title": "Sample Data Sharing Agreement (2018)",
+  "organization": "NHS England",
+  "agreement_type": "DSA",
+  "source_url": "https://www.england.nhs.uk/wp-content/uploads/2019/04/appendix-4-sample-data-sharing-agreement.docx",
+  "original_format": "DOCX",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:46.014304+00:00",
+  "ingestion_status": "manual_download_required",
+  "preprocessing_status": "not_ready",
+  "error": "ValueError: Response is not a recognized PDF, DOC, DOCX or HTML document"
+}

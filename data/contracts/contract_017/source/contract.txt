@@ -1,0 +1,370 @@
+NCATS Data Transfer Agreement                                                                          FINAL 4-7-2021
+
+                                      NI H COVI D-19 Data Warehouse
+                           Data T ransfer Agreem ent (“ Agreem ent” )
+
+This Data Transfer Agreement ("Agreement") is between the National Center for  Advancing
+Translational Sciences                        (NCATS) a component of the                                                 National Institutes of Health
+(“Recipient”) and _                                    _______________________________________________________
+(“Provider”) and will become effective on the date of the last signature below.
+
+
+The NIH COVID-                               19 Data Warehouse is an NIH data sharing resource, operated under a
+contract containing clinical and imaging data from individuals who have received a
+Coronavirus Disease 2019 (“COVID                        -19”) test or whose symptoms are consistent with
+COVID-19.                                                 Data will also be collected from individuals infected with pathogens such as
+SARS 1, MERS, and H1N1 to support comparative studies.  Addressing the  COVID                                    -1 9
+pandemic requires that researchers, clinicians, and heath                         care providers have available and
+can make use  of                          all relevant data needed to address this unprecedented crisis. Therefore,
+this data warehouse will accelerate discovery using near real-time data and observational
+research, clinical studies and clinical trials, and                         will bring these data to bear on COVID            -19.
+This solution requires a single computational environment to support public health actions,
+clinical care, policy, and science underpinning vaccines, prophylaxis, and treatment. The
+data warehouse is a highly interoperable, secure, clinical data  research environment that  will
+harmonize clinical and patient data.   The NIH COVID            -19 Data Warehouse                         will serve as a
+national resource to address the COVID-19 pandemic, as well as demonstrate coordination
+of clinical and patient data,                           setting  an example for how to approach urgent research needs
+during                                                     future healthcare  challenges.
+The NIH COVID-19 Data Warehouse is being                                                                                     created by NIH as part of the government
+response to  fight the  COVID-19 pandemic and protect the public health.  NIH intends to
+provide access to and use by researchers for public health purposes and decision making,
+including conducting and supporting research to                         define the clinical natural history of COVID-
+19 infection and assess therapeutic responses and outcomes, and conducting and
+supporting a broad range of studies, including the identification of COVID-19 risk factors and
+development of effective countermeasures and diagnostics.
+
+
+Terms and Conditions
+1)                                          Provider shall provide the data set described in Attachment 1 (“Data”) to Recipient.
+2)                                          Provider agrees that it has the legal                                                             authority to provide the Data to Recipient for the
+uses of the NIH COVID-                               19 Data Warehouse                         described in this agreement.
+3)                                          Recipient shall not use the Data except as authorized under this Agreement. The Data
+will be deposited in the NIH COVID-                                                                                                 19  Data Warehouse and made accessible to                                    users
+
+
+
+NCAT S Data Transfer Agreement                                                                                     FINAL 4-7-2021
+
+    under a separate              data  use agreement to support the response to the COVID-19 pandemic.
+    Users who access the Data will:
+                 •                                             only analyze the Data within                                     the NIH COVID-                               19 Data Warehouse                         platform.
+                 •                                             not be able to                         download                                                                          or  remove the Data from the NIH COVID-                                                                                           19 Warehouse
+                       in any form.
+                 •                                             share the results of analyses within the platform to the extent possible
+                 •                                             make no effort to contact or identify individuals who are or may be the sources or
+                       subjects of the Data
+                 •                                             agree to  acknowledge the NIH COVID-                                           19 Data Warehouse in all publications and
+                       oral disclosures that rely on the D                                                            a ta
+                 •                                             be used only for research purposes and p                                                                        ublic health                         activities related to                         t he
+                       COVID-19                                                 pandemic
+    4)                                          Recipient agrees to use the Data in compliance with all applicable laws, rules, and
+    regulations.
+    5)                                          Provider agrees to be identified as a data contributor on the NIH COVID-                                           19 Data
+    Warehouse website.
+
+    6)                                          Except as provided below or prohibited by law, any Data delivered pursuant to this
+    Agreement is understood to be provided “AS IS.” PROVIDER MAKES NO
+    REPRE SENT AT IONS AND E XT ENDS NO W ARRANT IES OF  ANY KIND,  EIT HER
+    EXPRE SS ED OR IM PLIED. T HERE ARE NO  EXPRE SS OR IM PLIED WARR ANT IES OF
+    M ERCHANT ABILIT Y OR F IT NESS F OR A PART ICULAR PURPOS E, OR T HAT  T HE USE
+    OF  T HE DAT A WILL NOT INF RINGE ANY PAT ENT , COPYRIGHT , T RADEM ARK, OR
+    OT HER PROPRIET ARY RIGHT S.
+
+    7)                                          Except to the extent prohibited by law, the Recipient is responsible for damages which
+    may arise from its use, storage, disclosure, or disposal of the Data. The Provider will not be
+    liable to the Recipient for any loss, claim, or demand made by the Recipient, or made
+    against the Recipient by any other party, due to or arising from the use of the Data by the
+    Recipient, except to the extent permitted by law when caused by the gross negligence or
+    willful misconduct of the Provider.  No indemnification for any loss, claim, damage, or liability
+    is intended or provided by either party under this Agreement.
+
+    8)                                          The parties agree that each party may disclose factual information regarding the
+    existence and purpose of the relationship that is the subject of this Agreement for other
+    purposes without written permission from the other party provided that any such statement
+    shall accurately and appropriately describe the relationship of the parties and shall not in
+    any manner imply endorsement by the other party whose name is being used.
+
+    9)                                                      Unless otherwise specified, this Agreement and the below listed Attachments embody
+    the entire understanding between Provider and Recipient regarding the transfer of the Data
+                                                                                2
+
+
+
+NCAT S Data Transfer Agreement                                                                           FINAL 4-7-2021
+
+   to Recipient for the Project:
+
+       I.                Attachment 1: Project Specific Information
+      II.               Attachment 2: Data-specific Terms and Conditions
+
+   10)                  The term of this Agreement is five (5) years from the date of last signature and may be
+   extended upon mutual consent of both parties. No modification or waiver of this Agreement
+   shall be valid unless in writing and executed by duly-authorized representatives of both
+   parties.
+
+   11)                              Should the Provider no longer be                                                 able to or willing to participate                         in the NIH COVID-                               19
+   Data Warehouse, Provider may request to terminate this agreement with 30 days written
+   notice.  Once Data has been ingested and uploaded into the NIH COVID            -19 Data
+   Warehouse, it cannot be destroyed                                                     and must be  retained.                                                  Recipient agrees to keep a copy
+   of Data and will generate a new version of the data set for use that no longer contains the
+   Provider’s withdrawn Data. For clarificat i on  purposes, researchers who have previously
+   utilized the Data, prior to Provider’s termination, will be allowed to                                                                                                                                                continue their ongoing
+   research as well as validation and confirmation of future findings.
+
+   12)                  Provider acknowledges that once data are uploaded to the NIH COVID-19 Data
+   Warehouse, the data will be protected from disclosure by a Certificate of Confidentiality per
+   Section 301(d) of the Public Health Service Act (42 USC 241(d)), as amended by Section
+   2012 of the 21st Century Cures Act, P.L 114-                                                                       255”, and the NIH Policy on Certificates of
+   Confidentiality. Recipient will be bound by the terms of the Certificate and will be unable to
+   redisclose the data except as permitted by the terms of the Certificate, including to Provider.
+   Provider acknowledges that even if a copy of the data is provided by Recipient, the copy of
+   the data is still protected by the Certificate.
+
+   13)                  The undersigned Authorized Officials of Provider and Recipient expressly represent and
+   affirm that the contents of any statements made herein are truthful and accurate and that
+   they are duly authorized to sign this Agreement on behalf of their institution.
+
+
+
+
+
+
+
+
+                                                   Signatures Begin on Next Page
+
+
+
+
+
+
+
+                                                                         3
+
+
+
+NCAT S Data Transfer Agreement                                                FINAL 4-7-2021
+
+    For NCATS (Recipient)                                 For Provider
+    Authorized Signature:                                 Authorized Signature:
+
+
+
+    Printed Name and Title:                                Printed Name and Title:
+
+    Krishna "Balki" Balakrishnan Ph.D.                  __________________________________
+    M.B.A                                               __________________________________
+    Acting Director, Office of Strategic                __________________________________
+    Alliances (OSA)
+
+    Date:                                                 Date:
+
+    Mailing Address for Notices:                          Mailing Address for Notice:
+    Name/Address:                                         Name/Address:
+
+    NCATS                                              __________________________________
+    Attn: Office of Strategic Alliances (OSA)          __________________________________
+    9800 Medical Center Drive                          __________________________________
+    Rockville MD 20850                                 __________________________________
+                                                       __________________________________
+                                                       __________________________________
+
+
+
+    Email: ncatspartnerships@mail.nih.gov                 Email:
+    Tel: 301-827-7155                                     Tel:
+                                                          Scientific POC:
+    N/A                                                   Printed Name
+                                                          Title
+                                                          Em ail
+                                                          Legal Reviewer/Sponsored Research:
+    N/A                                                   Printed Name
+                                                          Title
+                                                          Em ail
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                      4
+
+
+
+NCAT S Data Transfer Agreement                                                                       FINAL 4-7-2021
+
+
+
+
+                                                             Attachment 1
+
+                                                        Description of Data
+
+
+
+   Please provide a description of w                                               hat is being submitted to the NIH COVID-1                                                                 9 Data
+   Warehouse:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                      5
+
+
+
+NCAT S Data Transfer Agreement                                                                    FINAL 4-7-2021
+
+
+
+
+
+                                                            Attachment 2
+                                     Terms and Conditions for Limited Data Set
+
+   Additional Terms and Conditions:
+
+   1.                                    Recipient shall not use or further disclose the Limited Data Set (LDS) other than as
+   permitted by this Agreement or as otherwise required by law.
+   2.                                            Recipient shall report to the Provider any use or disclosure of the LDS not provided for
+   by this Agreement within fifteen (15) business days of when it becomes aware of such use
+   or disclosure.
+   3.                                             To the extent the Provider is a HIPAA Covered Entity, and the data will be a Limited
+   Data Set as defined by the Health Insurance Portability and Accountability Act of 1996
+   (“HIPAA”).  In accordance with Section 164.514(e)(2) of the HIPAA Privacy Rule, the LDS
+   shall exclude the following direct identifiers of the individual or of relatives, employers, or
+   household members of the individual:
+   (i)            Names;
+   (ii)            Postal address information, other than town or city, State, and zip code;
+   (iii)             Telephone numbers;
+   (iv)            Fax numbers;
+   (v)            Electronic mail addresses;
+   (vi)            Social security numbers;
+   (vii)            Medical record numbers;
+   (viii)            Health plan beneficiary numbers;
+   (ix)            Account numbers;
+   (x)             Certificate/license numbers;
+   (xi)            Vehicle identifiers and serial numbers, including license plate numbers;
+   (xii)            Device identifiers and serial numbers;
+   (xiii)            Web Universal Resource Locators (URLs);
+   (xiv)            Internet Protocol (IP) address numbers;
+   (xv)            Biometric identifiers, including finger and voice prints; and
+   (xvi)            Full face photographic images and any comparable images.
+   If the LDS being provided is coded, the Provider will not release, and the Recipient will not
+   request, the key to the code.
+   4.                                            Recipient will not use the LDS, either alone or in concert with any other information,  to
+   make any effort to identify or contact individuals who are or may be the sources of LDS
+   without specific written approval from Provider and appropriate Institutional Review Board
+   approval, if required pursuant to 45 CFR 46.  Should Recipient inadvertently receive
+   identifiable information or otherwise identify a subject, Recipient shall promptly notify
+   Provider and follow Provider’s reasonable written instructions, which may include return or
+   destruction of the identifiable information.
+                                                                    6
+
+
+
+NCAT S Data Transfer Agreement                                                                        FINAL 4-7-2021
+
+
+   5.                                            Recipient agrees to ensure that any agent, including a subcontractor to whom it
+   provides the LDS agrees to the same restrictions and conditions that apply through this
+   Agreement to the Recipient with respect to such information. For  clarification purposes, t h e
+   prior sentence does not alter the                                                 restrictions and conditions of the Certificate of
+   Confidentiality.
+   6.                                            By signing this Agreement, Recipient and Provider provide assurances that relevant
+   institutional policies and applicable federal, state, or local laws and regulations  (if any) have
+   been followed, including the completion of any IRB or ethics review or approval that may be
+   required.
+   7.                                            The parties agree to take such action as is necessary to amend this Agreement, from
+   time to time, in order for the Provider to remain in compliance with the requirements of the
+   HIPAA r ules.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                       7

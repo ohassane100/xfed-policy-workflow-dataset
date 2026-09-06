@@ -1,0 +1,15 @@
+{
+  "contract_id": "contract_025",
+  "title": "National Record Locator Data Sharing Agreement",
+  "organization": "NHS England Digital",
+  "agreement_type": "DSA",
+  "source_url": "https://digital.nhs.uk/services/national-record-locator/how-to-access/data-sharing-agreement",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:46.999263+00:00",
+  "ingestion_status": "manual_download_required",
+  "preprocessing_status": "not_ready",
+  "error": "HTTPError: HTTP Error 403: Forbidden"
+}

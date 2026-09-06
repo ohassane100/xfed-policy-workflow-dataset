@@ -1,0 +1,282 @@
+EXTERNAL   DUA
+                                                       DATA U S E AGR EEMENT  FOR U S E WITH
+                                            NON         -U NIVER S ITY                  OF  WASHINGTON  RECIPIENTS
+
+     This   Data   Use   Agreement   is   entered   into   between   the   University   of   Washington   (“UW” )
+     and                                                                                 (hereinafter  “Recipient”),  ef fective  as  of  the  date  of  last
+     signature  (“E ffective                 Date”)                                                                       to  (“E nd       Date”)                                                             .
+     The University  of  Washi ngton  is  a  hybrid  entity  and  has  designated  its  healthcare  components  and non-
+     healthcare   components   as   descr ibed   in   C OMP.101                                                          Patient   Infor mation   Privacy   and  Security
+     C ompliance               Program            and        Administrative                 Requirem ents.                  These          entities          are       Affiliated  E ntities               as
+     described  in  45  C FR  Sec tion  164. 105 (b)( 1).  F or  pur p oses  of  this  Agreement  UW  and    Recipient  may
+     hereinafter be collectively referred to as the “Parties ”.
+     I.             PURPOSE  OF  ACTIVITIE S
+     Recipient  will  only  use  or  disclose  data  fo r  the  follo wing  li mited  purposes:
+
+                            Sharing  a  UW  Medicine  L imited  Data  Set  for  one  of  the  following  p urpose s:
+                                            Research
+                                             Public Health
+                                             UW Medicine Healthcare Operations
+
+                           Sharing UW Medicine C linical Data for Research Purpo s es with  C ommercial Entity
+                           Sharing  UW  Medicine C linical Data for Research Purpos es with Non - C ommercial Entities
+                           Sharing UW Research Data
+
+     Description  of  data  (may  attach  reference  document  that  describes  the  data):
+
+
+
+
+
+
+     II.            DE FINITIONS
+     2.1             “Authori zation”              means  a  w ritten  detailed  document  that  gives  the  UW  permission  to  use  an d/
+     or  disclo se  PHI  for  resea rch  purp oses,  which  a re  gener ally  other  than  treatment,  payment  o r healthcare
+     operations ( TPO), or to di sclose PHI to a third pa rty specified by the individual.
+     2.2              “C linical  Data”              refers         to    healthcare             delivery          records          and      associated             clinical       data, including
+     protected  health  information  (“PHI ”),  de-identified  he althcare  data,  Quality  Improvement                                                                     (“QI” )                 data,
+     registry         data,        repository            data,       data        contained            in     P eer  Systems,               financial         data,       and      other      fo rms      o f
+     confidential or sens itive data within UW Medicine healthcare records.
+     2.3              “C ommercial               E ntities”:        A  “commercial  entity”                            is  a  private,  generally  technology industry
+     organization  that  UW  Medicine  collaborates  with  to  develop  and  test  predictive  and related mo dels
+     e.g.,  using                         AI  tools.  For                                                                                                                                                  this                    policy,  “commercial  entity”  does  not                              include  private,  pharmaceutical,  medical
+     device or related organizations that UW collab orates wit h to conduct  interventional clinical  trials.
+     2.4             "De-identified                                                             PHI”                                                                                                                                                                                                                                                                                                                                                                  refers                   to                         healthcare info rmation that has                                                                                been de-identified in accordance with
+     C OMP.103 Use and Disclosure o f PHI, Section VI.B. See al so  102.G4 P HI Guidance.
+
+
+
+
+
+
+
+                                                                                                                                                                                         Page  1  of  5
+
+
+
+EXTERNAL   DUA
+
+            2.6                       “Individually                                 Identi fiable                             Health                     In formatio n                           ”      means                      a       subset                    of         health                   info rmation, includin g
+            demographic            info rmation           collected           fro m           an           indivi dual,            and           (i)           i s           created           or           received           by           a           healthcare
+            provider,                         health                  plan,               em ployer                           or         healthcare                             clearinghouse                                      and             (ii )       relates                   to         past, p resent                                  or        futu re
+            physical                       or         mental                     health                    or         condition                           of         an          individual;                            and             (a)          identifies                         the  individual,                                    or         (b)          with
+            respect                        to           which                     there                   is         a          reasonab le                                basis                  to           believe                       that                the   informati on                                        can             be           used                to
+            identify an individual.
+            2.7                       "IRB”                    refers                  to          the              Institutional                                Review                        Boa rd                   that               reviewed                            an d              app roved                            the             research
+            and  provided                                   a      waiver  of  authorizatio n,                                                          to  the                 extent  required  under  applicable                                                                                 law s  and  UW Medicine
+            policy.
+            2.8                          “L imited  Data  Set”                                             is        Protected  Health                                            Info rmation                                tha t            excludes  the  following  di rect identifiers
+            of         the            individua l                          or         of          relatives,                         employers,                               or          h ous ehold                            members                              of         the            in dividual:   na mes;                                            postal
+            address                       i nfo rmation,                                othe r                 than                to wn                or          city,             state,                 and              ZIP            code;                 telephone numbers;                                                      fax numbe rs;
+            electronic                             mail         addresses;         Social         Security         number s;         medical                                                                                       record         numbers;         health                                                    plan                bene ficiary
+            numbers;   account   numbers;  certificate/license   numbers;  vehicle identifiers  and  se rial  numbers,
+            including                            license                       plate                   numbers;                               device                      identifiers                              and                serial     numbers;  web  univer sal  resource
+            locaters  (URL s);  Internet  Protocol  (IP)  add ress  num bers;  biometric                                                                                                                                                                        identifie rs,   including                                                         finger  and
+            voice  prints;  and  full  face  photogr aphic  images  and  any
+            comparable images.
+           2.9                          "Protected             Health              Information                                                     ”                                 means                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Individual ly              Identifiable               Health              Information              that                                  is                                           (i)
+           transmitted           by           electronic           media,           (ii )           maintained           i n           an y           medium           constituting           electronic           media,           or            (iii)
+           transmitted or maintained in any othe r fo rm or mediu m.  “Protected Health Information ” sh                                                                                                                                                                                                                        all n ot include
+           (i)  education  records  covered  by  the  Family  E ducational  Right  and  Privacy  Act  (“FE RPA”),  as  amended,  20
+           U.S.C .  Sec tion  1232g(a)(4)(B)(iv).
+           2.10                    “Research   Data                                    ”                            means                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       in form ation,   rec ord s,    and                                                                          tangible    products                                                    a rising                                          from                                                       or                         a ssociated    wit h
+           research conducted at, under the aus pices of, or using th e resources of the UW. Resea rch Data includes                                                                                                                                                                                                                                                                                                                                                                                                             both
+           intangibles  (e.g.,  information  and  copyrighted  works  s uch  as  software  and  expressions  o f informatio n)
+           and             tangibles       (e.g.,       cell      lines,        biological        samples        collected       for       resea rch       purp oses,        synthetic                                                                                                                                                                                                                                                                                                                                                                                                                                                       compounds,
+           organisms,  and o riginals o r copies of lab oratory n otebo.o ks“).
+           2.11                             "Sec urity     Review":                                              Process    by    which    the   UW    Medicine   Principal    Investigator    sets    up    a    meeting
+           with    the    UW    Medicine    C hief    Security    Inform ation    Officer,    Senior    Di rector    of    E nterpri se    Records    &    Healt h
+           Informatio n,    and    the    Director    of    Research    IT    to    ensure    the    UW    Medicine    data   se                                                                                                                                                                                                                                                                                                                                                                                                                                                   t    for    projects    involving    a
+           large language model will be pr otected and secure.
+           2.12                            "Use"                              means                              the                              sharing,                              empl oyment,                              applicatio n,                              utilization,                              exami nation,                              analys is,
+           canonization, or commi ngling with other inf ormation .
+
+          III.                        OBLIGATIONS  OF  RECIPIE NT
+          3.1                         Use       or       Disclosu re       of       Data                                                                                                                                 .  Recipient       sha ll      not        use       o r      d isclose       the                                                                                                                                                            above-referenced      data       in      any
+          manner      that       is      not       specifically      authorized      by      this       Agree ment       or      that       would      constitute       a      violation      of      any
+          applicable  laws  an d  regulations,  i ncluding  specifically  t he  Health  Insura nce  Portability  and Accountability
+          Act  of  199 6  and  any  regulations  enacted  purs uant  to  its  provision s  (“ HIPA A                          Standar ds” ),                                                                                                                                                                                            Washington
+          state  law,  or  any  other  data  p rivacy  obligations  agre ed  to  by  either  Pa rty  such  as  rep resentations  to
+          the  IRB  or  research  study  spons or.  Recipient  sh all  ens ure  all  d irectors, o fficers,  em ployees,  contractors,
+          and  agents  use  or  disclose  the  data  in  accordance  with  the provisions of this agreement and federal a nd
+          state law. Recipient shall not disclose, release, sell, rent, lease,                                                                                                                                              loan  or  otherwi se  grant  access  to  the  Data
+          to  any  third  party  except  as  may  be  authorized under  this  agreement  under  Section  3.6  or  otherwise.
+          Recipient  must  obtain  specific  authorization  in   the                                                                                                                             fo rm  of  another  w ritten  data  Use  Agreement  to
+          use  or  disclose  the  data  fo r  any  purp ose  other than  t hat  specifically  authorized  herei n.
+
+
+
+                                                                                                                                                                                                                                                                                                                                          Page  2  of  5
+
+
+
+EXTERNAL  DUA
+
+    3.2          Minimum   Nec essary                             .   Recipient   represents   that   it   has   obtained   appropriate   IRB
+    authorization to conduct the research project identified in this agreement. In addition, Recipient                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                represents
+    that  the  data  contains  only  the  minimum  necessary  information  to  accomplish  the purpose  identified.
+    3.3               Safegauards  Against  Unautho rized  Use  of  Disclos ure  of  Data.  Recipient  agrees  to  implement
+    all  safeguards  appr opriate  to  prevent  the  unauthor ize d  use  of  di sclosure  of  the  data.  If  UW  Medicine
+    de-identified  or  identified  patient  data  will  be  used  in  conjunction  with  a  L arge  L anguage  Model
+    or  AI algorithm, a Security Review is required prior to sharing the data. The Security Review can be requested
+    by follow ing this link                      https://redcap.iths.org/su rveys/?s= A4M3H3 7JTK
+    3.4              Reporting                 of                Unauthoriz                      ed Use                 of                Disclosure                 of                Dat a                                                                                                    .                 Recipient                 shall                 report                 in               writing                 any
+    unauthorized  u se  or  disclosure  of  data  not  provided  fo r  in  this  Agreement  within  five  (5)  wo rking  days
+    of  becoming  aware  of  an  unautho rized  use  or  disclosu re.  Recipient  shall  take  immediate  steps  to  stop
+    the unauthorized disclosu re and cure the b reach of confi dentiality. Written notification will be ma de to                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         the
+    follow ing:                                      UW   Medicine   C ompliance,   Box   358049,                                                                              Seattle,                     Washington
+    9819 5-9210, 2 06.5 43.3 098,                              comply @uw.edu                      .
+    3.5              Oversight and Monitoring                              .  Recipient agrees that UW Medicine retains oversight of this data sharing
+    arrangement  and  may  m onitor  Recipient’s                                                       access  or  use  of  the  Data  an d  audit  compliance  with
+    the terms of this Data Use Agreement.
+    3.6                Agreements                           with                           Thir d                           Parties .  Recipient                           agrees                           to                           ensure                           that                           any                           agent,                           including
+    subcontractors,  to  w hom  the  Recipient  intends  to  pr ovide  the  Data  will,  prio r  to  receiving  the  Data,
+    enter       into       a        written       data        use        agreement         with       UW        suc h       as       this        Agreement        an d       be       b ound       by        the       same
+    restrictions and conditions that apply to Recipient.
+    3.7               C ontact  with  Individuals.  If  applicable,  Recipient  agrees  it  will  not:  a)  attempt  to  identify  the
+    informatio n  contained  in  the  data,  either  directly  or  indirectly  through  linking  with  other  sources   of
+    informatio n,  b)  contact  any  patient(s)  who  are  the  su b ject  of  the  data,  or  c)  disclose  indivi dual subject
+    results when o r if the data are pre sented or publis hed.
+    3.8               Publication.  Recipient acknowledges that UW reserves the right to review any                                                                                                                                                                                                                                                                                                                                                                            and  all publications
+    that  result  from  the  use  of  the  Data  prio r  to  an y  manuscript  submis sion.  In  additio n,                                                                                                       Recipient
+    agrees  to  acknowledge  the  source  of  the  Data  in  any  publications  reporting  use  o f the Data.
+    3.9               Term  and  Terminatio n.   This   Agreement   shall   remain   in   effect   until   the   E nd
+    Date.  Where  either  party  violates  the  terms  of  this  Agreement,  the  party  must  take  immediate  steps  to
+    stop  the  unauthorized  use  or  disclosu re  and  cure  any  resulting  breach  of  confidentiality.  E ither
+    party may terminate  this Agreement immediately upon written notice in the                                                                                                                                                                                                                                                                                                                        event  that: (1)   UW determines
+    that  Recipient  has  violated  a  mater ial  pr ovision  of  this  Agreement;  (2)  the  Recipient or  any  of  its
+    employees,  officers,  or  agents  is  convicted  of  a  crime  relating  to,  or  is  excluded, debarred  or  other wise
+    ineligible              to      participate                 in,      any         government                    healthcare                 program,                including      but           not  limited  to
+    Medicare,  Medicaid,  C HAMPUS,  Tricare;  (3)  The  Recipient  or  any  employee,  officer,  or  agent  is  named
+    as  a  defendant  in  a  criminal  proceeding  for  the  violation  of  state  or federal                                                                              privacy  and  confidentiality
+    laws.  E ither  party  may  terminate  the  Agreement  for  any  reason  upon  30  days  w ritten  notice  to  the
+    other  parties.
+    3.10               Return  or  Destruction  of  Inf ormation.  U nless  termin ated  earlier  in  accordance  with Section
+    3.9  or  extended  via  a  modification  in  writing  and  exec uted  by  duly-authorized representatives  of
+    both  parties,   thi s  Agreement  shall  expi re  as  of  the  E nd  Date  set  forth  above.  E ither  part y
+    may  terminate  this Agreement                                       with  thi rty  (30 )  days  written  notice  to  the other  party's  Authorize d
+    Official  as  set  fo rth   bel ow.   Upon                                           expiration               or      e arly        termination                 of  thi s        Agreement,                  Recipien t
+    shall        follo w          the  disposition  in structions  provi ded  in  Attachment  1,   provided,   however,   that    Recipient
+    may retain one (1)
+
+
+
+                                                                                                                                                                                                             Page  3  of  5
+
+
+
+EXTERNAL  DUA
+    copy  of  the  Data  to  the  extent  necessary  to  comply  with  the  records  retention  requirements:
+
+                      I.    under  any  law,  regulation,  or  Recipient  institutional  policy,  and
+                      II.   for  instances  where  Data  di sposal  is  infeas ible,  and
+    The restrictions set fo rth in this                                      Agreement (a s applicabl e) shall survive and a pply to such
+    archival   copy   so  long  as  Recipient  holds  the  Data. Recipient  shall           not           use           data           received           from
+    UW           in                a                manne r           other           than                those         permitted         or requ i red         by         state and federal laws   or fo r
+    the purposes described he rein.
+    3.11            Use       of     Parties'          Names.           Neither           party         shall      use       th e      other         party's         name,          trademarks               o r
+    other logos in any publicity, advertising, or ne ws release without the prior w ritten approval o f an authori zed
+    representative                of    that      party.
+    3.12            C ost Reimbursement. Recipient agrees to reimburse UW for its costs in providing data under this
+     Agreement as follo ws:
+
+
+
+
+
+
+
+    IV.            GENE RAL  TE RMS  AND  CONDITIONS
+    4.1            Ownership.  UW  shall  retain  ownershi p  of  any  and  all  rights  it  has  in  the  data  and  Recipient  does
+    not  obtain any rights in the data other than as set fo rth in this agreement.
+    4.2             Indemnification.   To   the   extent   permitted   by   law,   the   Parties   agree   to defend
+    (if  requested),  indemn ify,                           and        hold  each              other         ha rmless           fr om        and  against                any  loss,  claim,  or
+    damage  arising  from  the  negligent  acts  or  omissi ons  of  their  own  off icers,  employees,
+    students,  or  agents  in  the  perfo rmance  of  thei r  duties  under  this  Agreement.
+    4.3              Assignment;  Successors  and  Ass igns.  The  Recipient  cannot  assign  its  rights  or  obligations
+    under  this   Agreement   without   the   pri or   w ritten   consent   of   the   UW.  Subject   to
+    the  foregoing,   this                    Agreement  shall  apply  to,  be  binding  in  all  respects                                                                upon  and             inure        to
+    the  benefit  of  the  Parties  hereto  and  their  respective successors and assigns.
+    4.4            Severability.  If  any  pr ovision  of  thi s  Agreement,  or  any  othe r  agreement,  document,
+    or  writing  pu rsuant  to                       or     in  connection                with  this            Agreement,               is    found  to  be  wholly                       or  partially
+    invalid  or  unen forceable; the remainder o f the                                          agreement is unaffected.
+    4.5             Waiver.  No  term  or                       provision  of  this                  Agreement  shall  be  deemed  waived  and  no breach
+    excused  unless  waiver  or  excuse  of  breach  is  in  w riti ng  and  signed  by  the  party  against whom  such
+    waiver or excuse is claimed.
+    4.6             E ntire  Agreement.  This  Agreement  constitutes  the                                                       entire        agreement  between                          the  Parties
+    with       respect   to   the   subject   matter   he reof,   a nd   su persedes   and   replaces   all  pri or
+    agreements, understandings,  commitments,  communic ations,  and  representations  made  between  the
+    Parties  whether  wr itten  or  oral,  with  respect  to  the  subject  matter  hereof.  No      modi fication                                                                                         or
+    amendment  to  this  agreement  s hall  be  val id  unles s  in  writing  an d  executed  by  the  duly  autho rized
+    representatives  of  both  pa rties.
+
+
+                                                                                  [S ignatur e  page  follows.]
+
+
+                                                                                                                                                                                            Page  4  of  5
+
+
+
+EXTERNAL  DUA
+
+     UW  Medicine  Representative                                               Data  Set  Recipient
+
+
+
+     Signature                                                                  Signature
+
+
+                                                                                Name
+
+
+                                                                                Title
+     Date
+
+                                                                                Date
+     Read  and  Understood
+
+
+
+     Signature
+
+
+     Name  of  UW  PI
+
+
+     Title
+
+
+     Date
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                  Page  5  of  5

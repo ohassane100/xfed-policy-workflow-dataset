@@ -1,0 +1,561 @@
+SAMPLE DOCUMENT – FOR INFORMATIONAL PURPOSES  ONLY
+                                        DO NOT USE  THIS  SAMPLE.
+      THE CUSTOMIZED DUA FOR EXECUTION WILL BE GENERATED
+                             DURING  THE DATA  REQUEST PROCESS
+
+                          The Eunice K       ennedy S  hriver National Institute of
+                                  Child Health and Human Development
+
+                                    DATA AND SPECIMEN HUB (DASH)
+                          NICHD DASH DATA USE AGREEMENT
+
+                               This Data Use Agreement (the “           DUA”) is by an  d b  etween
+                                    The Eunice K     ennedy Shriver National    Institute of
+                                  Child Health and Human    Development (     “NICHD”),
+
+
+                                           (NICHD Division Director/Designee),
+
+                                                                and
+
+
+
+           (The “Recipient Institution," which is signing on behalf of its employee, the “Recipient”),
+                           and is effective as of the date of the last signature affixed hereto
+                                                 (the “DUA Effective Date”).
+
+Requested NICHD DASH Study: [Name will be automatically added by NICHD DASH system during the
+request process]
+
+I.           INTRODUCTION
+The Eunice Kennedy Shriver National Institute of Child Health and Human Development (NICHD) established
+the NICHD Data and Specimen Hub (DASH)                as a data sharing mechanism that enables investigators to share and
+access de-                   identified data from NICHD-funded studies for secondary use. To take full advantage of the research
+data already collected by NICHD-funded investigators and maximize its value for public health, NICHD has
+established policies and processes designed to make such data available through NICHD DASH, under
+appropriate terms and conditions, to the largest possible number of qualified investigators in a timely manner.
+The full NICHD DASH Policy statement is available on the NICHD DASH website.
+Data deposited in NICHD DASH by the submitters (defined below) have been stripped of all individually
+identifying information according to both (a) the standards set forth in the Department of Health and Human
+Services (HHS) Regulations for the Protection of Human Subjects  1 and related guidance (which covers
+individually identifiable private information), and (b) the Health Insurance Portability and Accountability Act
+(HIPAA) Privacy Rule 2 (which covers protected health information), and have been assigned random, unique
+codes to ensure that data are not identifiable.
+
+
+
+1 45 CFR 46.102(e) at: https://www.ecfr.gov/cgi-bin/text-idx?tpl=/ecfrbrowse/Title45/45cfr46_main_02.tpl
+2 45  CFR 164.514(b)(2). The list of HIPAA                      identifiers that must be removed is available at: https://www.ecfr.gov/cgi-bin/text           -
+idx? SID=e5b0f4d4196a2ff12cb6eff228d36ffb&mc=true&node=se45.1.164_1514&rgn=div8
+
+
+
+However, the potential for deducing the identity of an individual from data stripped of identifiers is
+constantly evolving, due to the large number of individual data points and the advancement of computational
+tools.
+Therefore, to protect and promote the confidentiality and privacy of the individuals whose data have been
+deposited into NICHD DASH, NICHD is requiring the Recipient of such data to read and understand and
+sign this Data Use Agreement (DUA) and their institution to acknowledge and agree to abide by the terms of
+this DUA as a condition of access. A Recipient who is granted access to NICHD DASH data is expected to
+adhere to the specifications of this DUA, as executed in its final form. Failure to do so could result in denial
+of further access by the Recipient’s institution to NICHD DASH data.
+Submitters of data to NICHD DASH make a substantial long-term contribution to public health by sharing
+data more widely through NICHD DASH. NICHD encourages investigators who request and receive access
+to the data in NICHD DASH to adhere to appropriate and reasonable conditions for data use, collaborative
+relationships with the submitters, and to ensure proper acknowledgement of the submitters’ contribution to
+their research, as well as NICHD and NICHD DASH.
+II.           DEFINITIONS
+
+The following definitions apply for the purposes of this DUA:
+“Affiliates” are individuals within the same            institution as the Recipient, for whom access to Data is required to
+carry out the Research Plan or Non-research Use. They must read and understand the terms and conditions
+executed by the Recipient Institution who is the subject of this DUA and are not required to submit a separate
+Data Request Form or sign a separate DUA with NICHD. Affiliates are permitted to access and download Data
+directly from NICHD DASH. Affiliates of the Recipient, if any, are listed in Appendix A. Please see Section III
+below for roles and responsibilities of an Affiliate.
+“Associates” are individuals from a different institution than the Recipient and working on the same Research
+Plan or Non-                                          research Use as the Recipient, for whom access to Data is required to carry out the Research Plan or
+Non-research Use. They must read and understand the terms and conditions executed by the Recipient
+Institution who is the subject of this DUA and are not required to submit a separate Data Request Form or sign a
+separate DUA with NICHD. They will not be permitted by the NICHD DASH system to access or download
+Data directly; instead, they must access Data only within the Recipient Institution's data platform and must not
+download Data from the Recipient Institution 's data platf orm to their own local data platform or devices.
+Associates of the Recipient, if any, are listed in Appendix A           . Please see Section III below for roles and
+responsibilities of an Associate.
+“Data” re                                fers to data and information collected and recorded from participants in research studies that are
+available through NICHD DASH. For the purposes of this DUA, any associated study documentation provided
+along with the Data are included in this definition of Data. This Data is subject to release to the Recipient,
+according to the criteria laid out in the NICHD DASH Policy                    , which includes the execution of an NICHD DASH
+DUA, approval by the NICHD DASH Data Access Committee, and, if applicable, by study-                                                                          specific entities.
+“Data Request Form” is the online form completed by the Requester during the Data request process in NICHD
+DASH.
+“NICHD DASH Administrator” is the NICHD                                 representative who interfaces with NICHD DASH users and
+manages Data submissions and requests.
+“Recipient” is the lead individual who receives access to the Data on behalf of the Recipient Institution. The
+Recipient may share access to the Data only                              with individuals who are included under the Requester, Affiliates
+and/or Associates as listed in Appendix A. Please see Section III below for roles and responsibilities of a
+Recipient.
+“Recipient Institution” is an institution, e.g., a non-profit or for-          profit organization or corporation, which is the
+employer of the Recipient. The Recipient Institution must comply with applicable human subjects protection rules
+and regulations, as detailed under Section 10             .
+“Requester” may or may not be the same individual as the Recipient of the Data. If not the same individual as
+the Recipient, the Requester must be from the same institution as the Recipient and must be delegated by the
+Recipient to submit the data request online in the NICHD DASH system. The Requester is permitted to access
+and download Data directly from NICHD DASH. The Requester is identified in Appendix A                                 . Please see Section
+III below for roles and responsibilities of a Requester.
+
+
+
+“Research Plan”            is a description of the proposed research that serves as the basis for the Data access
+request. The Research Plan must include the title of the Research Project, description of the research need
+(study aims /goals, hypothesis that will be tested, methodology to be used, and the expected outcomes), and,
+if required by the Submitter, a design and analysis plan.
+“N on-research Use” is a description of the proposed practical application of the Data that serves as the basis for
+the Data access request. For the purpose of this DUA, practical application means to manufacture in the case of a
+composition or product, to practice in the case of a process or method, or to operate in the case of a machine or
+system. The Non-research Use must include the title and purpose of the project and identify the intended benefits
+of the project for the health community or the participant community
+“Study” is the research study that collected the Data described in this DUA.
+“Submitter” is an investigator who has submitted Data to NICHD DASH, according to the criteria laid out in the
+NICHD DASH Policy.
+
+III.           ROLES AND RESPONSIBILITIES
+Below is a list of general responsibilities based on the roles specified in this DUA. Additional responsibilities
+pertaining to the terms and conditions of the DUA are incorporated directly into the DUA.
+
+       Roles                                                                                                                                                                                                                      Responsibilities
+
+       Affiliate/s                                                                                                                                              •           Are from the same institutio n as the Recipient
+                                     •           Can access Data directly from NICHD DASH or from the Recipient
+                                     •           Must use the data for the same Research Plan or Non-research Use as the Recipient
+                                     who is leading the research
+                                     •           Must register in NICHD DASH
+                                     •           Must read and understand the terms of this DUA executed by the Recipient
+                                     Institution
+
+       Associate/s                                                                                                                        •           Are from a different institution than the Recipient
+                                     •           Must read and understand the terms and conditions of this DUA executed by the
+                                     Recipient Institution who is the subject of this DUA and are not required to submit a
+                                     separate Data Request Form or sign a separate DUA with NICHD
+                                     •           Must access Data only within the Recipient Institution’sdata platform
+                                     •           Must not download Data from the Recipient Institution’s                      data platform to local
+                                     data platform or devices
+                                     •           Must not download Data directly from NICHD DASH
+                                     •           Must use the data for the same Research Plan or Non-research Use as the Recipient
+                                     who is leading the research
+                                     •           Not required to register in NICHD DASH
+
+
+
+Roles                                                                                                                                                                                                                      Responsibilities
+
+
+NICHD DASH                  •           Communicates with the Recipient regarding any applicable terms and conditions
+Administrator               pertinent to the DUA
+
+Recipient                                                                                                                                                       •           Must read, understand, and sign the DUA executed by the Recipient Institution
+                            •           Share access to the Data only with individuals who are included as Requester (if
+                            not the same individual as the Recipient), Affiliates, and/or Associates listed in
+                            Appendix A
+                            •           Must not share Data received from NICHD DASH with anyone outside the
+                            Recipient Institution except with Associates who must access the data within the
+                            Recipient Institution’s data platform
+                            •           Oversee the Requester (if not the same individual as the Recipient), Affiliates, and
+                            /or Associates who are provided access to the Data
+                            •           Maintain compliance with the human subjects protection requirements, if
+                            applicable, under 45 CFR 46 and local rules
+                            •           Delegate authority, as needed, to an individual identified as Requester from the
+                            same institution to perform administrative functions within the NICHD DASH
+                            system (complete request process, add Affiliates and/or Associates, and submit data
+                            use annual report)
+                            •           Must register in NICHD DASH
+
+Recipient                   •           Execute the DUA with NICHD
+Institution                 •           Acknowledge and agree to abide by the terms of the executed DUA
+                            •          Assume responsibility for the compliance of the Recipient, Requester (if not th e
+                            same individual as the Recipient), Affiliates and/or Associates with the terms and
+                            conditions of this DUA
+                            •          Maintain compliance with the human subjects protection requirements, if
+                            applicable, under 45 CFR 46 and local rules
+
+Requester (if               •           May or may not be the same individual as the Recipient of the Data
+not the same                •          Must be from the sa me             institution as the Recipient and must be delegated by the
+individual as               Recipient to submit the data request online in the NICHD DASH system
+the Recipient)              •          Allowed to perform administrative functions within the NICHD DASH sy s tem
+                            (complete request process, add Affiliates and/or Associates, and submit data use
+                            annual report)
+                            •           Must read and understand the terms of the DUA executed by the Recipient
+                            Institution
+                            •           May access Data directly from NICHD DASH
+                            •           Must use the data for the same Research Plan as the Recipient
+                            •           Must register in NICHD DASH
+
+
+
+IV.             TERMS AND CONDITIONS
+The Recipient Institution requests approval for the Recipient to access Data listed in A ppendix B  from the
+NICHD DASH study listed below for purposes of the Research Plan or Non-research Use, which is
+specified in the NICHD DASH online Data Request Form and incorporated herein by reference.
+Requested NICHD DASH Study: [Name will be automatically added by NICHD DASH system during the
+request process]
+The Recipient Institution agrees to the following terms:
+     1.                     Non-Transferability of      Agreem ent
+         This DUA is not transferable. There are no third-party beneficiaries to this DUA. Any other individual that
+         wishes to receive Data from NICHD DASH is required to execute a separate DUA.
+         The following situations are examples of when the execution and approval of a new DUA is required:
+              a.                     Any substantive change to the scope of the Research Plan or Non-research Use
+              b.                     The appointment of another Recipient to complete the Research Plan or Non-research Use
+              c.                     Change to the Recipient Institution. *Note, if the Recipient wishes to retain access to the Data but
+                  has changed the institution under which this DUA was executed, a new DUA in which the new
+                  institution acknowledges and agrees with the provisions of the DUA is necessary. The Recipient
+                  must notify the NICHD DASH Administrator                   about a change of institution within 30 days of
+                  starting at the new institution.
+     2.                    Ap p rov ed  Parti es fo r  Access to Data
+
+         NICHD authorizes the Recipient, the Requester (if not the same individual as the Recipient), Affiliates and
+         /or Associates (if any) listed in Appendix A to access the Data. The Recipient Institution must ensure that
+         the Recipient, Requester (if not the same individual as the Recipient), Affiliates and/or Associates listed in
+         Appendix A, read and understand the terms of this DUA           .
+     3.                    Non -Dist ribution of Data
+         The Recipient Institution will retain control over the Data, and further, will not sell the Data, in any form,
+         to any entity or individual or to otherwise distribute the Data to anyone except those authorized under this
+         DUA to receive the Data. [Note: Recipients must not distribute the Data to Associates. Associates must
+         access the Data within the Recipient Institution’s data platform]. For clarity, the Recipient will not transfer
+         any Data obtained or accessed under this DUA to individuals or organizations not specified in this DUA,
+         except as required by law.
+     4.                    Res ea rch  Use of th e Data
+         Data obtained from the NICHD DASH study as listed in           Appendix B will be used by the Recipient, the
+         Requester (if not the same individual as the Recipient), Affiliates and/or Associates (if any) for the
+         purpose indicated and described in the Research Plan or Non-research Use specified in the NICHD DASH
+         online Data Request Form and incorporated herein by reference, in accordance with the following:
+              a.                     Data will only be used for purposes approved by the NICHD DASH Data Access Committee and
+                  /or the study-specific approving entity (such as the Study Steering Committee) as part of the
+                  Research Plan or Non-research Use.
+              b.                     A separate and completed DUA must be submitted for each Research Plan or Non-research Use for
+                  which Data are requested. A separate and fully executed DUA is also required when requesting
+                  new versions of the Data deposited later by the Submitter.
+              c.                     The Recipient, the Requester (if not the same individual as the Recipient), Affiliates and/or
+                  Associates (if any) listed in Appendix A will comply with all data use limitations specified by the
+                  Data Submitter and stated in the NICHD DASH Data Request Form.
+
+
+
+5.                     Dat a  Access f or Resea rch
+         Data in NICHD DASH are eligible for access by qualified investigators pursuant to the terms set forth in
+         this DUA. The Recipient Institution acknowledges that other requesting investigators also have access to
+         the same Data in NICHD DASH, and that downloading and utilization of the same Data that the Recipient
+         received from NICHD DASH as well as the duplication of research from such Data are distinct
+         possibilities.
+     6.                     Dat a Discl aim ers
+         The Recipient Institution agrees that although all reasonable efforts have been taken to ensure the accuracy
+         and reliability of the Data, NICHD does not and cannot warrant the results that may be obtained by using
+         any Data included therein. NICHD disclaims all warranties as to the accuracy of the Data in NICHD
+         DASH, or the performance or fitness of the Data for any particular purpose.
+         It is the specific intent of NICHD and the Recipient Institution that nothing contained in this DUA gives
+         rise to any right or cause of action, contractual or otherwise, in or on behalf of the individuals whose Data
+         are used or disclosed pursuant to this DUA.
+         The Recipient Institution understands and acknowledges that any request for access to the Data is
+         undertaken at its sole risk and with no expense applied to any study or to NICHD.
+         The Recipient Institution acknowledges that certain subsets of data received from NICHD DASH may
+         have been collected using proprietary instruments and/or coded using licensed coding standards (example,
+         MedDRA, SNOMED), which mandates users of such data to comply with licensing and subscription
+         requirements set forth by the owners of such instruments or standards. The Recipient Institution further
+         agrees to comply with such requirements and release NICHD or NICHD DASH from any liability for non-
+         compliance.
+     7.                     Certifi cat e of  Confidentiality
+         Data residing in NICHD DASH is protected by a Certificate of Confidentiality pursuant to section 301(d)
+         of the Public Health Service Act. The Certificate of Confidentiality prohibits disclosure of identifiable,
+         sensitive information collected or compiled during research unless disclosure is made pursuant to a
+         statutory exception. The Certificate of Confidentiality also protects all copies of data from NICHD DASH.
+         The Recipient Institution will comply with the requirements of the Certificate of Confidentiality as
+         explained in the NIH Policy for Issuing Certificates of Confidentiality  3.
+     8.                     Prohibition on Identification of S ub jects
+         Anyone using or accessing the Data must not attempt to establish the individual identities of any of the
+         individuals from whom the Data were obtained. In the event anyone discovers, or is able to deduce, the
+         identity of a specific individual, the Recipient Institution or Recipient must immediately notify the N IC HD
+         DASH Administrator          and suspend the use of the Data until further approval can be obtained. The
+         notification must be in writing and within five (5) business days of the discovery of any unauthorized use
+         or disclosure of identifying information related to the Data of which the Recipient and/or Requester and/or
+         Affiliates and/or Associates become aware. The Recipient Institution shall take (i) pro mpt corrective action
+         to cure any deficiencies or (ii) any action pertaining to such unauthorized disclosure required by applicable
+         federal law.
+         In the event anyone discovers, or is able to deduce, the identity of a specific individual, or any associated
+         information (such as clinically significant information), that person shall not reveal the individual’s
+         identifying information, or any associated information, to any person or attempt to contact the individual.
+         However, it is acknowledged that the Recipient Institution and Recipient may already possess or will
+         obtain from another source, identifying information related to the Data, and so the Recipient Institution
+         may be subject to additional restrictions or obligations or even alternative permissions under separate
+         agreements.
+
+
+
+
+
+
+
+
+
+
+
+
+3 NIH Policy for Issuing Certificates of Confidentiality at: https://grants.nih.gov/grants/guide/notice-files/NOT-OD-                                                          17-
+109.html
+
+
+
+9.                     Non -Endorsement and Liabilit y
+     The Recipient Institution will not claim, infer, or imply endorsement by the United States Government, the
+     Department of Health and Human Services (HHS), the National Institutes of Health (NIH), or the NICHD
+     of the Research Plan or Non-research Use, the entity or personnel conducting the Research Plan or Non-
+     research Use, or any resulting commercial product(s). The United States Government assumes no liability
+     except to the extent provided under the Federal Tort Claims Act (28 U.S.C. § 2671-2680).
+10.                      Compliance  with the  Recipient's Institutional Req u irem en ts
+     The Recipient Institution will comply with all applicable rules for the protection of human subjects, which
+     may include HHS regulations at 45 CFR Part 46, the U.S. Food and Drug Administration regulations at 21
+     CFR Parts 50 and 56, the current International Conference on Harmonization E-6 Guidelines for Good
+     Clinical Practice, the current Council for International Organizations of Medical Sciences International
+     Ethical Guidelines for Biomedical Research Involving Human Subjects, and any other Federal and State
+     laws or local policy pertaining to use of the Data. The Recipient will report any proposed change in the
+     Research Plan or Non-research Use promptly to NICHD. This DUA is made in addition to, and does not
+     supersede, any of the Recipient Institution’s policies or any applicable local, State, and/or Federal laws
+     and regulations that provide additional protections for human subjects.
+11.                     Dat a Discl osu re/B reach
+     The Recipient Institution must notify the NICHD DASH Administrator           in writing within five (5) business
+     days upon the receipt of any legal, investigatory, or other demand for disclosure of Data. The Recipient
+     Institution shall notify the NICHD DASH Administrator in writing within two (2) business days upon
+     discovering any breach, or suspected breach, of any unauthorized disclosure of Data. The existence of a
+     breach or suspected breach is not necessarily, but may be, grounds for DUA termination. NICHD may also
+     seek injunctive relief against the Recipient Institution to prevent any disclosure of Data by the Recipient to
+     anyone other than NICHD.
+12.                      In tellectu al P rop erty
+     Data in NICHD DASH is made available to the research community for their use to further the research
+     and development of ideas that will benefit and improve public health. NICHD encourages the development
+     of new diagnostics, therapeutics, or other interventions building on basic discoveries enabled through Data
+     obtained from NICHD DASH. The Recipient Institution and the Recipient are free to pursue patent
+     protection on any inventions or discoveries developed through their approved use of NICHD DASH Data.
+13.                      S ecu rity Req u irem en t s
+     The Recipient Institution shall ensure compliance by the Recipient of the security requirements listed
+     below:
+           a.                     Maintenance of, and access to, Data
+                    i.                         The Recipient shall retain the original version of the Data and may make no copy or
+                        extraction of the Data available to anyone other than the Requester (if not the same
+                        individual as the Recipient), Affiliates and/or Associates.
+                   ii.                            The Recipient must ensure that the Requester and/or Affiliates are registered in NICHD
+                        DASH.
+                   iii.                             The Recipient must ensure that all Associates access the Data only within the Recipient
+                        Institution’s data platform and must not download Data from the Recipient Institution’ s data
+                        platform to their local data platform or devices.
+                   iv.                           The Recipient, the Requester (if not the same individual as the Recipient), and/or Affiliates
+                        and/or Associates must keep the Data secure and confidential at all times and adhere to the
+                        Recipient Institution’s information security best practices in all aspects of data management
+                        to assure that only the Recipient, Requester (if not the same individual as the Recipient),
+                        Affiliates and/or Associates have access to the Data obtained through this DUA.
+
+
+
+b.                     Retention of Data: Upon research termination or the termination of this DUA, the Recipient, the
+                   Requester (if not the same individual as the Recipient), and/or Affiliates shall destroy all copies of
+                   the Data, except as required by publication practices or law to retain them.
+   14.                     Form at of Data
+         Data under this DUA may take many formats, depending upon the available technology.
+   15.                      Acknowledgments
+         The Recipient Institution and the Recipient will acknowledge the contribution of the Principal Investigator
+         (s)          who conducted the original study from which the Data were generated, the funding organization(s) that
+         supported the original study, and NICHD DASH in all resulting oral or written presentations, disclosures, or
+         publications, and patents, practical applications, or inventions originating from the Data.
+         Any manuscript resulting from the Data must also include an acknowledgement, as specified by the
+         Submitter(s), which can be obtained from NICHD DASH when processing the request online.
+   16.                      Perm ission  to P ost In form ation  Publicly
+         The Recipient Institution permits NICHD to post the Recipient’s approved use of NICHD DASH along
+         with the Recipient’s name and the name of the Recipient Institution on the NICHD DASH website.
+   17.                      Annual Rep ort
+         As a means to determine the effectiveness of NICHD DASH, the Recipient will submit to NICHD DASH
+         an Annual Report with the following:
+               a.                     Summary of accomplishments, including a list of oral or written presentations, disclosures,
+                   abstracts, publications, patents, practical applications, or inventions resulting from the approved use
+                   of the Data
+               b.                     For Non-research Use, a summary of the outcome from practical applications
+               c.                     Publication number (or a copy) of any published patent application for newly discovered o r
+                   developed technologies
+               d.                     Any updates to the list of Affiliates and/or Associates
+   18.                     Dat a Use Rep ortin g
+         When requested by NICHD, the Recipient Institution and the Recipient will respond to requests for
+         information on the effectiveness of NICHD DASH Data, workflows, and procedures (e.g., ease of access
+         and use, utility of Data, policy compliance, and suggestions for improving data access or the program).
+   19.                     Priv acy Act  Notif ication
+         The Recipient Institution agrees that information collected from the Recipient, such as name, contact,
+         funding, and data use information may be used in part, or in whole, for tracking and reporting purposes.
+         This Privacy Act Notification is provided pursuant to Public Law 93-579, the Privacy Act of 1974, 5U .S.
+         C.           Section 552a. The authority for the collection of the information requested from the Recipient comes
+         from the authorities regarding the establishment of the National Institutes of Health (NIH), its general
+         authority to conduct and fund research and to provide training assistance, and its general authority to
+         maintain records in connection with these and its other functions (42 U.S.C. 203, 241, 289l-1 and 44U .S .
+         C.           3101), and Sections 301 and 493 of the Public Health Service Act. These records will be maintained in
+         accordance with the Privacy Act System of Record Notice 09-25-0156 4 covering “Records of Participants
+         in Programs and Respondents in Surveys Used to Evaluate Programs of the Public Health Service (PHS),
+         HHS/PHS/NIH/OD.”
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4 Privacy Act System of Record Notice 09-25-                                        0156 at: https://www.govinfo.gov/content/pkg/FR-2002-                                                                                09-                                        26/pdf/02-
+23965.pdf
+
+
+
+The primary uses of this information are to document, track, monitor, and evaluate the use of NICHD
+     DASH Data, as well as to notify interested parties of updates, corrections, or other changes to the Data.
+20.                      Pen alties f or Viol ation  of th e DUA
+     The Recipient Institution agrees that should NICHD determine, or have a reasonable belief, that the
+     Recipient or any other authorized user of the Data has violated any terms of this DUA, NICHD will
+     provide the Recipient Institution with a 30-day notice to remedy the violation. If the Recipient Institution
+     does not rectify the violation, NICHD, at its sole discretion, will terminate the DUA and close the NICHD
+     DASH account of the Recipient, Requester (if not the same individual as the Recipient), Affiliates and
+     Associates (if any) listed in Appendix A. Accounts that have been closed due to a violation of this DUA
+     may be reactivated upon the submission of evidence of remediation that is acceptable to NICHD, a revised
+     online data request, and a new DUA.
+     If the Recipient Institution or the Recipient commits a material breach of this DUA, NICHD may, in its
+     sole discretion, terminate this DUA with 10 days written notice and require that the Recipient destroy the
+     Data as instructed by NICHD. The following situations are examples of material breaches:
+          a.                     Unauthorized distribution of Data (see Clause 3)
+          b.                     Identification of subjects in the Data obtained from NICHD DASH (see Clause 8         )
+          c.                     Unauthorized Data disclosure (seeClause 11)
+          d.                     Retention of Data after the DUA expiration date (seeC lause                               13.b.)
+     The Recipient Institution understands that as a result of this determination or reasonable belief that a
+     material breach of this DUA has occurred, NICHD may also refuse to release new data to the Recipient
+     Institution.
+     The Recipient Institution also agrees to immediately report violations of NICHD DASH Policy by the
+     Recipient, Requester (if not the same individual as the Recipient), and/or Affiliates and/or Associates who
+     are subject to this DUA to the NICHD DASH Administrator                       .
+21.                      Termination of the DUA
+     Either NICHD or the Recipient Institution may terminate this DUA without cause by providing 30 days
+     written notice to the other party. This DUA may also be terminated by mutual written agreement between
+     NICHD and the Recipient Institution.
+     In addition to the specific circumstances whereby NICHD may terminate this DUA (as indicated under
+     various terms and conditions of this DUA), NICHD reserves the right to terminate the DUA when the
+     Submitter has withdrawn the Data from NICHD DASH – either permanently or to submit a redacted o                     r
+     revised dataset. In both cases, NICHD will terminate the DUA by providing 30 days written notice to the
+     Recipient Institution and instruct the Recipient to destroy the Data. If and when a redacted or revised
+     dataset is deposited by the Submitter in NICHD DASH, the Recipient may choose to execute a new DUA
+     to obtain this new dataset.
+22.                      Term  of th e DUA
+     This DUA will remain in effect for a period of three (3) years from the DUA Effective Date and will
+     automatically expire at the end of this period unless terminated earlier or renewed. The Recipient
+     Institution may request that the DUA be renewed three (3) months prior to the expiration date by
+     submitting an application to the NICHD DASH Administrator           for renewal of the DUA.
+23.                      Amendments
+     Amendments to this DUA must be made in writing and signed by the Recipient Institution and NICHD.
+     Any amendment must be submitted and approved; the DUA becomes effective only following the date of
+     approval.
+
+
+
+24.                      S u rvival
+        Provisions 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 18, 19, and 20 of this DUA will survive expiration or
+        termination of this DUA.
+V.           PROCESSING OF THIS DATA USE AGREEMENT
+The Recipient Institution will ensure compliance with all terms included in this DUA and expressly certifies that
+the contents of any statements made or reflected in this document are truthful and accurate.
+
+
+                                                   See the next page for Signatures.
+
+
+
+VI.           FOR THE RECIPIENT INSTITUTION:
+
+
+
+Signature of the Authorized Organization Representative                                             Date
+Name of the Authorized Organization Representative:
+
+Title of the Authorized Organization Representative:
+
+
+I have read and understand the terms of this DUA:
+
+
+
+
+
+Signature of the Recipient                                                                          Date
+Name of the Recipient:
+
+Title of the Recipient:
+
+
+VII.           FOR THE NICHD:
+
+
+
+Signature of the Division Director (or Designee)                                                    Date
+
+Name of the Division Director (or Designee):
+
+Title of the Division Director (or Designee):
+
+
+
+APPENDIX A: LIST OF USERS WITH ACCESS TO NICHD DASH STUDY DATA
+        This DUA authorizes the following individuals to access the study Data. The Data must NOT be shared
+        with any other individuals. Note that Associates must access the Data within            the Recipient Institution's
+        data platform.
+    1.                     DATA RECIPIENT
+        Name of the Recipient who is approved to access the Data from the Requester or NICHD DASH is shown
+        below.
+        Name:
+
+        Title:
+
+    2.                      DATA REQUESTER
+        Name of the Requester who is approved to access the Data from the Recipient or NICHD DASH is shown
+        below.
+        Name:
+
+        Title:
+
+    3.                     AFFILIATES
+        List of Affiliates who are approved to access the Data from the Recipient or NICHD DASH:
+               First Name                          Last Name                          Job Title/Position
+         1
+         2
+    4.                    ASSOCIATES
+        List of Associates who are approved to access the Data within the Recipient Institution’s data platform:
+               First Name                          Last Name                          Job Title/Position
+         1
+         2
+
+
+
+APPENDIX B: LIST OF DATA FILES TO BE OBTAINED FROM NICHD DASH
+Requested NICHD  DASH Study: [          Name will be automatically added by the NICHD DASH system during the
+request process]
+Note: One of the following language options will be displayed depending on whether the study’s informed
+consent requires IRB approval for data request.  If IRB approval is required, cart level approval is dictated.
+Otherwise, study level approval is granted.
+[OPTION A]
+This study allows for "Study level approval". This means that regardless of whether entire content or only a
+subset of the data from this Study is requested, upon approval of this request, the Recipient, the Requester (if not
+the same individual as the Recipient), and/or Affiliates listed in Appendix A will have access to all Data from this
+study. Note that Associates, if any, must access the Data within the Recipient Institution’s data platform.
+[OPTION B]
+This study allows for "Cart level approval". This means that, upon approval of this request, the Recipient, the
+Requester (if not the same individual as the Recipient), and/or Affiliates listed in Appendix A will only have
+access to the requested Data from this study as listed below. Note that Associates, if any, must access the Data
+within the Recipient Institution’s data platform.

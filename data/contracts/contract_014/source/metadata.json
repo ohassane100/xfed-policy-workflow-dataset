@@ -1,0 +1,37 @@
+{
+  "contract_id": "contract_014",
+  "title": "COVID-19 Data Platform Data Transfer Agreement",
+  "organization": "Infectious Diseases Data Observatory",
+  "agreement_type": "DTA",
+  "source_url": "https://www.iddo.org/sites/default/files/publication/2021-03/COVID-19%20Data%20Transfer%20Agreement%2016MAR21.pdf",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:10:50.011555+00:00",
+  "ingestion_status": "normalized",
+  "preprocessing_status": "complete",
+  "resolved_url": "https://www.iddo.org/sites/default/files/publication/2021-03/COVID-19%20Data%20Transfer%20Agreement%2016MAR21.pdf",
+  "download_url": "https://www.iddo.org/sites/default/files/publication/2021-03/COVID-19%20Data%20Transfer%20Agreement%2016MAR21.pdf",
+  "original_sha256": "b39fffd59aeae1b4b81c796f6d7b750f01e61f8db8ad5e3e2bfd15841f0cb4cc",
+  "original_filename": "COVID-19 Data Transfer Agreement 16MAR21.pdf",
+  "content_type": "application/pdf",
+  "content_disposition": "",
+  "resolution": {
+    "method": "direct_or_unique_official_link"
+  },
+  "normalization_engine": "original_pdf_byte_copy",
+  "pdf_sha256": "b39fffd59aeae1b4b81c796f6d7b750f01e61f8db8ad5e3e2bfd15841f0cb4cc",
+  "text_sha256": "e07ae17b98f2fa4b96243c04ded62c724d19bb5a4edfe68a5fb12d2b4474a2f9",
+  "page_count": 10,
+  "empty_text_pages": [],
+  "preprocessing": {
+    "engine": "pypdf",
+    "mode": "layout",
+    "ocr": false
+  },
+  "text_quality": {
+    "control_characters": 0,
+    "replacement_characters": 0
+  }
+}

@@ -1,0 +1,619 @@
+Trusted Research Environment Data Access Agreement Template
+
+
+
+Scope:
+
+This Agreement is intended for use where data is accessed within a Trusted Research Environment
+(TRE) for the purposes of research and development for the public good.
+
+Between:
+
+     (1) [Host Organisation name] whose registered address is [address] (the Host Organisation) and
+     (2) [User Organisation name] whose registered address is [address] (the User Organisation)
+         (each ‘Party’ and together ‘Parties’)
+
+
+
+Where data access will occur within the following TRE: [name] (the TRE)
+
+The Host Organisation authorises access to Data in the TRE for Approved Researcher(s) from the
+User Organisation who have accepted the Terms of Use [Annex 1].  Access is authorised for the
+purposes of the Approved Project(s) [Annex 2] or Approved Purposes defined in Annex  only:
+
+
+
+ Project Details
+ Approved Project(s)                    [name/details of Approved Project(s)] as further defined in Annex
+                                        2 or Approved Purposes defined in Annex 3
+ Research Project Sponsor               [name of Sponsor (if applicable)]
+ Lead Researcher/Principal              [name]
+ Investigator/ Main
+ Applicant]
+ User Organisation                      [name]
+ Term                                   [authorised duration of Approved Project(s)/Purposes]
+ Data                                   [description of datasets requested for Approved
+                                        Project(s)/Purposes] as further defined in Annex 4
+
+
+
+Responsibility:
+
+The User Organisation is responsible for compliance by Approved Researchers with the terms of
+this Agreement and the Terms of Use [Annex 1] as further specified below.
+
+Approved Researchers are not required to sign this Agreement but must accept the Terms of Use
+before accessing the TRE.
+
+
+The terms below (including those set out in the Annexes) govern the access to the Data:
+
+
+
+
+
+
+                                                                                                            Page 1 of 11
+
+
+
+1.   Safe People            1.
+                                  1.1.  The User Organisation shall:
+                                       1.1.1. make Approved Researcher(s) aware of, and ensure Approved
+                                              Researcher(s) comply with, the terms of this Agreement and
+                                              the Terms of Use, and any breach by an Approved Researcher
+                                              of the Terms of Use or this Agreement shall be a breach of the
+                                              User Organisation of this Agreement;
+                                       1.1.2. notify the Host Organisation within 5 working days of changes
+                                              to Approved Researcher(s), including where an Approved
+                                              Researcher has left the User Organisation or is no longer
+                                              authorised to work on the Approved Project(s); and
+                                       1.1.3. ensure that Approved Researchers do not share login details
+                                              or access credentials to the TRE with any other person and do
+                                              not attempt to access the Data or the TRE after they have
+                                              been notified that they are no longer authorised to do so.
+                                  1.2.  The User Organisation warrants that the Approved Researcher(s)
+                                        are appropriately trained and skilled in data protection,
+                                        confidentiality, governance, and security, and to the standard
+                                        specified in Annex
+                                  1.3.  The Host Organisation shall:
+                                       1.3.1. terminate access to the Data on termination or expiry of the
+                                              Agreement;
+                                       1.3.2. following notification in accordance with clause 1.1.2 above,
+                                              terminate access to the TRE for the relevant Approved
+                                              Researchers; and
+                                       1.3.3. in the event of a breach or suspected breach of this
+                                              Agreement, including the Terms of Use, immediately suspend
+                                              access to the Data for one or more Approved Researcher(s)
+                                              and fully investigate the breach or suspected breach and may
+                                              apply further penalties and/or require remediations as set out
+                                              in Annex 6.
+                                  1.4.  If there is any conflict between the Terms of Use and this
+                                        Agreement, this Agreement shall prevail.
+
+
+
+
+
+
+
+ 2.   Safe Projects          2.
+                                  2.1.  The User Organisation shall access and use the Data in the TRE:
+                                       2.1.1. in accordance with Applicable Laws;
+                                       2.1.2. for the Approved Project(s) only, in line with the approved
+                                              project scope for research in the public good [as defined in
+                                              Annex 2], or where access is permitted under this Agreement
+                                              for other Approved Purposes [Annex 3], and not for any other
+                                              purposes ; and
+                                       2.1.3. in accordance with all applicable ethical standards and
+                                              approvals.
+
+
+
+                                                                                                              Page 2 of 11
+
+
+
+2.2.  The Host Organisation shall publish accurate and up to date details
+                                         of the Approved Project(s) and associated Approved Researcher(s)
+                                         in a publicly available data use register.
+                                   2.3.  The Approved Project(s) may only be varied by following the
+                                         procedure set out in Annex 7.
+
+ 3.   Safe Settings           3.
+                                   3.1.  The Host Organisation shall ensure that the TRE and processing
+                                         arrangements implement appropriate technical and organisational
+                                         measures in compliance with Data Protection Laws.
+                                   3.2.  The User Organisation shall ensure that the Approved
+                                         Researchers:
+                                        3.2.1. keep the Data and any access credentials to the Data
+                                               confidential in accordance with Applicable Laws and with at
+                                               least the same degree of care used to protect its own
+                                               confidential information;
+                                        3.2.2. do not access, use, or disclose the Data other than as
+                                               permitted by this Agreement or as required by Applicable
+                                               Laws; and
+                                        3.2.3. do not introduce or permit the introduction of any virus,
+                                               software, code, file or programme into the TRE which could
+                                               compromise its security, or the security of the Data, and shall
+                                               ensure that the End User security requirements set out in
+                                               Annex 8 are followed by the Approved Researcher(s).
+                                   3.3.  The Host Organisation shall monitor and audit the use of the TRE
+                                         and the Data by the User Organisation and its Approved
+                                         Researcher(s) to ensure compliance with the terms of this
+                                         Agreement in accordance with the protocol set out in Annex 9.
+
+ 4.   Safe Data               4.
+                                   4.1.  The User Organisation shall ensure that the Approved Researchers
+                                         do not, and do not attempt to:
+                                        4.1.1. identify individuals from the Data:
+                                        4.1.2. contact any Research Participant; or
+                                        4.1.3. link or combine the Data with other information or data
+                                               (including any information relating to an identified or
+                                               identifiable natural person) available to the User Organisation
+                                               without permission from the Host Organisation.
+                                   4.2.  The User Organisation acknowledges and agrees that it has sole
+                                         responsibility, and the Host Organisation takes no responsibility,
+                                         for interpretation or further analysis of the Data.
+                                   4.3.  The User Organisation will inform the Host Organisation without
+                                         delay, and in any event within 12 hours of becoming aware of:
+                                        4.3.1. any unauthorised access, disclosure, loss damage or
+                                               alteration of the Data;
+                                        4.3.2. any element within the Data that might permit the
+                                               identification of a Research Participant;
+                                        4.3.3. any event which may impact the confidentiality, integrity or
+                                               availability of the Data including cyber security incidents;
+
+
+
+                                                                                                               Page 3 of 11
+
+
+
+4.3.4. any complaints in relation to the Data including complaints
+                                               from an individual or supervisory authority; and
+                                        4.3.5. any request from a Research Participant to exercise their
+                                               rights in respect of the Data.
+                                   4.4.  To the extent required by Data Protection Laws, the Host
+                                         Organisation shall notify data protection supervisory authorities
+                                         and – where applicable – notify affected data subjects in the event
+                                         of a personal data breach (provided that the User Organisation
+                                         shall not be restricted from making such notifications in cases
+                                         where such notifications are required by Data Protection
+                                         Legislation and the Host Organisation fails to make such
+                                         notifications in accordance with the requirements of Data
+                                         Protection Legislation). The parties will collaborate in this regard
+                                         as appropriate.
+                                   4.5.  Host Organisation shall be responsible for responding to data
+                                         subject rights requests submitted to either party in an appropriate
+                                         and legal manner.  User Organisation shall provide reasonable
+                                         assistance to Host Organisation where this is necessary in order to
+                                         respond.
+                                   4.6.  Where the Approved Project(s) involve access to linked NHS data,
+                                         the provisions in Annex 16 shall apply.
+
+ 5.   Safe Outputs            5.
+                                   5.1.  The User Organisation may only publish, distribute or otherwise
+                                         share Research Outputs that have been approved in accordance
+                                         with the process set out at Annex 10 and the Output
+                                         acknowledgment policy set out in Annex 11. Research Outputs
+                                         must not include Personal Data.
+                                   5.2.  The User Organisation shall not:
+                                        5.2.1. use any Research Output for any purpose contrary to
+                                               Applicable Laws or Approved Project(s) purposes; or
+                                        5.2.2. download, extract, transmit, transfer, remove, share, copy, or
+                                               publish any of the Data from the TRE (but this shall not
+                                               prevent the publication of Research Outputs in accordance
+                                               with Annex 11).
+
+ 6.   Intellectual            6.
+      Property                     6.1.  This Agreement is not intended to constitute any transfer of
+                                         Intellectual Property Rights in the Data or the TRE.
+                                   6.2.  Ownership of Intellectual Property Rights is set out in Annex 13.
+                                   6.3.  Unless otherwise specified in Annex 13, Intellectual Property
+                                         Rights in the Research Outputs shall belong to the User
+                                         Organisation.
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                Page 4 of 11
+
+
+
+7.   Research                7.
+      uncertainty/ no              7.1.   It is generally not possible to know with certainty at the outset of
+      warranty                            research whether access to and use of particular datasets will
+                                          answer the relevant research question or produce valuable
+                                          outputs, therefore to the fullest extent permitted under Applicable
+                                          Laws, the Host Organisation:
+                                         7.1.1. makes no warranty, express or implied as to the quality of the
+                                                Data or its suitability for the Approved Project(s); and
+                                         7.1.2. excludes all liability for actions, claims, proceedings,
+                                                demands, losses, costs, awards, damages, and payments
+                                                suffered or made by the User Organisation that may arise
+                                                from their use of the Data or unavailability of the Data for
+                                                whatever reason.
+ 8.   Compliance              8.
+      with Laws                    8.1.   Each Party shall comply with their respective obligations under all
+                                          Applicable Laws, including Data Protection Laws.
+                                   8.2.   If the User Organisation is outside the UK and not in a country in
+                                          respect of which an adequacy decision under Art.45 UK GDPR
+                                          applies1, the terms at Annex 17 will apply.
+                                   8.3.   If either Party is obliged to respond to requests under the
+                                          Freedom of Information Act 2000 (‘FOIA’2 ), and a request is
+                                          received regarding the Data, the other Party shall provide
+                                          reasonable assistance to the Party in receipt of the request to
+                                          comply with its obligations under FOIA. The Party subject to any
+                                          request under FOIA retains overall discretion for responding to
+                                          requests made under FOIA.
+ 9.   Cost Recovery           9.   The Host Organisation may charge fees for providing the User
+      and Service                  Organisation with access to the TRE in accordance with the Cost
+      Levels                       Recovery Policy set out in Annex 14.
+                              10. Applicable service levels and helpdesk support facilities provided by the
+                                   Host Organisation are set out in Annex 18
+ 10.  Further                 11.
+      provisions                   11.1.           This Agreement is drafted in the English language. If this
+                                          Agreement is translated into any other language, the English
+                                          language version shall prevail. All other documents provided under
+                                          or in connection with this Agreement shall be in English or
+                                          accompanied by a certified English translation.
+                                   11.2.           This Agreement constitutes the entire agreement between
+                                          the Parties. No variation of this Agreement shall be effective
+                                          unless it is agreed in writing and signed by the Parties or their
+                                          authorised representatives.
+                                   11.3.           Any notices under this Agreement shall be in writing sent
+                                          to the Parties registered address or by email: for Host
+                                          Organisation: [insert email address]; and for the User Organisation
+                                          [insert email address].
+
+
+1 Note: these are: countries in the EEA, as well as Andorra, Argentina, Canada (commercial organisations),
+Gibraltar, Guernsey, Isle of Man, Israel, Japan (private sector), Jersey, New Zealand, Republic of South Korea,
+Switzerland and Uruguay.
+2  Drafting note: if the governing law in clause 9 below is Scottish law, please update this reference to include
+“Freedom of Information (Scotland) Act 2002 (‘FOISA’)” and update the rest of this clause accordingly.
+
+                                                                                                                  Page 5 of 11
+
+
+
+11.4.          No person other than a Party to this Agreement shall have
+                                        any rights to enforce any term of this Agreement.
+                                  11.5.          Either Party may terminate this agreement by thirty (30)
+                                        days’ written notice to the other Party.
+                                  11.6.          The Term of this Agreement is set out in Annex 7 and may
+                                        be extended by following the procedure set out in Annex 7.
+                                  11.7.          This Agreement, its subject matter, or its formation
+                                        (including non-contractual disputes or claims) shall be governed
+                                        and construed in accordance with the laws of England and Wales
+                                        and the Parties agree to the exclusive jurisdiction of the English
+                                        Courts (including non-contractual disputes or claims).
+
+
+ Signatories:
+
+
+ Signed by an
+ authorised
+ representative for
+ and on behalf of
+ the User
+ Organisation:
+
+
+ Signed by an
+ authorised
+ representative for
+ and on behalf of
+ Host Organisation:
+
+
+
+
+The following definitions apply in the Agreement:
+
+“Agreement” means this Trusted Research Environment (TRE) Data Access Agreement including the
+Annexes hereto and the Terms of Use.
+“Applicable Laws” means all applicable laws, statutes, regulations, and codes from time to time in
+force including Data Protection Laws.
+“Approved Project(s)” means the project(s) identified in Annex 2 below.
+“Approved Purposes” means the purposes identified in Annex 3 below.
+“Approved Researcher(s)” means Researcher(s) whose access to and use of the Data in the TRE for
+the Approved Project(s) or Approved Purposes has been approved in writing by the Host
+Organisation to the User Organisation, and who have entered the Terms of Use, prior to such access
+or use, and such approval has not been revoked by the Host Organisation.
+“Data” means the data fields and datasets to which the User Organisation has been approved access
+as described above.
+“Data Protection Laws” means any Applicable Laws with respect to data protection and
+privacy, including the General Data Protection Regulation ((EU) 2016/679) (“GDPR”), the UK
+GDPR (as defined in the UK Data Protection Act 2018) and/or Data Protection Act 2018, as
+applicable to either Party and or the activities under this Agreement.
+
+
+                                                                                                             Page 6 of 11
+
+
+
+“Host Organisation” means the organisation which is accredited to host and control the TRE.
+“Intellectual Property Rights” means the patents, rights to inventions, copyright and related rights,
+moral rights, trademarks and service marks, business names and domain names, rights in get-up,
+goodwill and the right to sue for passing off, rights in designs, rights in computer software, database
+rights, rights to use, and protect the confidentiality of, confidential information (including know-how
+and trade secrets) and all other intellectual property rights, in each case whether registered or
+unregistered and including all applications and rights to apply for and be granted, renewals or
+extensions of, and rights to claim priority from, such rights and all similar or equivalent rights or
+forms of protection which subsist or will subsist now or in the future in any part of the world.
+“Personal Data” has the meaning given to it in Data Protection Laws.
+“Principal Investigator” means the individual specified above.
+“Research Output” means any data, learning, discovery, insight, paper, publication, or other results
+arising out of an Approved Project.
+“Research Participant” means an individual whose data forms part of the Data.
+“Term” means the duration of the Agreement as provided above.
+“Terms of Use” means the Terms of Use of the TRE which will be accepted individually by Approved
+Researchers as users of the TRE.
+“User Organisation” means the organisation which is responsible for individuals using a TRE service.
+“Working Day” means any day other than a Saturday, Sunday, or public holiday in the UK country in
+which the Host Organisation is based.
+
+
+
+                                                         Annexes
+The Annexes are customisable to the individual requirements for the TRE. Host Organisations shall
+follow  the  guidance  for  each  Annex  when  deciding  on  what  information  to  include.    Duplication
+between the terms above and the Annexes should be avoided and where there is conflict with any
+terms in the annexes and the main Agreement, the terms of the main Agreement shall prevail.
+
+
+Annex 1
+Terms of Use
+
+Guidance: Annex 1 contains Terms of Use that may be used for approved researcher access to a TRE.
+It is recommended that the Terms of Use present as ‘click through’ terms that the Approved
+Researchers accept when accessing the TRE. If there are Terms of Use already in place for the TRE,
+insert them here and the below terms will not apply.
+
+Terms of Use:
+
+The Approved Researcher agrees that they must:
+     1.   Complete the Office for National Statistics (ONS) Safe Researcher Training prior to accessing
+          the TRE/SDE (or equivalent as defined in Annex 5 of the Data Access Agreement)
+     2.   Adhere to all relevant data protection legislation, including the UK General Data Protection
+          Regulation (GDPR) and the UK Data Protection Act (2018).
+     3.   Always preserve the confidentiality of the Data.
+     4.   Use the data for research for public good and only within the Approved Project scope and
+          purposes (as defined in Annex 2 of the Data Access Agreement).
+     5.   Notify the Host Organisation immediately of any breach of data in the TRE or incident that
+          may have compromised the security of the Data.
+     6.   Ensure that they are not overlooked by unauthorised persons when accessing the TRE.
+
+
+                                                                                                               Page 7 of 11
+
+
+
+The Approved Researcher agrees that they must not:
+     7.   Share access credentials or give access to Data in the TRE to any other person.
+     8.   Leave their device unattended while accessing the TRE.
+     9.   Link data to any other dataset other than those defined in the Approved Project.
+     10. Attempt to copy or remove Data or analyses of the Data from the TRE without following the
+          TRE Output Checking Policy as defined in Annex 10 of the Data Access Agreement.
+     11. Attempt to identify or contact any individual using Data in the TRE.
+
+
+          I agree that I have fully read and understood the Data Access Agreement and the Terms of
+          Use above: [Approved Researcher enters their name and User Organisation name as
+          acknowledgement]
+
+
+Annex 2
+Approved Project(s) Description
+          Guidance: Annex 2 can cover a single project or multiple projects.  Annex 2 can include the
+          following:
+                   A detailed summary of the project objectives and statistical analysis plan
+                   Attach the approved application form(s)
+                   Reference to separate approval system where the Approved Project(s) scope is
+                    clearly set out.
+
+
+Annex 3
+Other approved purposes for TRE access
+
+          Guidance: Access to the data may be permitted for a purpose other than a research study
+such as access for testing, audit, or feasibility counts.  Where applicable, Annex 3 should set out
+terms related to access for such purposes.
+
+
+Annex 4
+Datasets/Data fields available
+          Guidance: The purpose of this section is to detail the datasets available for analysis and (if
+          applicable) linkage in the TRE.
+
+Annex 5
+Approved Researcher training requirements
+          Guidance: Details of the training or accreditation requirements prior to requesting Approved
+          Researcher status to access data in the TRE as part of an Approved Project. For example, this
+          section could state that Researchers should undertake the Office for National Statistics
+          (ONS) Safe Researcher Training (SRT) and achieve full accreditation status, or provisional
+          accreditation where access to the TRE will be under supervision of an Approved Researcher
+          with full accreditation status. Where a TRE will not use the ONS SRT accreditation, an
+          equivalent standard of training must be demonstrated, and will be detailed here:
+
+
+
+
+
+                                                                                                              Page 8 of 11
+
+
+
+Annex 6
+Non-compliance, Offences and Penalties
+          Guidance: Penalties and remediation required for breaches of this Agreement, including self-
+          reported breaches, as defined by the Host Organisation should be described here:
+
+
+Annex 7
+Term and Conditions of extension/amendment submission
+          Guidance: Set out:
+                   The agreed Term for data access, and whether this is for the duration of the project
+                    or a defined period (for example, 12 months).
+                   The process for submitting a request for an extension to the Term of the Approved
+                    Project(s)
+                   The process for submitting amendments to the scope or purposes (whether
+                    commercial or non-commercial) of the Approved Project(s).
+
+
+
+
+Annex 8
+End user security requirements
+          Guidance: The User Organisation is responsible for ensuring that electronic devices used to
+          access the TRE are fit for purpose and are secured through the implementation of access
+          control mechanisms. Further end user security requirements defined by the Host
+          Organisation should be listed in this section, along with the means of checking these (this
+          may be part of the application for an Approved Project process):
+
+
+
+
+
+Annex 9
+TRE protocol on monitoring use/audit/compliance
+          Guidance: The Host Organisation protocol for monitoring access to and use of the TRE
+          should be inserted here. It is recommended that the protocol is made publicly available and
+          accessible via the Host Organisation website.
+
+
+Annex 10
+TRE output checking policy
+          Guidance: This purpose of this section is to define the process the TRE will have in place for
+          checking/auditing the anonymous outputs prior to release, and detail disclosure control. It is
+          recommended that the policy is made publicly available and accessible via the Host
+          Organisation website.
+
+
+
+
+
+
+                                                                                                              Page 9 of 11
+
+
+
+Annex 11
+Output acknowledgement/Publications policy
+          Guidance: Requirements for inclusion of acknowledgements in any outputs from the TRE
+          using data (including any Data under licence) should be defined here. It is recommended
+          that the policy is made publicly available and accessible via the Host Organisation website.
+
+
+Annex 12
+Open sharing of code, syntax, or methodology
+          Guidance: Sharing of code, syntax, and methodology, where possible, is encouraged to avoid
+          duplication of efforts amongst the research community. Sharing should occur through the
+          channels specified here, and ownership detailed. It is recommended that the policy is made
+          publicly available and accessible via the Host Organisation website.
+
+
+Annex 13
+Intellectual property rights
+          Guidance: Ownership of Intellectual Property Rights relating to source data, linked data,
+          derived data, metadata, researcher analyses and Research Outputs may be specified in
+          detail here:
+
+ The following example is for reference:
+ Intellectual Property Policy - Grant Funding | Wellcome
+ Consent and revenue and equity sharing policy - Grant Funding | Wellcome
+
+
+Annex 14
+Cost recovery policy
+          Guidance: The Host Organisation policy for pricing and/or recovering costs associated with
+          accessing data in the TRE should be inserted here:
+ The following example is for reference:
+ Pricing | CPRD
+
+
+Annex 15
+Conditions of permitted linkage
+          Guidance: Approved Researchers may not attempt to match or link the Data to any other
+          data from any other source without express permission. Conditions relating to the linkage of
+          datasets held within the TRE and any permitted datasets that may be ingested into the TRE
+          (if applicable) are defined here:
+
+
+Annex 16
+Additional terms for sublicensed data
+          Guidance: Where the User Organisation is accessing sublicensed linked Data (for example,
+          Hospital Episode Statistics from NHS England), the following additional conditions will apply:
+
+
+
+                                                                                                            Page 10 of 11
+
+
+
+Annex 17
+International Data Transfer Agreement
+          Guidance: [TBC]
+
+
+
+Annex 18
+Service Levels
+          Guidance: Set out details of agreed availability times and support services provided by the
+          Host Organisation. This Annex can be left blank where not applicable.
+
+ Example text:
+ Availability
+ The Host Organisation shall use reasonable endeavours to provide access to the Data within the
+ TRE to the Approved Researchers [through its website] from [time - time] on [working days]
+ throughout the Term.
+ The Host Organisation may effect maintenance, repairs or updates to the TRE and the Data and
+ wherever reasonably practicable shall give the Approved Researchers twenty-four (24) hours’
+ notice of any interruption of access to the Data by email. In case of urgent maintenance or repairs,
+ the TRE may be unavailable without notice.
+
+ Technical Support
+ The Host Organisation will provide technical support to the Approved Researchers from [time-
+ time] on [working days] throughout the Term.
+ The Approved Researcher will use reasonable endeavours to provide the Host Organisation with
+ sufficient information required to answer any query submitted. The Host Organisation will use
+ reasonable endeavours to respond to the Approved Researcher’s queries within [specified response
+ time] and if the Host Organisation reasonably considers that the Approved Researcher is making
+ excessive use of technical support, the Host Organisation at its sole discretion may charge the User
+ Organisation a service fee for any further queries submitted.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                             Page 11 of 11

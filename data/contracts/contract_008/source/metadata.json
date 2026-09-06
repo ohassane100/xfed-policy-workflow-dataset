@@ -1,0 +1,37 @@
+{
+  "contract_id": "contract_008",
+  "title": "Data Transfer and Use Agreement",
+  "organization": "Federal Demonstration Partnership",
+  "agreement_type": "DTUA",
+  "source_url": "https://rsp.wisc.edu/contracts/files/DTUA-General.pdf",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:10:48.634198+00:00",
+  "ingestion_status": "normalized",
+  "preprocessing_status": "needs_text_review",
+  "resolved_url": "https://rsp.wisc.edu/contracts/files/DTUA-General.pdf",
+  "download_url": "https://rsp.wisc.edu/contracts/files/DTUA-General.pdf",
+  "original_sha256": "6996c4ac43e6724848245742dd90e5f267d24da779e5863788993d5cdcdda7c8",
+  "original_filename": "DTUA-General.pdf",
+  "content_type": "application/pdf",
+  "content_disposition": "",
+  "resolution": {
+    "method": "direct_or_unique_official_link"
+  },
+  "normalization_engine": "original_pdf_byte_copy",
+  "pdf_sha256": "6996c4ac43e6724848245742dd90e5f267d24da779e5863788993d5cdcdda7c8",
+  "text_sha256": "df2f8ca32940bb96bd4976cb3d67c43a06d70f4fe6d13d6274bc6ff6b33621b7",
+  "page_count": 7,
+  "empty_text_pages": [],
+  "preprocessing": {
+    "engine": "pypdf",
+    "mode": "layout",
+    "ocr": false
+  },
+  "text_quality": {
+    "control_characters": 23,
+    "replacement_characters": 0
+  }
+}

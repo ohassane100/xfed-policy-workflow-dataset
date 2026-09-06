@@ -1,0 +1,15 @@
+{
+  "contract_id": "contract_022",
+  "title": "Data Transfer Agreement",
+  "organization": "University of Newcastle",
+  "agreement_type": "DTA",
+  "source_url": "https://www.newcastle.edu.au/__data/assets/pdf_file/0010/631954/Data_Transfer_Agreement_OREBA1.pdf",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:46.641072+00:00",
+  "ingestion_status": "manual_download_required",
+  "preprocessing_status": "not_ready",
+  "error": "HTTPError: HTTP Error 403: Forbidden"
+}

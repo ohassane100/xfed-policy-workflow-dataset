@@ -1,0 +1,15 @@
+{
+  "contract_id": "contract_028",
+  "title": "Data Sharing and Processing Agreement Template",
+  "organization": "NHS England Digital",
+  "agreement_type": "DSPA",
+  "source_url": "https://digital.nhs.uk/data-and-information/information-governance/templates/universal-ig-templates/data-sharing-and-processing-agreement-dspa",
+  "original_format": "DOCX",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:47.357010+00:00",
+  "ingestion_status": "manual_download_required",
+  "preprocessing_status": "not_ready",
+  "error": "HTTPError: HTTP Error 403: Forbidden"
+}

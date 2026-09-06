@@ -1,0 +1,66 @@
+{
+  "contract_id": "contract_041",
+  "title": "Limited Data Set DUA - Non-UW Workforce",
+  "organization": "UW Medicine",
+  "agreement_type": "DUA",
+  "source_url": "https://depts.washington.edu/comply/policy-resources/",
+  "original_format": "DOCX",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:10:59.843174+00:00",
+  "ingestion_status": "normalization_required",
+  "preprocessing_status": "not_ready",
+  "download_candidates": [
+    {
+      "url": "https://depts.washington.edu/comply/docs/103_T6.docx",
+      "label": "Data Use Agreement for Limited Data Set (for individuals or entities NOT part of UW Medicine workforce) – 103.T6",
+      "score": 4
+    },
+    {
+      "url": "https://depts.washington.edu/comply/docs/103_T7.docx",
+      "label": "Data Use Agreement for Limited Data Set for UW Medicine workforce – 103.T7",
+      "score": 3
+    },
+    {
+      "url": "https://depts.washington.edu/comply/docs/102_F3.pdf",
+      "label": "Non-UW Medicine Workforce Privacy, Confidentiality and Information Security Agreement – 102.F3",
+      "score": 2
+    },
+    {
+      "url": "https://depts.washington.edu/comply/docs/307_F2.pdf",
+      "label": "Data Use Agreement for Use with Non-University of Washington Recipients – (307.F2)",
+      "score": 1
+    },
+    {
+      "url": "https://depts.washington.edu/comply/docs/002_F1.pdf",
+      "label": "Privacy, Confidentiality, and Information Security Agreement (PCISA) – 002.F1",
+      "score": 0
+    },
+    {
+      "url": "https://depts.washington.edu/comply/docs/102_F1.pdf",
+      "label": "Agreement for Electronic Access to Protected Health Information – 102.F1",
+      "score": 0
+    },
+    {
+      "url": "https://depts.washington.edu/comply/docs/106_T1.docx",
+      "label": "UW Medicine Business Associate Agreement – 106.T1",
+      "score": 0
+    },
+    {
+      "url": "https://depts.washington.edu/comply/docs/307_F1.pdf",
+      "label": "Data Use Agreement for Use with University of Washington Recipients – (307.F1)",
+      "score": 0
+    }
+  ],
+  "resolved_url": "https://depts.washington.edu/comply/docs/103_T6.docx",
+  "download_url": "https://depts.washington.edu/comply/docs/103_T6.docx",
+  "original_sha256": "8a1e2ad7c05918dd7811b064ce92ad9eb3f7fc2ac468a776c534c48380c8e970",
+  "original_filename": "103_T6.docx",
+  "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "content_disposition": "",
+  "resolution": {
+    "method": "direct_or_unique_official_link"
+  },
+  "normalization_error": "LibreOffice required for DOC/DOCX/HTML: set LIBREOFFICE_PATH"
+}

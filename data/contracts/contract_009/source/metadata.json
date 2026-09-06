@@ -1,0 +1,15 @@
+{
+  "contract_id": "contract_009",
+  "title": "Multi-party Data and Material Transfer Agreement",
+  "organization": "Fred Hutch",
+  "agreement_type": "MDTA",
+  "source_url": "https://research.fredhutch.org/content/dam/stripe/specimen-acquisition-network/COL210703_Umbrella%20Data%20and%20Material%20Transfer%20Agreement_FH_FINAL%20no%20org%20list.pdf",
+  "original_format": "PDF",
+  "document_type": "data_collaboration",
+  "schema_version": "2.0",
+  "source": "real_public_agreement",
+  "retrieved_at": "2026-09-06T00:24:44.977811+00:00",
+  "ingestion_status": "manual_download_required",
+  "preprocessing_status": "not_ready",
+  "error": "HTTPError: HTTP Error 404: Not Found"
+}
