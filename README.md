@@ -33,9 +33,11 @@ Policies contain a `Parties` section with one bullet per party, without a fixed
 limit. V1 recognises the explicit registered-party list in this agreement and
 retains each name, stated role and organisation number. Other list formats remain
 unresolved for manual review. Rules separate `Actor`, `Counterparty/Recipient`,
-and `Applies to` (the data, workflow or resource scope). Simple active sentences
-use conservative word patterns; uncertain fields remain unresolved. A recipient
-absent from a recognised pattern is marked `Not specified`. Descriptions retain
+and `Applies to` (the data, workflow or resource scope). Each field is extracted
+independently using simple role, notification, transfer and passive-voice patterns.
+Resource fields list resource mentions; qualifiers remain in the full rule.
+Uncertain fields remain unresolved. `Not specified` means no recipient was found,
+not proof that no recipient exists. Descriptions retain
 the original sentence and its qualifiers. Actor fields retain source wording;
 collective terms such as “Parties” are not automatically expanded into individual
 obligations.

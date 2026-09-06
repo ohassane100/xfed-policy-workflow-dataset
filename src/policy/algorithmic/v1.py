@@ -145,51 +145,90 @@ def rough_action(sentence: str) -> str:
     return sentence.strip()
 
 
-def rule_fields(sentence: str) -> tuple[str, str, str]:
-    """Separate observed subject, recipient and resource for simple active rules.
+# Roles are matched only where the sentence places an actor or recipient.
+PARTY_PATTERN = (
+    r"(?:(?:the|a|an|any|each|other|another|all|relevant|receiving|disclosing)\s+)*"
+    r"(?:Project Owner|General Assembly|Funding Authority|Centre Director|"
+    r"Research Partners?|User Partners?|Technical Committee|Board|"
+    r"(?:third|other|Defaulting)\s+Part(?:y|ies)|Part(?:y|ies)|"
+    r"Recipients?|Company\s+[A-Z]\b|members of the SAC)"
+)
+RESOURCE_PATTERN = (
+    r"\b(?:(?:raw|seismic|personal|confidential|further|own|all|project|research|"
+    r"accounting)\s+)*(?:data(?:sets?)?|information|background|results?|"
+    r"reports?|documentation|documents?|outputs?|files?|materials?|software|"
+    r"workflow|Intellectual Property Rights|R&D activities)\b"
+)
 
-    Complex/passive constructions remain unresolved rather than assigning the
-    grammatical subject (which may be data) as an obligated party.
+
+def rule_fields(sentence: str) -> tuple[str, str, str]:
+    """Independent, conservative patterns; keep qualifiers in the full rule.
+
+    Resource fields are observed resource mentions, not a resolution of defined
+    terms or cross-references. Unsupported fields do not erase supported ones.
     """
     unknown = "Unresolved; see source text"
-    parts = rough_parts(sentence)
-    if parts is None:
-        return unknown, unknown, unknown
-    actor, action, remainder = parts
-    if action.lower() not in {
-        "share", "disclose", "transfer", "send", "provide", "release",
-        "use", "access", "process", "store", "retain", "delete", "destroy",
-        "protect", "publish", "keep", "return", "export", "analyse", "analyze",
-    }:
-        return unknown, unknown, unknown
-    # Pronouns need antecedent resolution, which V1 does not implement.
-    if actor.lower() in {"it", "they", "he", "she", "this", "that"}:
-        actor = unknown
-    # Qualifiers remain in the full description and source quotation.
-    core = re.split(
-        r"[,;]|\b(?:if|unless|except|provided|subject to|when|before|after|"
-        r"solely|only|for|under|in accordance with|without|within)\b",
-        remainder, maxsplit=1, flags=re.I,
-    )[0].strip().rstrip(".")
+    actor = unknown
     recipient = "Not specified"
-    resource = core
-    if action.lower() in {"share", "disclose", "transfer", "send", "provide",
-                          "release", "return", "export"}:
-        transfer = re.fullmatch(r"(.+?)\s+(?:to|with)\s+(.+)", core, re.I)
-        if transfer:
-            resource, target = transfer.groups()
-            # Do not label a location/system as a recipient party.
-            if re.search(r"\b(?:part(?:y|ies)|recipient|partner|company|companies|"
-                         r"researcher|authority|owner)\b", target, re.I):
-                recipient = target
-            else:
-                recipient = unknown
-    resource = re.sub(r"^(?:the|a|an)\s+", "", resource, flags=re.I)
-    if not re.search(r"\b(?:data|information|results?|background|records?|"
-                     r"dataset|outputs?|files?|materials?|software|workflow)\b",
-                     resource, re.I):
-        resource = unknown
-    return actor, recipient, resource or unknown
+    resources = list(dict.fromkeys(
+        match.group() for match in re.finditer(RESOURCE_PATTERN, sentence, re.I)
+    ))
+    scope = "; ".join(resources) or unknown
+    modals = list(MODAL_RE.finditer(sentence))
+    if not modals:
+        return actor, unknown, scope
+
+    modal = modals[0]
+    prefix = sentence[:modal.start()].strip()
+    tail = sentence[modal.end():].strip()
+    # Passive voice: the subject is often the resource, not the actor.
+    passive = re.match(r"be\s+\w+(?:ed|en)\b", tail, re.I)
+    if passive:
+        by = re.search(r"\bby\s+(" + PARTY_PATTERN + r")\b", tail, re.I)
+        if by:
+            actor = by.group(1)
+    else:
+        roles = list(re.finditer(r"\b" + PARTY_PATTERN + r"\b", prefix, re.I))
+        if roles:
+            last = roles[-1]
+            # Keep actor qualifications such as 'Any Party wishing to ...'.
+            suffix = prefix[last.end():]
+            if not suffix or re.match(r"\s+(?:wishing|that|who|which)\b", suffix, re.I):
+                actor = prefix[last.start():]
+        elif re.fullmatch(r"(?:[A-Z][\w&.-]*\s*){1,8}", prefix):
+            # A simple proper name can be the subject; never promote a resource.
+            if not re.search(RESOURCE_PATTERN, prefix, re.I) and prefix.lower() not in {
+                "it", "they", "he", "she", "this", "that"
+            }:
+                actor = prefix
+
+    # Notifications name their recipient directly; transfers use to/with.
+    target_patterns = (
+        r"\b(?:notify|inform)\s+(" + PARTY_PATTERN + r")\b",
+        r"\b(?:to|with)\s+(" + PARTY_PATTERN + r")\b",
+    )
+    main_tail = re.split(
+        r"\b(?:that|which|who|if|unless|provided|in order to)\b",
+        tail, maxsplit=1, flags=re.I,
+    )[0]
+    communication = re.search(
+        r"\b(?:notify|inform|share|disclose|transfer|send|provide|return|submit|grant)\b",
+        main_tail, re.I,
+    )
+    targets = []
+    if communication:
+        for pattern in target_patterns:
+            targets.extend(match.group(1) for match in re.finditer(pattern, main_tail, re.I))
+    if targets:
+        recipient = "; ".join(dict.fromkeys(targets))
+    elif communication or re.search(r"\b(?:ensure|between)\b", tail, re.I):
+        recipient = unknown
+    # More than one modal can describe different actors. Do not silently assign
+    # the first actor/recipient to every obligation in a compound sentence.
+    if len(modals) > 1:
+        actor = unknown
+        recipient = unknown
+    return actor, recipient, scope
 
 
 def rule_id(effect: str, sentence: str) -> str:

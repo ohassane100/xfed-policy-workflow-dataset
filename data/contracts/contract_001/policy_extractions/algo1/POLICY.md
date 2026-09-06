@@ -26,8 +26,8 @@ Status: candidate
 
 - `require` **require_reflect_the_value_of_the_cce871** — The conditions shall reflect the value of the Project Results or Background to which access is requested, financial and non-financial contributions, as well as the scope, duration or other characteristics of the exploitation envisaged.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results; Background
   - Source clause: 1
   - Source text: "The conditions shall reflect the value of the Project Results or Background to which access is requested, financial and non-financial contributions, as well as the scope, duration or other characteristics of the exploitation envisaged."
 
@@ -40,49 +40,42 @@ Status: candidate
 
 - `require` **require_take_precedence_f73533** — The Collaboration Agreement has the following appendices: Appendix 1: The R&D Contract, including the requirements and guidelines that applies to Societal and Industry-oriented Research Centres Appendix 2: Specification of the Project’s fu nding plan Appendix 3: Ba ckground In the event of a conflict between the R&D Contract and this Collaboration Agreement, the R&D Contract shall take precedence.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: unresolved (detached numbering)
   - Source text: "The Collaboration Agreement has the following appendices: Appendix 1: The R&D Contract, including the requirements and guidelines that applies to Societal and Industry-oriented Research Centres Appendix 2: Specification of the Project’s fu nding plan Appendix 3: Ba ckground In the event of a conflict between the R&D Contract and this Collaboration Agreement, the R&D Contract shall take precedence."
 
 - `require` **require_be_taken_by_the_general_5768a7** — T he following decisions shall be taken by the General Assembly: • Content of the Collaboration Agreement, finances, and Intellectual Property Rights, including: - Proposal for suspension of all or part of the Project - Proposal for termination of the Project as a whole - Proposals for changes to the R&D Contract to be agreed by the Funding Authority - Major changes to the Work Plan (including Project budget) - Addition and withdrawals of Background (Appendix 3) • E volution of the Research Centre, including: - Decide on the accession of a new Party to the Collaboration Agreement and adopt the conditions of the accession of such a new Party, including any Late Fees - Declaration of a Party to be a Defaulting Party - Remedies to be performed by a Defaulting Party - Termination of a Defaulting Party’s participation in the Research Centre.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: the General Assembly
+  - Counterparty/Recipient: Not specified
+  - Applies to: Intellectual Property Rights; Background
   - Source clause: 5.3.3
   - Source text: "T he following decisions shall be taken by the General Assembly: • Content of the Collaboration Agreement, finances, and Intellectual Property Rights, including: - Proposal for suspension of all or part of the Project - Proposal for termination of the Project as a whole - Proposals for changes to the R&D Contract to be agreed by the Funding Authority - Major changes to the Work Plan (including Project budget) - Addition and withdrawals of Background (Appendix 3) • E volution of the Research Centre, including: - Decide on the accession of a new Party to the Collaboration Agreement and adopt the conditions of the accession of such a new Party, including any Late Fees - Declaration of a Party to be a Defaulting Party - Remedies to be performed by a Defaulting Party - Termination of a Defaulting Party’s participation in the Research Centre."
 
-- `require` **require_see_k_a_consensus_among_7fff4d** — F urthermore, the Board shall: • See k a consensus among the Parties • Prepare meetings, propose decisions and the agenda of the General Assembly. • B e responsible for the proper implementation of the decisions by the General Assembly. • Monitor the implementation of the Project as well as the deliverables. • A gree on the content and timing of press releases and joint publications by the Parties. • Ap prove to involvement of Subcontractors. • R eview HSE statistics including incidents, accidents, and near misses. • Appoint representatives to the Technical Committee, cf.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
-  - Source clause: 5.4.3
-  - Source text: "F urthermore, the Board shall: • See k a consensus among the Parties • Prepare meetings, propose decisions and the agenda of the General Assembly. • B e responsible for the proper implementation of the decisions by the General Assembly. • Monitor the implementation of the Project as well as the deliverables. • A gree on the content and timing of press releases and joint publications by the Parties. • Ap prove to involvement of Subcontractors. • R eview HSE statistics including incidents, accidents, and near misses. • Appoint representatives to the Technical Committee, cf."
-
 - `require` **require_include_a_sufficient_number_of_157565** — The Technical Committee The Technical Committee shall include a sufficient number of representatives from the User Partners to follow up on the Centre’s research activities to give technical input to ensure its relevance.
-  - Actor: Unresolved; see source text
+  - Actor: The Technical Committee
   - Counterparty/Recipient: Unresolved; see source text
   - Applies to: Unresolved; see source text
   - Source clause: 6.1
   - Source text: "The Technical Committee The Technical Committee shall include a sufficient number of representatives from the User Partners to follow up on the Centre’s research activities to give technical input to ensure its relevance."
 
 - `require` **require_ensure_that_a_non_disclosure_e39906** — In case Confidential Information is to be shared with the members of the SAC the Project Owner shall ensure that a non-disclosure agreement is entered into between the members of the SAC and the Parties.
-  - Actor: Unresolved; see source text
+  - Actor: the Project Owner
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: Confidential Information
   - Source clause: 6.2
   - Source text: "In case Confidential Information is to be shared with the members of the SAC the Project Owner shall ensure that a non-disclosure agreement is entered into between the members of the SAC and the Parties."
 
 - `require` **require_be_carried_out_in_accordance_a5ed0c** — All R&D activities shall be carried out in accordance with commonly accepted research practices.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: All R&D activities
   - Source clause: 7.2
   - Source text: "All R&D activities shall be carried out in accordance with commonly accepted research practices."
 
 - `allow` **allow_decide_to_transfer_responsibility_for_841bcc** — In the event a Party does not perform according to the Collaboration Agreement, and subject to such Party not rectifying its breach of the Collaboration Agreement within reasonable time of having received written notification of such breach by the Board the Board may decide to transfer responsibility for the work in whole or in part to another Party, based on specified terms and conditions.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: the Board
+  - Counterparty/Recipient: another Party
   - Applies to: Unresolved; see source text
   - Source clause: 7.5
   - Source text: "In the event a Party does not perform according to the Collaboration Agreement, and subject to such Party not rectifying its breach of the Collaboration Agreement within reasonable time of having received written notification of such breach by the Board the Board may decide to transfer responsibility for the work in whole or in part to another Party, based on specified terms and conditions."
@@ -90,356 +83,363 @@ Status: candidate
 - `require` **require_fulfil_the_relevant_party_s_8c5e07** — The Parties undertake a commitment to sign any agreements with owners, employees (including individuals with dual employment), partners, subcontractors, and others that are required to fulfil the relevant Party’s obligations under this Agreement, including measures to ensure the necessary transfer of Intellectual Property Rights.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: Intellectual Property Rights
   - Source clause: 7.6
   - Source text: "The Parties undertake a commitment to sign any agreements with owners, employees (including individuals with dual employment), partners, subcontractors, and others that are required to fulfil the relevant Party’s obligations under this Agreement, including measures to ensure the necessary transfer of Intellectual Property Rights."
 
 - `require` **require_without_undue_delay_submit_all_37c0dc** — Parties shall without undue delay submit all Project Results, reports, accounting documentation and other documents that the Project Owner requires to fulfil its obligations to the Funding Authority.
-  - Actor: Unresolved; see source text
+  - Actor: Parties
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: all Project Results; reports; accounting documentation; documents
   - Source clause: 8.2
   - Source text: "Parties shall without undue delay submit all Project Results, reports, accounting documentation and other documents that the Project Owner requires to fulfil its obligations to the Funding Authority."
 
 - `allow` **allow_recover_already_disbursed_and_unused_ddd1e0** — Furthermore, the Project Owner is entitled to recover already disbursed and unused funding to a Defaulting Party.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: the Project Owner
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 9.4
   - Source text: "Furthermore, the Project Owner is entitled to recover already disbursed and unused funding to a Defaulting Party."
 
 - `require` **require_ify_the_other_parties_of_b109cd** — Any Party wishing to contribute further Background during the Project Period shall notify the other Parties of this.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: Any Party wishing to contribute further Background during the Project Period
+  - Counterparty/Recipient: the other Parties
+  - Applies to: further Background
   - Source clause: 10.2
   - Source text: "Any Party wishing to contribute further Background during the Project Period shall notify the other Parties of this."
 
 - `require` **require_be_approved_by_the_general_430e63** — Any request to modify a Party’s Background to the Project shall be approved by the General Assembly, and relevant appendices shall be updated continuously.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: Background
   - Source clause: 10.2
   - Source text: "Any request to modify a Party’s Background to the Project shall be approved by the General Assembly, and relevant appendices shall be updated continuously."
 
 - `allow` **allow_have_access_at_no_charge_f08e06** — For the duration of the Project Period, the Parties shall have access at no charge to the Background necessary for the implementation of their own work in the Project in accordance with the Work Plan.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: the Parties
+  - Counterparty/Recipient: Not specified
+  - Applies to: Background
   - Source clause: 10.4
   - Source text: "For the duration of the Project Period, the Parties shall have access at no charge to the Background necessary for the implementation of their own work in the Project in accordance with the Work Plan."
 
 - `require` **require_be_granted_on_fair_and_c57d6f** — Access to Background necessary for the Commercial Utilisation of another Party’s own Project Results, shall be granted on Fair and Reasonable Conditions, and in accordance with any limitations and/or conditions specified in Appendix 3.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Background; own Project Results
   - Source clause: 10.5
   - Source text: "Access to Background necessary for the Commercial Utilisation of another Party’s own Project Results, shall be granted on Fair and Reasonable Conditions, and in accordance with any limitations and/or conditions specified in Appendix 3."
 
 - `allow` **allow_be_made_up_to_twelve_f3df86** — Such requests for access may be made up to twelve months after the Project Period.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 10.5
   - Source text: "Such requests for access may be made up to twelve months after the Project Period."
 
 - `require` **require_be_submitted_in_writing_to_7a9425** — Requests for access must be submitted in writing to the relevant Party.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 10.6
   - Source text: "Requests for access must be submitted in writing to the relevant Party."
 
 - `allow` **allow_be_made_conditional_on_the_4cd9a8** — The granting of access may be made conditional on the acceptance of specific conditions aimed at ensuring that these rights will be used only for the intended purpose and that appropriate confidentiality obligations are in place.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 10.6
   - Source text: "The granting of access may be made conditional on the acceptance of specific conditions aimed at ensuring that these rights will be used only for the intended purpose and that appropriate confidentiality obligations are in place."
 
 - `require` **require_have_joint_ownership_of_these_ceda7a** — If two or more Parties have generated the Project Results collaboratively, and the Project Results cannot be separated, they shall have joint ownership of these.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 11.1.2
   - Source text: "If two or more Parties have generated the Project Results collaboratively, and the Project Results cannot be separated, they shall have joint ownership of these."
 
 - `require` **require_correspond_to_the_respective_party_3d3ade** — The Parties' undivided share shall correspond to the respective Party’s proportionate intellectual contribution to the Project Results in question.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 11.1.2
   - Source text: "The Parties' undivided share shall correspond to the respective Party’s proportionate intellectual contribution to the Project Results in question."
 
 - `require` **require_within_six_months_after_the_ced463** — Parties owning Project Results jointly shall, within six months after the Project Results in question were generated, enter into a separate agreement on the utilisation of these Project Results, including any protective measures and the distribution of costs relating to such.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 11.1.2
   - Source text: "Parties owning Project Results jointly shall, within six months after the Project Results in question were generated, enter into a separate agreement on the utilisation of these Project Results, including any protective measures and the distribution of costs relating to such."
 
-- `require` **require_be_responsible_for_protecting_and_2b4e64** — The co-ownership agreement should as a minimum include the following items: • A clear description of the Project Results, including each Party’s ownership share. • Provisions regarding which of the co-owners shall be responsible for protecting and maintaining the Project Result, including relevant authorisations. • A detailed plan for how the Project Results shall be protected, defended, maintained and used, including a plan for Commercial Utilisation.
+- `require` **require_be_responsible_for_protecting_and_662335** — Provisions regarding which of the co-owners shall be responsible for protecting and maintaining the Project Result, including relevant authorisations. •
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Result
   - Source clause: 11.1.2
-  - Source text: "The co-ownership agreement should as a minimum include the following items: • A clear description of the Project Results, including each Party’s ownership share. • Provisions regarding which of the co-owners shall be responsible for protecting and maintaining the Project Result, including relevant authorisations. • A detailed plan for how the Project Results shall be protected, defended, maintained and used, including a plan for Commercial Utilisation."
+  - Source text: "Provisions regarding which of the co-owners shall be responsible for protecting and maintaining the Project Result, including relevant authorisations. •"
+
+- `require` **require_be_protected_defended_maintained_and_ff7743** — A detailed plan for how the Project Results shall be protected, defended, maintained and used, including a plan for Commercial Utilisation.
+  - Actor: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
+  - Source clause: 11.1.2
+  - Source text: "A detailed plan for how the Project Results shall be protected, defended, maintained and used, including a plan for Commercial Utilisation."
 
 - `require` **require_ify_the_board_of_all_38798d** — Parties shall notify the Board of all Project Results.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: Parties
+  - Counterparty/Recipient: the Board
+  - Applies to: all Project Results
   - Source clause: 11.1.3
   - Source text: "Parties shall notify the Board of all Project Results."
 
 - `require` **require_be_treated_confidentially_for_a_07e36c** — Project Results shall be treated confidentially for a minimum period of 30 days from such notification to the Board.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 11.1.3
   - Source text: "Project Results shall be treated confidentially for a minimum period of 30 days from such notification to the Board."
 
 - `allow` **allow_have_access_at_no_charge_9b869f** — For the duration of the Project Period, the Parties shall have access at no charge to Project Results that are necessary for implementing their own work in the Project in accordance with the Work Plan.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: the Parties
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 11.2.1
   - Source text: "For the duration of the Project Period, the Parties shall have access at no charge to Project Results that are necessary for implementing their own work in the Project in accordance with the Work Plan."
 
 - `require` **require_be_granted_on_fair_and_c56de1** — Access rights to Project Results necessary for the Commercial Utilisation of another Party’s own Project Results, shall be granted on Fair and Reasonable Conditions.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results; own Project Results
   - Source clause: 11.2.2
   - Source text: "Access rights to Project Results necessary for the Commercial Utilisation of another Party’s own Project Results, shall be granted on Fair and Reasonable Conditions."
 
 - `allow` **allow_have_access_at_no_charge_5ca3bb** — Research Partners shall have access at no charge to Project Results that are to be used for their own educational or research purposes.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: Research Partners
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 11.2.3
   - Source text: "Research Partners shall have access at no charge to Project Results that are to be used for their own educational or research purposes."
 
 - `require` **require_be_submitted_in_writing_9c376d** — All requests for access to Project Results must be submitted in writing.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 11.2.4
   - Source text: "All requests for access to Project Results must be submitted in writing."
 
 - `require` **require_cease_immediately_from_the_time_50c22e** — Access rights of a Defaulting Party shall cease immediately from the time that party receives the formal notification from the General Assembly that its participation in the Project has been terminated but will still be obligated to give the remaining Parties access rights to its own Background and Project Results in accordance with the Collaboration Agreement.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: a Defaulting Party
+  - Counterparty/Recipient: Not specified
+  - Applies to: own Background; Project Results
   - Source clause: 12.2.1
   - Source text: "Access rights of a Defaulting Party shall cease immediately from the time that party receives the formal notification from the General Assembly that its participation in the Project has been terminated but will still be obligated to give the remaining Parties access rights to its own Background and Project Results in accordance with the Collaboration Agreement."
 
 - `allow` **allow_request_access_to_other_parties_45969e** — A Party that withdraws from the Project may request access to other Parties’ Project Results generated up to the date of withdrawal.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: A Party that withdraws from the Project
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 12.2.2
   - Source text: "A Party that withdraws from the Project may request access to other Parties’ Project Results generated up to the date of withdrawal."
 
 - `require` **require_continue_to_grant_access_rights_9d7f3a** — Any Party leaving the Project maintains ownership to Project Results according to Section 11.1, however the Party shall continue to grant access rights to its own Background and Project Results pursuant the Collaboration Agreement as if it had remained a Party for the entire Project Period.
-  - Actor: Unresolved; see source text
+  - Actor: the Party
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: Project Results; own Background
   - Source clause: 12.2.3
   - Source text: "Any Party leaving the Project maintains ownership to Project Results according to Section 11.1, however the Party shall continue to grant access rights to its own Background and Project Results pursuant the Collaboration Agreement as if it had remained a Party for the entire Project Period."
 
 - `require` **require_be_published_as_quickly_as_4c599f** — Project Results shall be published as quickly as possible.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 13.1
   - Source text: "Project Results shall be published as quickly as possible."
 
 - `require` **require_be_interpreted_as_preventing_the_923841** — Subject to the provisions of this Section 13 and Section 14, nothing in this Collaboration Agreement shall be interpreted as preventing the publication of Project Results such Master student or PhD candidate is required to publish in order to qualify for any degree.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: Project Results
   - Source clause: 13.2
   - Source text: "Subject to the provisions of this Section 13 and Section 14, nothing in this Collaboration Agreement shall be interpreted as preventing the publication of Project Results such Master student or PhD candidate is required to publish in order to qualify for any degree."
 
 - `allow` **allow_publish_their_own_project_results_2c2c75** — Given that the conditions stipulated in Sections 13.4 and 13.5 have been met, Parties are entitled to publish their own Project Results when such publication does not impair the ability of the other Parties to utilise their own Project Results.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: Parties
+  - Counterparty/Recipient: Not specified
+  - Applies to: own Project Results
   - Source clause: 13.3
   - Source text: "Given that the conditions stipulated in Sections 13.4 and 13.5 have been met, Parties are entitled to publish their own Project Results when such publication does not impair the ability of the other Parties to utilise their own Project Results."
 
 - `require` **require_consent_to_a_postponement_of_5c297f** — The board of the institution (or its authorised representative) shall consent to a postponement of publication when there is a legitimate reason to do so.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 13.4
   - Source text: "The board of the institution (or its authorised representative) shall consent to a postponement of publication when there is a legitimate reason to do so."
 
 - `deny` **deny_be_agreed_upon_or_stipulated_6fc5d6** — Permanent restrictions on the right to publish Project Results over and above those laid down in legislation or pursuant to legislation may not be agreed upon or stipulated.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 13.4
   - Source text: "Permanent restrictions on the right to publish Project Results over and above those laid down in legislation or pursuant to legislation may not be agreed upon or stipulated."
 
 - `require` **require_however_not_be_published_if_3bbe53** — Project Results shall however not be published if doing so will unlawfully disclose Confidential Information and/or business secrets.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results; Confidential Information
   - Source clause: 13.4
   - Source text: "Project Results shall however not be published if doing so will unlawfully disclose Confidential Information and/or business secrets."
 
 - `require` **require_be_submitted_to_all_parties_c2137b** — Notification of plans for publication of Project Results shall be submitted to all Parties by the Party that has generated the relevant Project Results.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: the Party
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 13.5
   - Source text: "Notification of plans for publication of Project Results shall be submitted to all Parties by the Party that has generated the relevant Project Results."
 
 - `allow` **allow_after_90_calendar_days_the_72b660** — After 90 calendar days the publication is permitted, provided that the objections of the objecting Party have been addressed.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 13.5.2
   - Source text: "After 90 calendar days the publication is permitted, provided that the objections of the objecting Party have been addressed."
 
 - `require` **require_during_the_project_period_and_3435af** — During the Project Period, and for a subsequent period of three years, the Parties are under obligation to keep confidential any Confidential Information disclosed to them in connection with the Project and store this information in a secure manner.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Confidential Information; information
   - Source clause: 14.1
   - Source text: "During the Project Period, and for a subsequent period of three years, the Parties are under obligation to keep confidential any Confidential Information disclosed to them in connection with the Project and store this information in a secure manner."
 
 - `require` **require_only_be_used_to_perform_a232d6** — Confidential Information shall only be used to perform Project tasks and to utilise Project Results, or as agreed with or presupposed by the disclosing Party.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Confidential Information; Project Results
   - Source clause: 14.1
   - Source text: "Confidential Information shall only be used to perform Project tasks and to utilise Project Results, or as agreed with or presupposed by the disclosing Party."
 
 - `require` **require_ensure_that_all_employees_and_fc0eb5** — The Parties shall ensure that all employees and third parties, contractors and Subcontractors, who are given access to Confidential Information, complies with the above confidentiality obligation.
-  - Actor: Unresolved; see source text
+  - Actor: The Parties
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: Confidential Information
   - Source clause: 14.2
   - Source text: "The Parties shall ensure that all employees and third parties, contractors and Subcontractors, who are given access to Confidential Information, complies with the above confidentiality obligation."
 
 - `deny` **deny_prevent_the_publication_of_project_1c634c** — The above confidentiality obligation shall not prevent the publication of Project Results in line with the provisions of Section 13.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results
   - Source clause: 14.4
   - Source text: "The above confidentiality obligation shall not prevent the publication of Project Results in line with the provisions of Section 13."
 
 - `require` **require_be_notified_upon_such_disclosure_cb296b** — The disclosing Party shall be notified upon such disclosure.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 14.4
   - Source text: "The disclosing Party shall be notified upon such disclosure."
 
 - `allow` **allow_imply_transferring_the_designated_tasks_b2bb17** — The decision of the General Assembly may imply transferring the designated tasks of the Defaulting Party to another Party or cancelling the Collaboration Agreement with the Defaulting Party, however in the latter case of cancelling the Collaboration Agreement only subject to the breach in question being of a material nature.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: the General Assembly
+  - Counterparty/Recipient: Not specified
+  - Applies to: material
   - Source clause: 15.2
   - Source text: "The decision of the General Assembly may imply transferring the designated tasks of the Defaulting Party to another Party or cancelling the Collaboration Agreement with the Defaulting Party, however in the latter case of cancelling the Collaboration Agreement only subject to the breach in question being of a material nature."
 
 - `require` **require_in_all_cases_be_entirely_eccf4f** — Therefore, the recipient Party shall in all cases be entirely and solely liable for the use to which it puts such information and materials, and no Party granting Access Rights shall be liable in case of infringement of proprietary rights of a third party resulting from any other Party exercising its access Rights.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: information; materials
   - Source clause: 16.1.1
   - Source text: "Therefore, the recipient Party shall in all cases be entirely and solely liable for the use to which it puts such information and materials, and no Party granting Access Rights shall be liable in case of infringement of proprietary rights of a third party resulting from any other Party exercising its access Rights."
 
 - `require` **require_be_responsible_to_any_other_3a5eb5** — No Party shall be responsible to any other Party for any indirect or consequential loss or similar damage such as, but not limited to, loss of profit, loss of revenue or loss of contracts, provided such damage was not caused by a wilful act.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: Party
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 16.2.1
   - Source text: "No Party shall be responsible to any other Party for any indirect or consequential loss or similar damage such as, but not limited to, loss of profit, loss of revenue or loss of contracts, provided such damage was not caused by a wilful act."
 
-- `require` **require_be_limited_to_the_party_cf0a2b** — A Party’s aggregate liability towards the other Parties collectively shall be limited to the Party’s share of the total costs of the Project provided such damage was not caused by a wilful act. 16.
+- `require` **require_be_limited_to_the_party_bb8666** — A Party’s aggregate liability towards the other Parties collectively shall be limited to the Party’s share of the total costs of the Project provided such damage was not caused by a wilful act.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: the Party
   - Applies to: Unresolved; see source text
   - Source clause: 16.2.1
-  - Source text: "A Party’s aggregate liability towards the other Parties collectively shall be limited to the Party’s share of the total costs of the Project provided such damage was not caused by a wilful act. 16."
+  - Source text: "A Party’s aggregate liability towards the other Parties collectively shall be limited to the Party’s share of the total costs of the Project provided such damage was not caused by a wilful act."
 
-- `require` **require_be_solely_liable_for_any_a5ae53** — Each Party shall be solely liable for any loss, damage or injury to third parties resulting from the performance of the said Party’s obligations by it or on its behalf under this Collaboration Agreement or from its use of Project Results or Background. 16.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+- `require` **require_be_solely_liable_for_any_19d4cb** — Each Party shall be solely liable for any loss, damage or injury to third parties resulting from the performance of the said Party’s obligations by it or on its behalf under this Collaboration Agreement or from its use of Project Results or Background.
+  - Actor: Each Party
+  - Counterparty/Recipient: Not specified
+  - Applies to: Project Results; Background
   - Source clause: 16.3.1
-  - Source text: "Each Party shall be solely liable for any loss, damage or injury to third parties resulting from the performance of the said Party’s obligations by it or on its behalf under this Collaboration Agreement or from its use of Project Results or Background. 16."
+  - Source text: "Each Party shall be solely liable for any loss, damage or injury to third parties resulting from the performance of the said Party’s obligations by it or on its behalf under this Collaboration Agreement or from its use of Project Results or Background."
 
 - `require` **require_comply_with_all_applicable_requirements_797639** — P ersonal data The Parties shall comply with all applicable requirements of the EU Data Protection Legislation and, if necessary, enter into a separate legal agreement in respect of the submission and/or the processing of personal data subject to EU Data Protection Legislation.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: The Parties
+  - Counterparty/Recipient: Not specified
+  - Applies to: data; Data; personal data
   - Source clause: 18
   - Source text: "P ersonal data The Parties shall comply with all applicable requirements of the EU Data Protection Legislation and, if necessary, enter into a separate legal agreement in respect of the submission and/or the processing of personal data subject to EU Data Protection Legislation."
 
 - `require` **require_otherwise_ensure_that_the_audit_38df46** — The Project Owner agrees to give the auditors access to all the systems and data necessary to perform the audit and shall otherwise ensure that the audit will be carried out effectively and without unnecessary delay.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: data
   - Source clause: 21.1
   - Source text: "The Project Owner agrees to give the auditors access to all the systems and data necessary to perform the audit and shall otherwise ensure that the audit will be carried out effectively and without unnecessary delay."
 
 - `require` **require_be_carried_out_in_a_a39459** — The audit shall be carried out in a manner that causes the least inconvenience.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 21.2
   - Source text: "The audit shall be carried out in a manner that causes the least inconvenience."
 
 - `require` **require_collaborating_partner_the_project_owner_998220** — Collaborating partner The Project Owner is under obligation to draw up a collaboration agreement with the partners with reference to Section 5 of the Requirements and guidelines for Societal and Industry-oriented Research Centre and Section 3 of the General Terms and Conditions for R&D Projects.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 01.01.2022
   - Source text: "Collaborating partner The Project Owner is under obligation to draw up a collaboration agreement with the partners with reference to Section 5 of the Requirements and guidelines for Societal and Industry-oriented Research Centre and Section 3 of the General Terms and Conditions for R&D Projects."
 
 - `require` **require_be_approved_by_the_research_4b9f36** — Changes in the project description must be approved by the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 2.4
   - Source text: "Changes in the project description must be approved by the Research Council."
 
 - `require` **require_be_submitted_to_the_research_06cac9** — Requests for changes must be submitted to the Research Council via “My RCN Web” > “Projects/Reports” > “View / Change project”.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Reports
   - Source clause: 2.4
   - Source text: "Requests for changes must be submitted to the Research Council via “My RCN Web” > “Projects/Reports” > “View / Change project”."
 
 - `allow` **allow_be_published_by_the_research_9336ca** — The following project summary may be published by the Research Council: The vision of the NCS2030 centre is to facilitate an energy-efficient, multi-purpose utilization of the subsurface into a “Sustainable Subsurface Value Chain” to reach the Net-Zero-Emissions goals on the Norwegian Continental Shelf.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 2.4
   - Source text: "The following project summary may be published by the Research Council: The vision of the NCS2030 centre is to facilitate an energy-efficient, multi-purpose utilization of the subsurface into a “Sustainable Subsurface Value Chain” to reach the Net-Zero-Emissions goals on the Norwegian Continental Shelf."
 
 - `require` **require_be_immediately_reported_to_the_8ca644** — Article 4: Project management – administrative and scientific The Project Owner has appointed the following project management: Project administrator Name: Merete Vadla Madland Title: Prorector for research Project manager Name: Alejandro Escalona Varela Title: Head of department, Professor Any change of project administrator shall be immediately reported to the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 2.4
   - Source text: "Article 4: Project management – administrative and scientific The Project Owner has appointed the following project management: Project administrator Name: Merete Vadla Madland Title: Prorector for research Project manager Name: Alejandro Escalona Varela Title: Head of department, Professor Any change of project administrator shall be immediately reported to the Research Council."
 
 - `require` **require_be_submitted_to_the_research_39a49e** — Notification must be submitted to the Research Council via “My RCN Web” > “Projects/Reports” > “Change of role”.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Reports
   - Source clause: 2.4
   - Source text: "Notification must be submitted to the Research Council via “My RCN Web” > “Projects/Reports” > “Change of role”."
 
 - `require` **require_be_approved_by_the_research_1fbc90** — Changes of the project manager must be approved by the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 2.4
   - Source text: "Changes of the project manager must be approved by the Research Council."
@@ -447,139 +447,139 @@ Status: candidate
 - `require` **require_be_submitted_to_the_research_6c2af6** — Requests for changes must be submitted to the Research Council via “My RCN Web” > “Projects/Reports” > “Change of role” and must include the CV of the desired project manager as well as the desired date of commencement of duties.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: Reports
   - Source clause: 2.4
   - Source text: "Requests for changes must be submitted to the Research Council via “My RCN Web” > “Projects/Reports” > “Change of role” and must include the CV of the desired project manager as well as the desired date of commencement of duties."
 
 - `require` **require_be_extended_with_three_years_b2ea72** — Research performance site at the Project Owner: UNIVERSITETET I STAVANGER, Organization number: 971564679 Article 5: Project period and progress plan The project period is five years: From the starting date: 01.01.2022 To the date: 31.12.2026 The Research Council of Norway will decide if the project period shall be extended with three years (with reference to Section 6 of Requirements and guidelines for Societal and Industry-oriented Research Centre).
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 2.4
   - Source text: "Research performance site at the Project Owner: UNIVERSITETET I STAVANGER, Organization number: 971564679 Article 5: Project period and progress plan The project period is five years: From the starting date: 01.01.2022 To the date: 31.12.2026 The Research Council of Norway will decide if the project period shall be extended with three years (with reference to Section 6 of Requirements and guidelines for Societal and Industry-oriented Research Centre)."
 
-- `require` **require_on_the_condition_of_a_56053e** — On the condition of a positive decision on a prolongation of the centre after five years, the project period will be extended: From the date: 01.01.2027 To the date of completion: 31.12.2029 Project no.: 331644 5 / 15 CLASSIFICATION: IN CONFIDENCE The Project Owner is under obligation to carry out the activities listed in the progress plan: Main activity / milestone From year Quarter To year Quarter WP1 - Near Field resource evaluation 2022 1 2029 4 M1a Methodologies for quantitative prediction 2023 2 2024 4 M1b Reservoir potential and integrity 2025 1 2026 4 M1c Established models for primary migration 2025 1 2028 4 M1d M2d Reservoirs for geothermal 2024 1 2029 4 WP2 - Reservoir for energy transition 2022 1 2029 4 M2a Solutions for combine CO2 EOR 2023 1 2025 4 M2b parameters to enhance storage CO2 H2 2024 1 2025 4 M2c Modelling tools for CO2 andH2 plume 2028 1 2029 4 WP3 - Net Zero Emission production 2022 1 2029 4 M3a EOR methods with low emission potentia 2022 1 2028 4 M3b IOR Solutions for tight reservoirs 2023 1 2028 4 M3c M4b Improved near-well modelling 2024 1 2028 4 WP4 - Efficient water management 2022 1 2029 4 M4a Water conformance control method cases 2023 1 2025 4 M4c IORSim upgrade 2024 1 2024 4 M4d Field methods demonstration 2028 1 2029 4 WP5 - Digital subsurface for decisions 2022 1 2029 4 M5a Subsurface Knowledge Cloud 2023 1 2024 4 M5b Methodologies for MF uncertainty 2024 1 2025 4 M5c ML proxy models tested 2025 1 2025 4 M5d Hybrid ML-Ensemble methods 2023 1 2027 4 M5e ML/MF calculation of BME 2024 1 2026 4 WP6 - Energy policy, economy and society 2022 1 2029 4 M6a Impact into the business climate 2025 1 2029 4 M6b policy impact of emissions 2023 1 2026 4 M6c Criteria for supporting policy makers 2025 1 2029 4 WP7 - Education and Outreach 2022 1 2029 4 PhDs 9, Postdocs 2 2022 1 2026 4 PhDs 7, Postdocs 3 2026 1 2029 4
+- `require` **require_331644_5_15_classification_in_7e1eb5** — 331644 5 / 15 CLASSIFICATION: IN CONFIDENCE The Project Owner is under obligation to carry out the activities listed in the progress plan: Main activity / milestone From year Quarter To year Quarter WP1 - Near Field resource evaluation 2022 1 2029 4 M1a Methodologies for quantitative prediction 2023 2 2024 4 M1b Reservoir potential and integrity 2025 1 2026 4 M1c Established models for primary migration 2025 1 2028 4 M1d M2d Reservoirs for geothermal 2024 1 2029 4 WP2 - Reservoir for energy transition 2022 1 2029 4 M2a Solutions for combine CO2 EOR 2023 1 2025 4 M2b parameters to enhance storage CO2 H2 2024 1 2025 4 M2c Modelling tools for CO2 andH2 plume 2028 1 2029 4 WP3 - Net Zero Emission production 2022 1 2029 4 M3a EOR methods with low emission potentia 2022 1 2028 4 M3b IOR Solutions for tight reservoirs 2023 1 2028 4 M3c M4b Improved near-well modelling 2024 1 2028 4 WP4 - Efficient water management 2022 1 2029 4 M4a Water conformance control method cases 2023 1 2025 4 M4c IORSim upgrade 2024 1 2024 4 M4d Field methods demonstration 2028 1 2029 4 WP5 - Digital subsurface for decisions 2022 1 2029 4 M5a Subsurface Knowledge Cloud 2023 1 2024 4 M5b Methodologies for MF uncertainty 2024 1 2025 4 M5c ML proxy models tested 2025 1 2025 4 M5d Hybrid ML-Ensemble methods 2023 1 2027 4 M5e ML/MF calculation of BME 2024 1 2026 4 WP6 - Energy policy, economy and society 2022 1 2029 4 M6a Impact into the business climate 2025 1 2029 4 M6b policy impact of emissions 2023 1 2026 4 M6c Criteria for supporting policy makers 2025 1 2029 4 WP7 - Education and Outreach 2022 1 2029 4 PhDs 9, Postdocs 2 2022 1 2026 4 PhDs 7, Postdocs 3 2026 1 2029 4
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 2.4
-  - Source text: "On the condition of a positive decision on a prolongation of the centre after five years, the project period will be extended: From the date: 01.01.2027 To the date of completion: 31.12.2029 Project no.: 331644 5 / 15 CLASSIFICATION: IN CONFIDENCE The Project Owner is under obligation to carry out the activities listed in the progress plan: Main activity / milestone From year Quarter To year Quarter WP1 - Near Field resource evaluation 2022 1 2029 4 M1a Methodologies for quantitative prediction 2023 2 2024 4 M1b Reservoir potential and integrity 2025 1 2026 4 M1c Established models for primary migration 2025 1 2028 4 M1d M2d Reservoirs for geothermal 2024 1 2029 4 WP2 - Reservoir for energy transition 2022 1 2029 4 M2a Solutions for combine CO2 EOR 2023 1 2025 4 M2b parameters to enhance storage CO2 H2 2024 1 2025 4 M2c Modelling tools for CO2 andH2 plume 2028 1 2029 4 WP3 - Net Zero Emission production 2022 1 2029 4 M3a EOR methods with low emission potentia 2022 1 2028 4 M3b IOR Solutions for tight reservoirs 2023 1 2028 4 M3c M4b Improved near-well modelling 2024 1 2028 4 WP4 - Efficient water management 2022 1 2029 4 M4a Water conformance control method cases 2023 1 2025 4 M4c IORSim upgrade 2024 1 2024 4 M4d Field methods demonstration 2028 1 2029 4 WP5 - Digital subsurface for decisions 2022 1 2029 4 M5a Subsurface Knowledge Cloud 2023 1 2024 4 M5b Methodologies for MF uncertainty 2024 1 2025 4 M5c ML proxy models tested 2025 1 2025 4 M5d Hybrid ML-Ensemble methods 2023 1 2027 4 M5e ML/MF calculation of BME 2024 1 2026 4 WP6 - Energy policy, economy and society 2022 1 2029 4 M6a Impact into the business climate 2025 1 2029 4 M6b policy impact of emissions 2023 1 2026 4 M6c Criteria for supporting policy makers 2025 1 2029 4 WP7 - Education and Outreach 2022 1 2029 4 PhDs 9, Postdocs 2 2022 1 2026 4 PhDs 7, Postdocs 3 2026 1 2029 4"
+  - Source text: "331644 5 / 15 CLASSIFICATION: IN CONFIDENCE The Project Owner is under obligation to carry out the activities listed in the progress plan: Main activity / milestone From year Quarter To year Quarter WP1 - Near Field resource evaluation 2022 1 2029 4 M1a Methodologies for quantitative prediction 2023 2 2024 4 M1b Reservoir potential and integrity 2025 1 2026 4 M1c Established models for primary migration 2025 1 2028 4 M1d M2d Reservoirs for geothermal 2024 1 2029 4 WP2 - Reservoir for energy transition 2022 1 2029 4 M2a Solutions for combine CO2 EOR 2023 1 2025 4 M2b parameters to enhance storage CO2 H2 2024 1 2025 4 M2c Modelling tools for CO2 andH2 plume 2028 1 2029 4 WP3 - Net Zero Emission production 2022 1 2029 4 M3a EOR methods with low emission potentia 2022 1 2028 4 M3b IOR Solutions for tight reservoirs 2023 1 2028 4 M3c M4b Improved near-well modelling 2024 1 2028 4 WP4 - Efficient water management 2022 1 2029 4 M4a Water conformance control method cases 2023 1 2025 4 M4c IORSim upgrade 2024 1 2024 4 M4d Field methods demonstration 2028 1 2029 4 WP5 - Digital subsurface for decisions 2022 1 2029 4 M5a Subsurface Knowledge Cloud 2023 1 2024 4 M5b Methodologies for MF uncertainty 2024 1 2025 4 M5c ML proxy models tested 2025 1 2025 4 M5d Hybrid ML-Ensemble methods 2023 1 2027 4 M5e ML/MF calculation of BME 2024 1 2026 4 WP6 - Energy policy, economy and society 2022 1 2029 4 M6a Impact into the business climate 2025 1 2029 4 M6b policy impact of emissions 2023 1 2026 4 M6c Criteria for supporting policy makers 2025 1 2029 4 WP7 - Education and Outreach 2022 1 2029 4 PhDs 9, Postdocs 2 2022 1 2026 4 PhDs 7, Postdocs 3 2026 1 2029 4"
 
 - `require` **require_be_approved_by_the_research_445da5** — Distribution of project costs by cost category (amounts in NOK 1 000) The project is to be implemented in accordance with the following cost plan: 2022 2023 2024 2025 2026 2027 Payroll and indirect expenses 21.687 31.860 37.086 42.080 38.320 34.235 Procurement of R&D services 0 0 0 0 0 0 Equipment 587 957 965 972 981 989 Other operating expenses 2.753 2.753 2.753 2.753 2.753 2.753 Total amount 25.027 35.570 40.804 45.805 42.054 37.977 2028 2029 Amount Payroll and indirect expenses 32.219 28.480 265.967 Procurement of R&D services 0 0 0 Equipment 998 704 7.153 Other operating expenses 2.753 2.753 22.024 Total amount 35.970 31.937 295.144 Changes in the cost plan must be approved by the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 6.1.1
   - Source text: "Distribution of project costs by cost category (amounts in NOK 1 000) The project is to be implemented in accordance with the following cost plan: 2022 2023 2024 2025 2026 2027 Payroll and indirect expenses 21.687 31.860 37.086 42.080 38.320 34.235 Procurement of R&D services 0 0 0 0 0 0 Equipment 587 957 965 972 981 989 Other operating expenses 2.753 2.753 2.753 2.753 2.753 2.753 Total amount 25.027 35.570 40.804 45.805 42.054 37.977 2028 2029 Amount Payroll and indirect expenses 32.219 28.480 265.967 Procurement of R&D services 0 0 0 Equipment 998 704 7.153 Other operating expenses 2.753 2.753 22.024 Total amount 35.970 31.937 295.144 Changes in the cost plan must be approved by the Research Council."
 
 - `require` **require_be_approved_by_the_research_7c49fe** — Distribution of project costs by cost code (in NOK 1 000) Project costs are to be distributed by cost code as follows: 2022 2023 2024 2025 2026 2027 Trade and industry 3.201 3.202 3.202 3.200 3.202 3.201 Research institutes 16.045 16.551 16.763 16.982 17.207 17.439 Universities and university colleges 5.781 15.817 20.839 25.623 21.645 17.337 Other sectors 0 0 0 0 0 0 Abroad 0 0 0 0 0 0 Total amount 25.027 35.570 40.804 45.805 42.054 37.977 2028 2029 Sum Trade and industry 3.201 3.201 25.610 Research institutes 17.678 16.534 135.199 Universities and university colleges 15.091 12.202 134.335 Other sectors 0 0 0 Abroad 0 0 0 Total amount 35.970 31.937 295.144 Changes in the distribution between cost codes must be approved by the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 6.1.2
   - Source text: "Distribution of project costs by cost code (in NOK 1 000) Project costs are to be distributed by cost code as follows: 2022 2023 2024 2025 2026 2027 Trade and industry 3.201 3.202 3.202 3.200 3.202 3.201 Research institutes 16.045 16.551 16.763 16.982 17.207 17.439 Universities and university colleges 5.781 15.817 20.839 25.623 21.645 17.337 Other sectors 0 0 0 0 0 0 Abroad 0 0 0 0 0 0 Total amount 25.027 35.570 40.804 45.805 42.054 37.977 2028 2029 Sum Trade and industry 3.201 3.201 25.610 Research institutes 17.678 16.534 135.199 Universities and university colleges 15.091 12.202 134.335 Other sectors 0 0 0 Abroad 0 0 0 Total amount 35.970 31.937 295.144 Changes in the distribution between cost codes must be approved by the Research Council."
 
 - `require` **require_be_submitted_to_the_research_cdb639** — Requests for changes must be submitted to the Research Council via My RCN Web> Projects/Reports > View/Change project.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Reports
   - Source clause: 6.1.2
   - Source text: "Requests for changes must be submitted to the Research Council via My RCN Web> Projects/Reports > View/Change project."
 
 - `require` **require_be_approved_by_the_research_9929d3** — 1.500 1.500 1.000 4.000 0 Total amount 34.218 53.201 48.593 38.263 63.125 11.736 Partner / Activity 28 37 Sum UNIVERSITETET I STAVANGER 6.903 25.533 105.286 INSTITUTT FOR ENERGITEKNIKK 200 3.500 55.636 UNIVERSITETET I BERGEN 836 836 27.492 HALLIBURTON AS 0 1.000 10.000 NORCE Teknologi/Energi ROGALAND 400 5.800 86.730 SCHLUMBERGER OFFSHORE SERVICES LIMITED 0 1.000 10.000 Total amount 8.339 37.669 295.144 Changes in the distribution of project costs between the various partners or main activities must be approved by the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 1.000
   - Source text: "1.500 1.500 1.000 4.000 0 Total amount 34.218 53.201 48.593 38.263 63.125 11.736 Partner / Activity 28 37 Sum UNIVERSITETET I STAVANGER 6.903 25.533 105.286 INSTITUTT FOR ENERGITEKNIKK 200 3.500 55.636 UNIVERSITETET I BERGEN 836 836 27.492 HALLIBURTON AS 0 1.000 10.000 NORCE Teknologi/Energi ROGALAND 400 5.800 86.730 SCHLUMBERGER OFFSHORE SERVICES LIMITED 0 1.000 10.000 Total amount 8.339 37.669 295.144 Changes in the distribution of project costs between the various partners or main activities must be approved by the Research Council."
 
 - `require` **require_be_submitted_to_the_research_6db741** — Requests for changes must be submitted to the Research Council via “My RCN Web > Projects/Reports > “View / Change project”.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Reports
   - Source clause: 1.000
   - Source text: "Requests for changes must be submitted to the Research Council via “My RCN Web > Projects/Reports > “View / Change project”."
 
-- `require` **require_be_approved_by_the_research_3f75cb** — 20.975 15.505 11.800 23.200 4.850 HALLIBURTON AS 1.000 1.500 1.500 1.000 4.000 0 Total amount 34.218 53.201 48.593 38.263 63.125 11.736 Partner / Activity 28 37 Amount UNIVERSITETET I STAVANGER 6.903 25.533 105.286 UNIVERSITETET I BERGEN 836 836 27.492 SCHLUMBERGER OFFSHORE SERVICES LIMITED 0 1.000 10.000 INSTITUTT FOR ENERGITEKNIKK 200 3.500 55.636 NORCE Teknologi/Energi ROGALAND 400 5.800 86.730 HALLIBURTON AS 0 1.000 10.000 Total amount 8.339 37.669 295.144 Project no.: 331644 8 / 15 CLASSIFICATION: IN CONFIDENCE Changes in the distribution of the various project costs between partners must be approved by the Research Council.
+- `require` **require_be_approved_by_the_research_67caeb** — 331644 8 / 15 CLASSIFICATION: IN CONFIDENCE Changes in the distribution of the various project costs between partners must be approved by the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4.200
-  - Source text: "20.975 15.505 11.800 23.200 4.850 HALLIBURTON AS 1.000 1.500 1.500 1.000 4.000 0 Total amount 34.218 53.201 48.593 38.263 63.125 11.736 Partner / Activity 28 37 Amount UNIVERSITETET I STAVANGER 6.903 25.533 105.286 UNIVERSITETET I BERGEN 836 836 27.492 SCHLUMBERGER OFFSHORE SERVICES LIMITED 0 1.000 10.000 INSTITUTT FOR ENERGITEKNIKK 200 3.500 55.636 NORCE Teknologi/Energi ROGALAND 400 5.800 86.730 HALLIBURTON AS 0 1.000 10.000 Total amount 8.339 37.669 295.144 Project no.: 331644 8 / 15 CLASSIFICATION: IN CONFIDENCE Changes in the distribution of the various project costs between partners must be approved by the Research Council."
+  - Source text: "331644 8 / 15 CLASSIFICATION: IN CONFIDENCE Changes in the distribution of the various project costs between partners must be approved by the Research Council."
 
 - `allow` **allow_be_approved_in_writing_by_3cfc26** — Funding plan (amounts in NOK 1000) The project is to be implemented in accordance with the following funding plan: 2022 2023 2024 2025 2026 2027 The Research Council 8.153 9.229 10.067 11.355 10.820 10.083 Own financing 4.228 10.073 12.708 15.790 12.301 8.685 Public funding 0 0 0 0 0 0 Private funding 12.646 16.268 18.029 18.660 18.933 19.209 International funding 0 0 0 0 0 0 Total amount 25.027 35.570 40.804 45.805 42.054 37.977 2028 2029 Amount The Research Council 10.125 10.168 80.000 Own financing 6.278 5.081 75.144 Public funding 0 0 0 Private funding 19.567 16.688 140.000 International funding 0 0 0 Total amount 35.970 31.937 295.144 Changes in the funding plan may be approved in writing by the Research Council and is treated as a contractual amendment, ref.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 6.2
   - Source text: "Funding plan (amounts in NOK 1000) The project is to be implemented in accordance with the following funding plan: 2022 2023 2024 2025 2026 2027 The Research Council 8.153 9.229 10.067 11.355 10.820 10.083 Own financing 4.228 10.073 12.708 15.790 12.301 8.685 Public funding 0 0 0 0 0 0 Private funding 12.646 16.268 18.029 18.660 18.933 19.209 International funding 0 0 0 0 0 0 Total amount 25.027 35.570 40.804 45.805 42.054 37.977 2028 2029 Amount The Research Council 10.125 10.168 80.000 Own financing 6.278 5.081 75.144 Public funding 0 0 0 Private funding 19.567 16.688 140.000 International funding 0 0 0 Total amount 35.970 31.937 295.144 Changes in the funding plan may be approved in writing by the Research Council and is treated as a contractual amendment, ref."
 
 - `require` **require_be_submitted_to_the_research_ceacfd** — Requests for changes must be submitted to the Research Council via My RCN Web > Projects/Reports > View > Change project.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Reports
   - Source clause: 6.2
   - Source text: "Requests for changes must be submitted to the Research Council via My RCN Web > Projects/Reports > View > Change project."
 
-- `require` **require_be_submitted_to_the_research_dcd15b** — Project no.: 331644 9 / 15 CLASSIFICATION: IN CONFIDENCE Article 7: Reports The following reports shall be submitted to the Research Council:
+- `require` **require_be_submitted_to_the_research_fb2ccc** — 331644 9 / 15 CLASSIFICATION: IN CONFIDENCE Article 7: Reports The following reports shall be submitted to the Research Council:
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Reports; reports
   - Source clause: 6.4
-  - Source text: "Project no.: 331644 9 / 15 CLASSIFICATION: IN CONFIDENCE Article 7: Reports The following reports shall be submitted to the Research Council:"
+  - Source text: "331644 9 / 15 CLASSIFICATION: IN CONFIDENCE Article 7: Reports The following reports shall be submitted to the Research Council:"
 
 - `deny` **deny_be_submitted_to_the_research_e26723** — Deadline: 1 April Reports and publications that are not compulsory that have been drawn up on the initiative of project management shall not be submitted to the Research Council, unless specifically agreed upon.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Reports
   - Source clause: 7.4
   - Source text: "Deadline: 1 April Reports and publications that are not compulsory that have been drawn up on the initiative of project management shall not be submitted to the Research Council, unless specifically agreed upon."
 
 - `require` **require_store_all_technical_reports_and_cc44f0** — The Project Owner is required to store all technical reports and publications for at least 10 years after conclusion of the project period.
   - Actor: The Project Owner
   - Counterparty/Recipient: Not specified
-  - Applies to: Unresolved; see source text
+  - Applies to: reports
   - Source clause: 7.4
   - Source text: "The Project Owner is required to store all technical reports and publications for at least 10 years after conclusion of the project period."
 
 - `require` **require_assign_an_isbn_issn_number_08cc16** — The Project Owner shall assign an ISBN/ISSN number to the reports and/or publications, where so required, and ensure that these are sent to the National Library in Mo i Rana.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: reports
   - Source clause: 7.4
   - Source text: "The Project Owner shall assign an ISBN/ISSN number to the reports and/or publications, where so required, and ensure that these are sent to the National Library in Mo i Rana."
 
 - `require` **require_comply_with_requirements_and_guidelines_47d5e5** — The centre shall comply with Requirements and guidelines for Societal and Industry-oriented Research Centre.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 1
   - Source text: "The centre shall comply with Requirements and guidelines for Societal and Industry-oriented Research Centre."
 
 - `require` **require_coordinate_the_activity_with_ongoing_e221f5** — The centre must coordinate the activity with ongoing centres in PETROSENTER or other large projects, such as a Norwegian Centre of Excellence (SFF), Centre for Research-based Innovation (SFI) or Centre for Environment-friendly Energy Research (FME).
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 2.3
   - Source text: "The centre must coordinate the activity with ongoing centres in PETROSENTER or other large projects, such as a Norwegian Centre of Excellence (SFF), Centre for Research-based Innovation (SFI) or Centre for Environment-friendly Energy Research (FME)."
 
 - `require` **require_have_three_or_more_partners_3b49d1** — The centre must have three or more partners that are not research organisations and that provide funding to the project (user partners).
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 3
   - Source text: "The centre must have three or more partners that are not research organisations and that provide funding to the project (user partners)."
 
 - `allow` **allow_be_a_maximum_of_two_ed3294** — Funding from the Research Council may be a maximum of two times that of funding from user partners.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 3
   - Source text: "Funding from the Research Council may be a maximum of two times that of funding from user partners."
 
 - `require` **require_specify_the_financial_contribution_of_c05d85** — The collaboration agreement shall specify the financial contribution of each collaboration partner, and at all times reflect the funding plan in the contract with the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 3
   - Source text: "The collaboration agreement shall specify the financial contribution of each collaboration partner, and at all times reflect the funding plan in the contract with the Research Council."
@@ -587,62 +587,62 @@ Status: candidate
 - `require` **require_be_regulated_to_ensure_that_53a6d2** — Ownership of project results must be regulated to ensure that undertakings participating in the centre do not receive indirect state aid from participating research partners.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: project results
   - Source clause: 4
   - Source text: "Ownership of project results must be regulated to ensure that undertakings participating in the centre do not receive indirect state aid from participating research partners."
 
 - `require` **require_therefore_be_in_compliance_with_5d964e** — The regulation of ownership must therefore be in compliance with paragraph 28 of the EFTA Surveillance Authority’s guidelines for state aid for research and development and innovation.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4
   - Source text: "The regulation of ownership must therefore be in compliance with paragraph 28 of the EFTA Surveillance Authority’s guidelines for state aid for research and development and innovation."
 
 - `allow` **allow_take_part_in_the_centre_4331ab** — A representative from the Research Council may take part in the centre board meetings with the status of observer.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 6
   - Source text: "A representative from the Research Council may take part in the centre board meetings with the status of observer."
 
 - `require` **require_be_obtained_from_cristin_e9f560** — Publication information must be obtained from CRIStin.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: information
   - Source clause: 7
   - Source text: "Publication information must be obtained from CRIStin."
 
 - `require` **require_register_the_scientific_publications_manually_082c6c** — Those who do not have the opportunity to use CRIStin must register the scientific publications manually.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 7
   - Source text: "Those who do not have the opportunity to use CRIStin must register the scientific publications manually."
 
-- `require` **require_submit_confirmation_of_employment_with_4f96ef** — 31.12.2026 Norway Project no.: 331644 12 / 15 CLASSIFICATION: IN CONFIDENCE For research fellowship positions in the project: When a research fellow is hired, the Project Owner shall submit confirmation of employment with full name, person security number and date of commencement of employment to the Research Council, either by progress reporting or by creating a request for changes via My RCN Web.
-  - Actor: Unresolved; see source text
+- `require` **require_submit_confirmation_of_employment_with_5474a7** — 331644 12 / 15 CLASSIFICATION: IN CONFIDENCE For research fellowship positions in the project: When a research fellow is hired, the Project Owner shall submit confirmation of employment with full name, person security number and date of commencement of employment to the Research Council, either by progress reporting or by creating a request for changes via My RCN Web.
+  - Actor: the Project Owner
   - Counterparty/Recipient: Unresolved; see source text
   - Applies to: Unresolved; see source text
   - Source clause: 01.01.2025
-  - Source text: "31.12.2026 Norway Project no.: 331644 12 / 15 CLASSIFICATION: IN CONFIDENCE For research fellowship positions in the project: When a research fellow is hired, the Project Owner shall submit confirmation of employment with full name, person security number and date of commencement of employment to the Research Council, either by progress reporting or by creating a request for changes via My RCN Web."
+  - Source text: "331644 12 / 15 CLASSIFICATION: IN CONFIDENCE For research fellowship positions in the project: When a research fellow is hired, the Project Owner shall submit confirmation of employment with full name, person security number and date of commencement of employment to the Research Council, either by progress reporting or by creating a request for changes via My RCN Web."
 
 - `require` **require_commence_during_the_agreed_fiscal_bda11b** — Employment must commence during the agreed fiscal year, unless otherwise agreed in writing with the Research Council.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: Employment
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 01.01.2025
   - Source text: "Employment must commence during the agreed fiscal year, unless otherwise agreed in writing with the Research Council."
 
 - `require` **require_comply_with_the_rules_and_aec445** — The Project Owner or, if relevant, a partner has employer responsibility for the research fellow and must comply with the rules and guidelines that apply to employers.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 01.01.2025
   - Source text: "The Project Owner or, if relevant, a partner has employer responsibility for the research fellow and must comply with the rules and guidelines that apply to employers."
 
 - `require` **require_be_notified_immediately_of_any_4f9fb8** — The Research Council must be notified immediately of any changes of significance to the implementation of the project.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 01.01.2025
   - Source text: "The Research Council must be notified immediately of any changes of significance to the implementation of the project."
@@ -656,28 +656,28 @@ Status: candidate
 
 - `require` **require_be_notified_immediately_9223d9** — In the event the Project Owner finds grounds indicating that the fellowship should be discontinued or terminated, the Research Council must be notified immediately.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 01.01.2025
   - Source text: "In the event the Project Owner finds grounds indicating that the fellowship should be discontinued or terminated, the Research Council must be notified immediately."
 
 - `deny` **deny_take_place_without_the_prior_8057b1** — Discontinuation or termination of the fellowship may not take place without the prior written consent of the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 01.01.2025
   - Source text: "Discontinuation or termination of the fellowship may not take place without the prior written consent of the Research Council."
 
 - `require` **require_be_included_in_the_post_74914f** — If an employer expects the extension of the fellowship period to exceed six months as a result of an overseas research stay and subsequent extension, stipulations allowing for this must be included in the post-doctoral candidate's original contract of employment.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: result
   - Source clause: 01.01.2025
   - Source text: "If an employer expects the extension of the fellowship period to exceed six months as a result of an overseas research stay and subsequent extension, stipulations allowing for this must be included in the post-doctoral candidate's original contract of employment."
 
 - `require` **require_draw_up_a_professional_development_660815** — The Project Owner or the research institution where the post-doctoral research fellow is employed is required to draw up a professional development plan for the full duration of the post-doctoral period.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 01.01.2025
   - Source text: "The Project Owner or the research institution where the post-doctoral research fellow is employed is required to draw up a professional development plan for the full duration of the post-doctoral period."
@@ -692,41 +692,41 @@ Status: candidate
 - `require` **require_required_submission_of_data_management_4e4649** — Required submission of data management plans for projects that generate research data Starting in 2018, all projects that have applied for and been granted research funding will, as a general rule, be required to submit a data management plan if the project collects or in some other way produces research data.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: data; research data
   - Source clause: 01.01.2025
   - Source text: "Required submission of data management plans for projects that generate research data Starting in 2018, all projects that have applied for and been granted research funding will, as a general rule, be required to submit a data management plan if the project collects or in some other way produces research data."
 
 - `require` **require_be_provided_in_the_final_bafb09** — In the case of projects that generate research data but have not drawn up a data management plan, information regarding the archives and/or data infrastructure(s) where the data are to be stored must be provided in the final project report.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: research data; data; information; project report
   - Source clause: 01.01.2025
   - Source text: "In the case of projects that generate research data but have not drawn up a data management plan, information regarding the archives and/or data infrastructure(s) where the data are to be stored must be provided in the final project report."
 
 - `require` **require_be_included_in_the_registration_48aa05** — Information that the trial is funded by the Research Council, with reference to the project number, must be included in the registration information.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Information; information
   - Source clause: 01.01.2025
   - Source text: "Information that the trial is funded by the Research Council, with reference to the project number, must be included in the registration information."
 
 - `require` **require_in_addition_be_registered_in_256bfe** — All clinical trials that plan to include patients/trial subjects in Norway must in addition be registered in the list of clinical trials published on Helsenorge, the national health website: https://helsenorge.no/kliniske-studier.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 01.01.2025
   - Source text: "All clinical trials that plan to include patients/trial subjects in Norway must in addition be registered in the list of clinical trials published on Helsenorge, the national health website: https://helsenorge.no/kliniske-studier."
 
-- `require` **require_register_and_update_project_information_466b3e** — Project no.: 331644 14 / 15 CLASSIFICATION: IN CONFIDENCE Projects of relevance for Svalbard: The Project Owner is required to register and update project information in the Research in Svalbard (RiS) database.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+- `require` **require_register_and_update_project_information_68b431** — 331644 14 / 15 CLASSIFICATION: IN CONFIDENCE Projects of relevance for Svalbard: The Project Owner is required to register and update project information in the Research in Svalbard (RiS) database.
+  - Actor: The Project Owner
+  - Counterparty/Recipient: Not specified
+  - Applies to: project information
   - Source clause: 01.01.2025
-  - Source text: "Project no.: 331644 14 / 15 CLASSIFICATION: IN CONFIDENCE Projects of relevance for Svalbard: The Project Owner is required to register and update project information in the Research in Svalbard (RiS) database."
+  - Source text: "331644 14 / 15 CLASSIFICATION: IN CONFIDENCE Projects of relevance for Svalbard: The Project Owner is required to register and update project information in the Research in Svalbard (RiS) database."
 
 - `allow` **allow_be_sent_to_the_secretariat_a4b141** — Enquiries about the database may be sent to the secretariat of the Svalbard Science Forum at ssf@rcn.no.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 01.01.2025
   - Source text: "Enquiries about the database may be sent to the secretariat of the Svalbard Science Forum at ssf@rcn.no."
@@ -740,63 +740,63 @@ Status: candidate
 
 - `require` **require_be_approved_by_the_research_792378** — Norwegian research organisations must be approved by the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 1.2
   - Source text: "Norwegian research organisations must be approved by the Research Council."
 
 - `require` **require_be_carried_out_in_effective_e846d8** — All projects carried out by a Societal and Industry-oriented Research Centre must be carried out in effective collabo- ration with the partners participating in the project.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 2.2
   - Source text: "All projects carried out by a Societal and Industry-oriented Research Centre must be carried out in effective collabo- ration with the partners participating in the project."
 
 - `require` **require_have_at_least_three_user_b5cff7** — Each centre must have at least three user partners unless another minimum requirement is specified in the call.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 2.4
   - Source text: "Each centre must have at least three user partners unless another minimum requirement is specified in the call."
 
 - `require` **require_be_engaged_in_considerable_innovation_903e90** — The user partners must be engaged in considerable innovation ac- tivities of their own and/or have the ability to utilise research results in the development of their own organisation.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: research results
   - Source clause: 2.4
   - Source text: "The user partners must be engaged in considerable innovation ac- tivities of their own and/or have the ability to utilise research results in the development of their own organisation."
 
 - `require` **require_comprise_representatives_of_the_project_335b32** — The centre’s board must comprise representatives of the Project Owner, user partners and research partners.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: board
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 3.2
   - Source text: "The centre’s board must comprise representatives of the Project Owner, user partners and research partners."
 
 - `require` **require_have_a_scientific_advisory_committee_f12296** — Unless otherwise specified in the agreement document with the Research Council, the centre must have a Scientific Advisory Committee comprising independent international top researchers.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: document
   - Source clause: 3.2
   - Source text: "Unless otherwise specified in the agreement document with the Research Council, the centre must have a Scientific Advisory Committee comprising independent international top researchers."
 
 - `require` **require_have_joint_day_to_day_2a985a** — The centre must have joint day-to-day management and one overall research plan that corresponds with the project description.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 3.5
   - Source text: "The centre must have joint day-to-day management and one overall research plan that corresponds with the project description."
 
 - `require` **require_take_gender_equality_into_account_d46d1a** — When recruiting staff, the centre must take gender equality into account and actively work to attract outstanding researchers.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 3.9
   - Source text: "When recruiting staff, the centre must take gender equality into account and actively work to attract outstanding researchers."
 
 - `require` **require_encourage_and_contribute_to_researcher_e9f176** — The centre must encourage and contribute to researcher education in areas where recruit- ment is important for renewal and value creation.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 3.10
   - Source text: "The centre must encourage and contribute to researcher education in areas where recruit- ment is important for renewal and value creation."
@@ -817,13 +817,13 @@ Status: candidate
 
 - `require` **require_be_used_eb863f** — The Research Council’s rules for calculating payroll and indirect expenses to be included in the budget must be used.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4.2
   - Source text: "The Research Council’s rules for calculating payroll and indirect expenses to be included in the budget must be used."
 
 - `require` **require_use_the_stipulated_research_fellow_764977** — All partners must use the stipulated research fellow rates for all years the application covers.
-  - Actor: All partners
+  - Actor: Unresolved; see source text
   - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4.2
@@ -831,76 +831,76 @@ Status: candidate
 
 - `require` **require_cover_their_own_costs_a7930f** — This means that they cannot receive state aid through the Research Coun- cil’s grant, but must cover their own costs.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4.3
   - Source text: "This means that they cannot receive state aid through the Research Coun- cil’s grant, but must cover their own costs."
 
 - `require` **require_the_undertakings_participating_in_the_e2db48** — Nor must the undertakings participating in the research centre receive indirect state aid through favourable conditions for their collaboration with the research organisations par- ticipating in the research centre.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: Nor
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4.4
   - Source text: "Nor must the undertakings participating in the research centre receive indirect state aid through favourable conditions for their collaboration with the research organisations par- ticipating in the research centre."
 
 - `allow` **allow_termi_nate_its_contract_with_0f3d25** — If the change in partners means that important assumptions that formed the basis for the estab- lishment of the centre lapse or are significantly changed, the Research Council may termi- nate its contract with the Project Owner.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4.6
   - Source text: "If the change in partners means that important assumptions that formed the basis for the estab- lishment of the centre lapse or are significantly changed, the Research Council may termi- nate its contract with the Project Owner."
 
 - `require` **require_be_drawn_up_in_accord_21e119** — The collaboration agreement must be drawn up in accord- ance with the Research Council’s agreement document, the Requirements and Guidelines for Societal and Industry-oriented Research Centre and the General Terms and Conditions
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: document
   - Source clause: 5.1
   - Source text: "The collaboration agreement must be drawn up in accord- ance with the Research Council’s agreement document, the Requirements and Guidelines for Societal and Industry-oriented Research Centre and the General Terms and Conditions"
 
 - `require` **require_the_collaboration_agreement_should_contain_8e56f5** — The collaboration agreement should contain provisions setting out the Project Owner’s and partners’ obligation to contribute resources in accordance with the centre’s activity and funding plan, rules regarding the right to join and leave the centre, rules regarding employer responsibility, and provisions on property rights, utilisation rights, licensing, publication of project results and confidentiality.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: project results
   - Source clause: 5.2
   - Source text: "The collaboration agreement should contain provisions setting out the Project Owner’s and partners’ obligation to contribute resources in accordance with the centre’s activity and funding plan, rules regarding the right to join and leave the centre, rules regarding employer responsibility, and provisions on property rights, utilisation rights, licensing, publication of project results and confidentiality."
 
 - `require` **require_be_used_as_a_basis_569cfe** — The Research Council’s General Terms and Conditions for R&D Projects regarding prop- erty rights, utilisation rights, licensing, publication of project results and confidentiality must be used as a basis.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: project results
   - Source clause: 5.3
   - Source text: "The Research Council’s General Terms and Conditions for R&D Projects regarding prop- erty rights, utilisation rights, licensing, publication of project results and confidentiality must be used as a basis."
 
 - `require` **require_be_worded_in_a_manner_58d2b4** — The collaboration agreement’s terms and conditions regarding these issues must be worded in a manner that ensures that the undertakings participating in the centre do not receive indirect state aid, as described in the EFTA Surveillance Au- thority’s guidelines on state aid for research and development and innovation Section 28 letters b), c) or d).
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 5.3
   - Source text: "The collaboration agreement’s terms and conditions regarding these issues must be worded in a manner that ensures that the undertakings participating in the centre do not receive indirect state aid, as described in the EFTA Surveillance Au- thority’s guidelines on state aid for research and development and innovation Section 28 letters b), c) or d)."
 
 - `require` **require_create_a_website_for_the_8588b4** — The Project Owner must create a website for the centre to be actively used in external and internal communication.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: The Project Owner
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 6.2
   - Source text: "The Project Owner must create a website for the centre to be actively used in external and internal communication."
 
 - `require` **require_ensure_that_a_data_management_0d784c** — The Project Owner must ensure that a data management plan is prepared in line with the Research Council’s Policy for Open Access to Research Data.
-  - Actor: Unresolved; see source text
+  - Actor: The Project Owner
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: data; Research Data
   - Source clause: 6.4
   - Source text: "The Project Owner must ensure that a data management plan is prepared in line with the Research Council’s Policy for Open Access to Research Data."
 
 - `require` **require_be_written_in_english_sent_a6f410** — The annual report must be written in English, sent to the Research Council and pub- lished on the centre’s website.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: report
   - Source clause: 6.4
   - Source text: "The annual report must be written in English, sent to the Research Council and pub- lished on the centre’s website."
 
 - `require` **require_prepare_and_send_a_work_589aae** — By 1 December each year, the Project Owner must prepare and send a work plan to the Research Council with updated plans for the forthcoming year.
-  - Actor: Unresolved; see source text
+  - Actor: the Project Owner
   - Counterparty/Recipient: Unresolved; see source text
   - Applies to: Unresolved; see source text
   - Source clause: 6.5
@@ -908,69 +908,69 @@ Status: candidate
 
 - `require` **require_at_appropriate_inter_vals_organise_c3dcb2** — In consultation with the Project Owner, the Research Council must, at appropriate inter- vals, organise a site visit to the centre to review developments, the centre’s work and plans going forward.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 6.7
   - Source text: "In consultation with the Project Owner, the Research Council must, at appropriate inter- vals, organise a site visit to the centre to review developments, the centre’s work and plans going forward."
 
-- `allow` **allow_be_patented_or_registered_as_c27e9e** — Intellectual property rights: Patents and all other rights to technical solutions, methods, processes, procedures, drawings, prototypes, specifications, design, circuit layout drawings and trade secrets, regardless of whether or not these are or may be patented or registered as well as all copyrights, database rights and other similar rights, rights to trademarks, domains, and other distinguishing business identification marks, and rights protected under the Act relating to the control of marketing and contract terms and conditions, etc. (Marketing Control Act), regardless of whether these are or may be registered.
+- `allow` **allow_be_patented_or_registered_as_9fd883** — Intellectual property rights: Patents and all other rights to technical solutions, methods, processes, procedures, drawings, prototypes, specifications, design, circuit layout drawings and trade secrets, regardless of whether or not these are or may be patented or registered as well as all copyrights, database rights and other similar rights, rights to trademarks, domains, and other distinguishing business identification marks, and rights protected under the Act relating to the control of marketing and contract terms and conditions, etc. (
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Intellectual property rights
   - Source clause: 1
-  - Source text: "Intellectual property rights: Patents and all other rights to technical solutions, methods, processes, procedures, drawings, prototypes, specifications, design, circuit layout drawings and trade secrets, regardless of whether or not these are or may be patented or registered as well as all copyrights, database rights and other similar rights, rights to trademarks, domains, and other distinguishing business identification marks, and rights protected under the Act relating to the control of marketing and contract terms and conditions, etc. (Marketing Control Act), regardless of whether these are or may be registered."
+  - Source text: "Intellectual property rights: Patents and all other rights to technical solutions, methods, processes, procedures, drawings, prototypes, specifications, design, circuit layout drawings and trade secrets, regardless of whether or not these are or may be patented or registered as well as all copyrights, database rights and other similar rights, rights to trademarks, domains, and other distinguishing business identification marks, and rights protected under the Act relating to the control of marketing and contract terms and conditions, etc. ("
 
 - `require` **require_be_implemented_in_accordance_with_424897** — In cases where the Research Council has approved the grant application without requiring any special agreement document, the project shall be implemented in accordance with the grant application and the General Terms and Conditions for R&D Projects issued by the Research Council.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: document
   - Source clause: 2.1
   - Source text: "In cases where the Research Council has approved the grant application without requiring any special agreement document, the project shall be implemented in accordance with the grant application and the General Terms and Conditions for R&D Projects issued by the Research Council."
 
 - `require` **require_comply_with_the_applicable_statutory_8bb20e** — The Project Owner is required to comply with the applicable statutory framework and other public regulations, ethical guidelines as well as recognised quality standards and norms for good research practice.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: The Project Owner
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 2.1
   - Source text: "The Project Owner is required to comply with the applicable statutory framework and other public regulations, ethical guidelines as well as recognised quality standards and norms for good research practice."
 
 - `deny` **deny_be_granted_any_rights_to_715705** — Subcontractors may not be granted any rights to project results.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: project results
   - Source clause: 2.3
   - Source text: "Subcontractors may not be granted any rights to project results."
 
 - `require` **require_represent_the_partners_vis_vis_2e808a** — Projects in collaboration with partners In projects carried out in collaboration with partners, the Project Owner shall represent the partners vis-à-vis the Research Council.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: the Project Owner
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 3
   - Source text: "Projects in collaboration with partners In projects carried out in collaboration with partners, the Project Owner shall represent the partners vis-à-vis the Research Council."
 
 - `require` **require_have_been_received_before_the_9f28d5** — Unless otherwise agreed in writing, the collaboration agreement is to be completed within three months after the Research Council has sent the contract to the Project Owner, and must have been received before the Research Council will disburse any funds.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 3
   - Source text: "Unless otherwise agreed in writing, the collaboration agreement is to be completed within three months after the Research Council has sent the contract to the Project Owner, and must have been received before the Research Council will disburse any funds."
 
 - `require` **require_among_other_things_ensure_that_baba6d** — The Project Owner must, among other things, ensure that the allocation is used in accordance with the contract, and that the partners that receive funding keep and submit cost accounts to the Project Owner as a basis for the preparation of project accounts that meet the requirements set out in the contract, cf.
-  - Actor: Unresolved; see source text
+  - Actor: The Project Owner
   - Counterparty/Recipient: Unresolved; see source text
   - Applies to: Unresolved; see source text
   - Source clause: 3
   - Source text: "The Project Owner must, among other things, ensure that the allocation is used in accordance with the contract, and that the partners that receive funding keep and submit cost accounts to the Project Owner as a basis for the preparation of project accounts that meet the requirements set out in the contract, cf."
 
 - `require` **require_take_place_on_terms_and_6fa21b** — Collaboration shall take place on terms and conditions that ensure that neither the Project Owner nor the partners receive indirect state aid, in accordance with the EFTA Surveillance Authority’s guidelines on state aid for research and development and innovation.
-  - Actor: Unresolved; see source text
+  - Actor: Collaboration
   - Counterparty/Recipient: Unresolved; see source text
   - Applies to: Unresolved; see source text
   - Source clause: 3
   - Source text: "Collaboration shall take place on terms and conditions that ensure that neither the Project Owner nor the partners receive indirect state aid, in accordance with the EFTA Surveillance Authority’s guidelines on state aid for research and development and innovation."
 
 - `allow` **allow_stipulate_special_requirements_pertaining_to_d059d4** — The Research Council may stipulate special requirements pertaining to collaboration between partners.
-  - Actor: Unresolved; see source text
+  - Actor: The Research Council
   - Counterparty/Recipient: Unresolved; see source text
   - Applies to: Unresolved; see source text
   - Source clause: 3
@@ -978,43 +978,43 @@ Status: candidate
 
 - `require` **require_establish_the_right_of_the_1eb5fc** — The collaboration agreement shall establish the right of the Research Council to exercise the rights of the Project Owner pursuant to the collaboration agreement in so far as this is necessary in order for the Research Council to exercise its rights under the contract (including provisions on duty of secrecy, verification and auditing, etc.).
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 3
   - Source text: "The collaboration agreement shall establish the right of the Research Council to exercise the rights of the Project Owner pursuant to the collaboration agreement in so far as this is necessary in order for the Research Council to exercise its rights under the contract (including provisions on duty of secrecy, verification and auditing, etc.)."
 
 - `allow` **allow_consent_to_the_carrying_forward_700cbc** — Transfer of unused funds from a fiscal year On the basis of a request from the Project Owner citing reasons why it is justified, the Research Council may consent to the carrying forward of unused funding from one fiscal year to the next.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4.3
   - Source text: "Transfer of unused funds from a fiscal year On the basis of a request from the Project Owner citing reasons why it is justified, the Research Council may consent to the carrying forward of unused funding from one fiscal year to the next."
 
 - `require` **require_submit_its_request_to_the_8c0b62** — The Project Owner must submit its request to the Research Council at the latest by the end of calendar year to which the grant applies.
-  - Actor: Unresolved; see source text
+  - Actor: The Project Owner
   - Counterparty/Recipient: Unresolved; see source text
   - Applies to: Unresolved; see source text
   - Source clause: 4.3
   - Source text: "The Project Owner must submit its request to the Research Council at the latest by the end of calendar year to which the grant applies."
 
-- `allow` **allow_reduce_the_following_year_s_6db636** — If the funding has already been disbursed, the Research Council may reduce the following year's disbursement by a corresponding amount or require reimbursement of the unused funds. 6 / 14
+- `allow` **allow_reduce_the_following_year_s_65d228** — If the funding has already been disbursed, the Research Council may reduce the following year's disbursement by a corresponding amount or require reimbursement of the unused funds.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4.3
-  - Source text: "If the funding has already been disbursed, the Research Council may reduce the following year's disbursement by a corresponding amount or require reimbursement of the unused funds. 6 / 14"
+  - Source text: "If the funding has already been disbursed, the Research Council may reduce the following year's disbursement by a corresponding amount or require reimbursement of the unused funds."
 
 - `require` **require_be_repaid_to_the_research_32f7b1** — Disbursed funding in excess of the Research Council’s agreed proportion of the project costs shall be repaid to the Research Council in the manner that it specifies.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4.4
   - Source text: "Disbursed funding in excess of the Research Council’s agreed proportion of the project costs shall be repaid to the Research Council in the manner that it specifies."
 
 - `require` **require_repay_the_difference_immediately_f56ba4** — Reimbursement as a result of incorrect disbursement If the Research Council has disbursed a higher amount than what follows from the allocation, the Project Owner shall repay the difference immediately.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: the Project Owner
+  - Counterparty/Recipient: Not specified
+  - Applies to: result
   - Source clause: 4.5
   - Source text: "Reimbursement as a result of incorrect disbursement If the Research Council has disbursed a higher amount than what follows from the allocation, the Project Owner shall repay the difference immediately."
 
@@ -1027,49 +1027,49 @@ Status: candidate
 
 - `allow` **allow_stop_or_change_any_future_062989** — In the event one or more of these conditions is not satisfied, the Research Council may stop or change any future allocations or pledges.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4.7
   - Source text: "In the event one or more of these conditions is not satisfied, the Research Council may stop or change any future allocations or pledges."
 
 - `allow` **allow_require_repayment_of_all_or_3130cb** — Furthermore, the Research Council may require repayment of all or part of the disbursed allocation, or decide to cancel the contract pursuant to Section 18, if this is warranted under the circumstances.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 4.7
   - Source text: "Furthermore, the Research Council may require repayment of all or part of the disbursed allocation, or decide to cancel the contract pursuant to Section 18, if this is warranted under the circumstances."
 
 - `require` **require_be_recorded_within_the_deadlines_7bc639** — Under all circumstances, information of significance to the preparation of compulsory reports stipulated in the contract must be recorded within the deadlines that apply to such reporting.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: information; reports
   - Source clause: 6
   - Source text: "Under all circumstances, information of significance to the preparation of compulsory reports stipulated in the contract must be recorded within the deadlines that apply to such reporting."
 
-- `require` **require_satisfy_the_requirements_set_out_f37841** — Project accounts must satisfy the requirements set out by the Research Council in its relevant guidelines, and must be in accordance with good accounting practice and commonly accepted accounting principles. 7 / 14
+- `require` **require_satisfy_the_requirements_set_out_f60ed2** — Project accounts must satisfy the requirements set out by the Research Council in its relevant guidelines, and must be in accordance with good accounting practice and commonly accepted accounting principles.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
   - Applies to: Unresolved; see source text
   - Source clause: 6
-  - Source text: "Project accounts must satisfy the requirements set out by the Research Council in its relevant guidelines, and must be in accordance with good accounting practice and commonly accepted accounting principles. 7 / 14"
+  - Source text: "Project accounts must satisfy the requirements set out by the Research Council in its relevant guidelines, and must be in accordance with good accounting practice and commonly accepted accounting principles."
 
 - `require` **require_prepare_and_submit_reports_within_0e6c6b** — In general The Project Owner is required to prepare and submit reports within the stipulated deadlines, in the manner and format specified by the Research Council.
-  - Actor: Unresolved; see source text
+  - Actor: The Project Owner
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: reports
   - Source clause: 7.1
   - Source text: "In general The Project Owner is required to prepare and submit reports within the stipulated deadlines, in the manner and format specified by the Research Council."
 
 - `require` **require_be_up_to_date_and_b89247** — The information shall be up-to-date and meet the Research Council's guidelines applicable at all times.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: information
   - Source clause: 7.1
   - Source text: "The information shall be up-to-date and meet the Research Council's guidelines applicable at all times."
 
 - `require` **require_be_reported_to_the_research_994e42** — All changes and deviations to the project and the contract shall be reported to the Research Council unsolicited and without undue delay in the format specified by the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 7.1
   - Source text: "All changes and deviations to the project and the contract shall be reported to the Research Council unsolicited and without undue delay in the format specified by the Research Council."
@@ -1077,62 +1077,62 @@ Status: candidate
 - `require` **require_store_the_final_report_and_8367a4** — The Project Owner shall store the final report and project data in a safe and secure manner for at least 10 years after the conclusion of the contract period.
   - Actor: The Project Owner
   - Counterparty/Recipient: Not specified
-  - Applies to: final report and project data in a safe and secure manner
+  - Applies to: report; project data
   - Source clause: 7.1
   - Source text: "The Project Owner shall store the final report and project data in a safe and secure manner for at least 10 years after the conclusion of the contract period."
 
 - `require` **require_be_approved_by_the_research_1940a9** — The progress report and any notifications of changes to the project framework must be approved by the Research Council before the allocation can be disbursed and/or funding pledges will be honoured, cf.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: report
   - Source clause: 7.2
   - Source text: "The progress report and any notifications of changes to the project framework must be approved by the Research Council before the allocation can be disbursed and/or funding pledges will be honoured, cf."
 
 - `allow` **allow_be_relevant_for_reuse_and_a804b6** — The Project Owner is to provide the name of the archives or data infrastructure to be used for storing the research data/output data generated in connection with the project that may be relevant for reuse, and all the necessary documentation for reuse of the data (metadata).
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: data; research data; output; documentation
   - Source clause: 7.3
   - Source text: "The Project Owner is to provide the name of the archives or data infrastructure to be used for storing the research data/output data generated in connection with the project that may be relevant for reuse, and all the necessary documentation for reuse of the data (metadata)."
 
 - `require` **require_append_the_latest_version_of_3e0c50** — Projects that have submitted a data management plan must append the latest version of this plan to the final report.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: data; report
   - Source clause: 7.3
   - Source text: "Projects that have submitted a data management plan must append the latest version of this plan to the final report."
 
 - `require` **require_be_approved_by_the_research_2fd8f1** — The final report must be approved by the Research Council.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: report
   - Source clause: 7.3
   - Source text: "The final report must be approved by the Research Council."
 
 - `allow` **allow_request_additional_reports_covering_shorter_a7cb8c** — Other reports Within reason, the Research Council is entitled to request additional reports covering shorter periods of time or specific parts of a project.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: reports
   - Source clause: 7.4
   - Source text: "Other reports Within reason, the Research Council is entitled to request additional reports covering shorter periods of time or specific parts of a project."
 
 - `require` **require_contribute_at_no_charge_to_2aba78** — Upon the request of the Research Council, and to the degree possible, the Project Owner and partners are required to contribute at no charge to the Research Council’s evaluation of the project and measurement of results.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: results
   - Source clause: 7.4
   - Source text: "Upon the request of the Research Council, and to the degree possible, the Project Owner and partners are required to contribute at no charge to the Research Council’s evaluation of the project and measurement of results."
 
 - `require` **require_the_project_owner_is_also_0a9e11** — The Project Owner is also required to submit account information and any other statistical data relating to the project to the national research statistics authorities.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: information; data
   - Source clause: 7.4
   - Source text: "The Project Owner is also required to submit account information and any other statistical data relating to the project to the national research statistics authorities."
 
 - `require` **require_be_regulated_in_the_collaboration_f951f8** — In projects involving collaboration with partners, the ownership of the research infrastructure shall be regulated in the collaboration agreement, cf.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 9.1
   - Source text: "In projects involving collaboration with partners, the ownership of the research infrastructure shall be regulated in the collaboration agreement, cf."
@@ -1147,72 +1147,72 @@ Status: candidate
 - `require` **require_obtain_the_rights_to_commercial_6be272** — Project results Rights The Project Owner and any partners must obtain the rights to commercial utilisation of the project results, and are required when necessary to sign agreements with owners, employees (including individuals with multiple employers), subcontractors and others to achieve this.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: Project results; project results
   - Source clause: 9.2
   - Source text: "Project results Rights The Project Owner and any partners must obtain the rights to commercial utilisation of the project results, and are required when necessary to sign agreements with owners, employees (including individuals with multiple employers), subcontractors and others to achieve this."
 
 - `require` **require_ensure_open_access_to_scientific_a131c5** — The Project Owner shall ensure open access to scientific publications relating to the project results, including that the Project Owner, partners and/or authors shall retain sufficient intellectual property rights to meet the open access requirements, which are described in more detail in Section 10.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: project results; intellectual property rights
   - Source clause: 9.2
   - Source text: "The Project Owner shall ensure open access to scientific publications relating to the project results, including that the Project Owner, partners and/or authors shall retain sufficient intellectual property rights to meet the open access requirements, which are described in more detail in Section 10."
 
 - `require` **require_retain_the_unconditional_right_to_4671c6** — Among other things, this means that the Project Owner, partners and/or authors shall retain the unconditional right to make the final version of a manuscript following a peer review (AAM) and/or the publisher’s published version (VoR) of a scientific article available under an open licence through an open archive, immediately on publication by the publisher.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 9.2
   - Source text: "Among other things, this means that the Project Owner, partners and/or authors shall retain the unconditional right to make the final version of a manuscript following a peer review (AAM) and/or the publisher’s published version (VoR) of a scientific article available under an open licence through an open archive, immediately on publication by the publisher."
 
 - `require` **require_be_utilised_within_a_reasonable_46dc57** — Utilisation The project results must be utilised within a reasonable period of time, given the characteristics of the particular industry or market, the specific field of research, and the relevant product’s development time-frame, useful economic life and utilisation opportunities.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: project results
   - Source clause: 9.2
   - Source text: "Utilisation The project results must be utilised within a reasonable period of time, given the characteristics of the particular industry or market, the specific field of research, and the relevant product’s development time-frame, useful economic life and utilisation opportunities."
 
 - `allow` **allow_demand_that_the_rights_are_70a4e2** — If the party holding the rights to the project results does not achieve such utilisation, the persons who have produced the project results may demand that the rights are transferred to them, unless a different agreement is in place between the Project Owner and those same persons, or between the various parties involved in projects in collaboration with partners, cf.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: project results
   - Source clause: 9.2
   - Source text: "If the party holding the rights to the project results does not achieve such utilisation, the persons who have produced the project results may demand that the rights are transferred to them, unless a different agreement is in place between the Project Owner and those same persons, or between the various parties involved in projects in collaboration with partners, cf."
 
 - `deny` **deny_take_place_without_the_written_5fa0ac** — This does not apply, however, in cases where:  measures to achieve utilisation have been launched and are underway; or  the rights holder’s lack of utilisation of a project result is of commercial significance for the utilisation of the rights holder’s other project results Transfer of project results to a foreign legal entity The transfer of ownership and/or licensing of exclusive rights to project results to a third party who is not a partner, and who is in a country outside the European Economic Area, may not take place without the written approval of the Research Council.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: a third party who is not a partner, and who is in a country outside the European Economic Area,
+  - Counterparty/Recipient: Not specified
+  - Applies to: project result; project results
   - Source clause: 9.2
   - Source text: "This does not apply, however, in cases where:  measures to achieve utilisation have been launched and are underway; or  the rights holder’s lack of utilisation of a project result is of commercial significance for the utilisation of the rights holder’s other project results Transfer of project results to a foreign legal entity The transfer of ownership and/or licensing of exclusive rights to project results to a third party who is not a partner, and who is in a country outside the European Economic Area, may not take place without the written approval of the Research Council."
 
 - `allow` **allow_refuse_to_allow_transfers_licensing_f93574** — The Research Council may refuse to allow transfers/licensing agreements if they are in conflict with national economic interests, ethical principles or considerations relating to the safety of the realm.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: The Research Council
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 9.2
   - Source text: "The Research Council may refuse to allow transfers/licensing agreements if they are in conflict with national economic interests, ethical principles or considerations relating to the safety of the realm."
 
 - `allow` **allow_stipulate_conditions_for_the_proposed_4a783a** — Alternatively, the Research Council 9 / 14 may stipulate conditions for the proposed transfers/licensing agreements.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 9.2
   - Source text: "Alternatively, the Research Council 9 / 14 may stipulate conditions for the proposed transfers/licensing agreements."
 
 - `allow` **allow_be_considered_approved_if_the_961fd8** — A request may be considered approved if the Research Council has not responded within four weeks of receipt of written notification.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 9.2
   - Source text: "A request may be considered approved if the Research Council has not responded within four weeks of receipt of written notification."
 
-- `require` **require_be_notified_immediately_and_in_caf54c** — Changes in ownership – foreign owners The Research Council shall be notified immediately and in writing if a person or an undertaking outside the European Economic Area assumes a controlling interest in the Project Owner through the acquisition of a stake in the enterprise (shares, etc.), by agreement or by other means.
+- `require` **require_be_notified_immediately_and_in_def11f** — Changes in ownership – foreign owners The Research Council shall be notified immediately and in writing if a person or an undertaking outside the European Economic Area assumes a controlling interest in the Project Owner through the acquisition of a stake in the enterprise (shares, etc.),
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 9.2
-  - Source text: "Changes in ownership – foreign owners The Research Council shall be notified immediately and in writing if a person or an undertaking outside the European Economic Area assumes a controlling interest in the Project Owner through the acquisition of a stake in the enterprise (shares, etc.), by agreement or by other means."
+  - Source text: "Changes in ownership – foreign owners The Research Council shall be notified immediately and in writing if a person or an undertaking outside the European Economic Area assumes a controlling interest in the Project Owner through the acquisition of a stake in the enterprise (shares, etc.),"
 
 - `require` **require_the_project_owner_is_also_09426c** — The Project Owner is also required to notify the Research Council immediately and in writing if a person or an undertaking outside the European Economic Area assumes a controlling interest over any of the partners after a contract has been signed.
   - Actor: Unresolved; see source text
@@ -1222,65 +1222,72 @@ Status: candidate
   - Source text: "The Project Owner is also required to notify the Research Council immediately and in writing if a person or an undertaking outside the European Economic Area assumes a controlling interest over any of the partners after a contract has been signed."
 
 - `allow` **allow_also_cancel_the_agreement_document_2dfb9e** — The Research Council may also cancel the agreement document and require reimbursement for disbursed allocations pursuant to Section 17 and 18.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: The Research Council
+  - Counterparty/Recipient: Not specified
+  - Applies to: document
   - Source clause: 9.2
   - Source text: "The Research Council may also cancel the agreement document and require reimbursement for disbursed allocations pursuant to Section 17 and 18."
 
-- `require` **require_have_the_right_to_use_6ae462** — The following principles are to be adhered to:  For the duration of the project period, the Project Owner and partners must have the right to use, at no charge, all project results that are necessary for implementing their own work in the project.  The Project Owner and partners must have the right to use project results and background brought in according to the agreed-upon terms, when this is necessary for commercial utilisation of the project results to which they themselves have rights under the project.
+- `require` **require_have_the_right_to_use_28957a** — The following principles are to be adhered to:  For the duration of the project period, the Project Owner and partners must have the right to use, at no charge, all project results that are necessary for implementing their own work in the project.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: all project results
   - Source clause: 9.3
-  - Source text: "The following principles are to be adhered to:  For the duration of the project period, the Project Owner and partners must have the right to use, at no charge, all project results that are necessary for implementing their own work in the project.  The Project Owner and partners must have the right to use project results and background brought in according to the agreed-upon terms, when this is necessary for commercial utilisation of the project results to which they themselves have rights under the project."
+  - Source text: "The following principles are to be adhered to:  For the duration of the project period, the Project Owner and partners must have the right to use, at no charge, all project results that are necessary for implementing their own work in the project."
+
+- `require` **require_have_the_right_to_use_64afab** —  The Project Owner and partners must have the right to use project results and background brought in according to the agreed-upon terms, when this is necessary for commercial utilisation of the project results to which they themselves have rights under the project.
+  - Actor: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: project results; background
+  - Source clause: 9.3
+  - Source text: " The Project Owner and partners must have the right to use project results and background brought in according to the agreed-upon terms, when this is necessary for commercial utilisation of the project results to which they themselves have rights under the project."
 
 - `require` **require_make_the_project_results_public_e6d631** — Publication of project results Unless otherwise stipulated below, the Project Owner is required to make the project results public as quickly as possible.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: the Project Owner
+  - Counterparty/Recipient: Not specified
+  - Applies to: project results
   - Source clause: 10.1
   - Source text: "Publication of project results Unless otherwise stipulated below, the Project Owner is required to make the project results public as quickly as possible."
 
 - `allow` **allow_be_temporarily_postponed_until_such_24f983** — If publication of project results will interfere with the protection or commercial utilisation of the project results, the publication may be temporarily postponed until such protection or commercial utilisation has been achieved.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: project results
   - Source clause: 10.1
   - Source text: "If publication of project results will interfere with the protection or commercial utilisation of the project results, the publication may be temporarily postponed until such protection or commercial utilisation has been achieved."
 
 - `allow` **allow_give_its_written_consent_to_aa2b79** — In special cases, the Research Council may give its written consent to the imposition of permanent secrecy on the project results.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: project results
   - Source clause: 10.1
   - Source text: "In special cases, the Research Council may give its written consent to the imposition of permanent secrecy on the project results."
 
-- `require` **require_ensure_that_all_scientific_publications_30f922** — Research-generated data must be made publicly available after the conclusion of the project, unless special circumstances indicate otherwise, or unless this is prevented by the terms and conditions of the contract or other public rules. 10 / 14 The Project Owner shall ensure that all scientific publications about or based on project results that are written by authors affiliated to the Project Owner or the partners, are published in accordance with the Research Council’s requirements for such publications at all times, available at https://www.forskningsradet.no/en/Adviser-research-policy/open-science/apen-tilgang-til- publikasjoner/.
+- `require` **require_be_made_publicly_available_after_230cef** — Research-generated data must be made publicly available after the conclusion of the project, unless special circumstances indicate otherwise, or unless this is prevented by the terms and conditions of the contract or other public rules.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: data
   - Source clause: 10.1
-  - Source text: "Research-generated data must be made publicly available after the conclusion of the project, unless special circumstances indicate otherwise, or unless this is prevented by the terms and conditions of the contract or other public rules. 10 / 14 The Project Owner shall ensure that all scientific publications about or based on project results that are written by authors affiliated to the Project Owner or the partners, are published in accordance with the Research Council’s requirements for such publications at all times, available at https://www.forskningsradet.no/en/Adviser-research-policy/open-science/apen-tilgang-til- publikasjoner/."
+  - Source text: "Research-generated data must be made publicly available after the conclusion of the project, unless special circumstances indicate otherwise, or unless this is prevented by the terms and conditions of the contract or other public rules."
 
-- `require` **require_be_made_immediately_available_online_0f1c44** — Among other things, this means that scientific articles shall be made immediately available online with open access under a Creative Commons Navngivelse CC BY 4.0 licence unless otherwise agreed with the Research Council.
+- `require` **require_ensure_that_all_scientific_publications_86a41c** — 10 / 14 The Project Owner shall ensure that all scientific publications about or based on project results that are written by authors affiliated to the Project Owner or the partners, are published in accordance with the Research Council’s requirements for such publications at all times, available at https://www.forskningsradet.no/en/Adviser-research-policy/open-science/apen-tilgang-til- publikasjoner/. Among other things, this means that scientific articles shall be made immediately available online with open access under a Creative Commons Navngivelse CC BY 4.0 licence unless otherwise agreed with the Research Council.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: project results
   - Source clause: 10.1
-  - Source text: "Among other things, this means that scientific articles shall be made immediately available online with open access under a Creative Commons Navngivelse CC BY 4.0 licence unless otherwise agreed with the Research Council."
+  - Source text: "10 / 14 The Project Owner shall ensure that all scientific publications about or based on project results that are written by authors affiliated to the Project Owner or the partners, are published in accordance with the Research Council’s requirements for such publications at all times, available at https://www.forskningsradet.no/en/Adviser-research-policy/open-science/apen-tilgang-til- publikasjoner/. Among other things, this means that scientific articles shall be made immediately available online with open access under a Creative Commons Navngivelse CC BY 4.0 licence unless otherwise agreed with the Research Council."
 
 - `require` **require_ensure_that_all_research_generated_b32cd5** — Archiving of project results The Project Owner shall ensure that all research- generated data, including all data that forms the basis for publications, is stored in a secure digital archive.
-  - Actor: Unresolved; see source text
+  - Actor: The Project Owner
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: project results; data; all data
   - Source clause: 10.2
   - Source text: "Archiving of project results The Project Owner shall ensure that all research- generated data, including all data that forms the basis for publications, is stored in a secure digital archive."
 
 - `allow` **allow_require_that_all_such_data_a8198d** — The Research Council may require that all such data, including the necessary documentation for reuse of data (metadata), is stored in designated, secure national or international archives.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: The Research Council
+  - Counterparty/Recipient: Not specified
+  - Applies to: data; documentation
   - Source clause: 10.2
   - Source text: "The Research Council may require that all such data, including the necessary documentation for reuse of data (metadata), is stored in designated, secure national or international archives."
 
@@ -1293,120 +1300,120 @@ Status: candidate
 
 - `require` **require_be_the_last_version_of_9f67ba** — The archived version shall be the last version of the manuscript following peer review (AAM) and/or the publisher’s published version (VoR).
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 10.2
   - Source text: "The archived version shall be the last version of the manuscript following peer review (AAM) and/or the publisher’s published version (VoR)."
 
 - `require` **require_make_reference_to_the_research_871fae** — Publication of project information The Project Owner and any partners are required to make reference to the Research Council’s support in any external information issued about the project.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: project information; information
   - Source clause: 10.3
   - Source text: "Publication of project information The Project Owner and any partners are required to make reference to the Research Council’s support in any external information issued about the project."
 
 - `allow` **allow_publish_project_results_that_are_f0a76f** — The Research Council may publish project results that are reported in connection with the progress and final reports unless the information has been designated as confidential.
   - Actor: The Research Council
   - Counterparty/Recipient: Not specified
-  - Applies to: project results that are reported in connection with the progress and final reports
+  - Applies to: project results; reports; information
   - Source clause: 10.3
   - Source text: "The Research Council may publish project results that are reported in connection with the progress and final reports unless the information has been designated as confidential."
 
 - `allow` **allow_require_that_the_project_owner_ff7429** — Within reason, the Research Council is entitled to require that the Project Owner establishes a website for the project and takes part in relevant seminars, conferences and other dissemination and networking measures.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 10.3
   - Source text: "Within reason, the Research Council is entitled to require that the Project Owner establishes a website for the project and takes part in relevant seminars, conferences and other dissemination and networking measures."
 
 - `deny` **deny_transfer_mortgage_or_in_any_193290** — Transfer The Project Owner may not transfer, mortgage or in any other way convey the use of the contract, or portions of the contract, including allocations and pledges from the Research Council, without the prior written consent of the Research Council.
-  - Actor: Unresolved; see source text
+  - Actor: The Project Owner
   - Counterparty/Recipient: Unresolved; see source text
   - Applies to: Unresolved; see source text
   - Source clause: 12
   - Source text: "Transfer The Project Owner may not transfer, mortgage or in any other way convey the use of the contract, or portions of the contract, including allocations and pledges from the Research Council, without the prior written consent of the Research Council."
 
-- `require` **require_indemnify_the_research_council_against_7de662** — Indemnification and discharge of liability The Project Owner bears liability for ensuring that the performance of the project does not violate the rights of any third parties, including the third party’s copyrights and other intellectual property rights, or can in any other way lead to claims from a third party. 11 / 14 The Project Owner shall indemnify the Research Council against any claims resulting from the Project Owner’s performance of the project, including claims related to infringements of intellectual property rights.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+- `require` **require_indemnify_the_research_council_against_629105** — 11 / 14 The Project Owner shall indemnify the Research Council against any claims resulting from the Project Owner’s performance of the project, including claims related to infringements of intellectual property rights.
+  - Actor: The Project Owner
+  - Counterparty/Recipient: Not specified
+  - Applies to: intellectual property rights
   - Source clause: 13
-  - Source text: "Indemnification and discharge of liability The Project Owner bears liability for ensuring that the performance of the project does not violate the rights of any third parties, including the third party’s copyrights and other intellectual property rights, or can in any other way lead to claims from a third party. 11 / 14 The Project Owner shall indemnify the Research Council against any claims resulting from the Project Owner’s performance of the project, including claims related to infringements of intellectual property rights."
+  - Source text: "11 / 14 The Project Owner shall indemnify the Research Council against any claims resulting from the Project Owner’s performance of the project, including claims related to infringements of intellectual property rights."
 
 - `allow` **allow_stop_payment_of_the_allocation_db6877** — Should the parties fail to agree on such adjustments, the Research Council is entitled to stop payment of the allocation until the situation of force majeure is resolved.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 14
   - Source text: "Should the parties fail to agree on such adjustments, the Research Council is entitled to stop payment of the allocation until the situation of force majeure is resolved."
 
 - `allow` **allow_introduce_amendments_as_set_out_887c71** — Amendments The Research Council may introduce amendments as set out in the contract.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: Amendments The Research Council
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 15
   - Source text: "Amendments The Research Council may introduce amendments as set out in the contract."
 
 - `allow` **allow_apply_to_the_project_s_1b7c1d** — Amendments may apply to the project’s objectives, scope, or other conditions Amendments to the contract require the prior written consent of the Research Council.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: Amendments
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 15
   - Source text: "Amendments may apply to the project’s objectives, scope, or other conditions Amendments to the contract require the prior written consent of the Research Council."
 
 - `allow` **allow_verification_auditing_and_disclosure_requirement_4d43b4** — Verification, auditing and disclosure requirement The Research Council, the Office of the Auditor General or a third party appointed by the Research Council are entitled at any time to verify that the funds are being applied in accordance with the contract.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 16
   - Source text: "Verification, auditing and disclosure requirement The Research Council, the Office of the Auditor General or a third party appointed by the Research Council are entitled at any time to verify that the funds are being applied in accordance with the contract."
 
 - `require` **require_produce_receipts_time_sheets_calculations_d84714** — Upon a request from the Research Council or Office of the Auditor General, the Project Owner shall produce receipts, time sheets, calculations and any other relevant documentary evidence and information requested by the Research Council and/or the Office of the Auditor General in order to carry out such verification.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Actor: the Project Owner
+  - Counterparty/Recipient: Not specified
+  - Applies to: information
   - Source clause: 16
   - Source text: "Upon a request from the Research Council or Office of the Auditor General, the Project Owner shall produce receipts, time sheets, calculations and any other relevant documentary evidence and information requested by the Research Council and/or the Office of the Auditor General in order to carry out such verification."
 
 - `allow` **allow_require_the_project_owner_to_d0658a** — The Research Council and the Office of the Auditor General may require the Project Owner to disclose all information that is necessary to verify compliance with the rules pertaining to public support.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: all information
   - Source clause: 16
   - Source text: "The Research Council and the Office of the Auditor General may require the Project Owner to disclose all information that is necessary to verify compliance with the rules pertaining to public support."
 
-- `allow` **allow_demand_repayment_of_the_disbursed_d65207** — Repayment Regardless of what follows from Section 4, the Research Council may demand repayment of the disbursed allocations, in whole or in part, in case of deviations from and/or breach of contract, including that the project has received other project funding than assumed at the time the contract was signed, or if the Research Council has disbursed funds that will constitute unlawful state aid. 12 / 14
+- `allow` **allow_demand_repayment_of_the_disbursed_9ea8d1** — Repayment Regardless of what follows from Section 4, the Research Council may demand repayment of the disbursed allocations, in whole or in part, in case of deviations from and/or breach of contract, including that the project has received other project funding than assumed at the time the contract was signed, or if the Research Council has disbursed funds that will constitute unlawful state aid.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 17
-  - Source text: "Repayment Regardless of what follows from Section 4, the Research Council may demand repayment of the disbursed allocations, in whole or in part, in case of deviations from and/or breach of contract, including that the project has received other project funding than assumed at the time the contract was signed, or if the Research Council has disbursed funds that will constitute unlawful state aid. 12 / 14"
+  - Source text: "Repayment Regardless of what follows from Section 4, the Research Council may demand repayment of the disbursed allocations, in whole or in part, in case of deviations from and/or breach of contract, including that the project has received other project funding than assumed at the time the contract was signed, or if the Research Council has disbursed funds that will constitute unlawful state aid."
 
 - `allow` **allow_cancel_the_contract_in_the_40be80** — The Research Council’s right of cancellation The Research Council may cancel the contract in the event of a material breach on the part of the Project Owner.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: material
   - Source clause: 18.1
   - Source text: "The Research Council’s right of cancellation The Research Council may cancel the contract in the event of a material breach on the part of the Project Owner."
 
 - `allow` **allow_furthermore_cancel_the_contract_in_0ed276** — The Research Council may furthermore cancel the contract in the event that:  a person or undertaking outside the EEA assumes control of the Project Owner, and the terms set out under Section 9.2, final clause are met;  there is notification of a declaration of bankruptcy, or a petition for compulsory winding up or the opening of composition proceedings on the part of the Project Owner, or there is other compelling reason to believe that the Project Owner is insolvent;  a decision has been taken to close down the Project Owner’s activities or there is other compelling reason to believe that grounds exist for forced dissolution of the company;  key prerequisites underlying the contractual relationship are not fulfilled, such as the Research Council receives less funding than expected, or there are changes in public regulations or other unforeseen circumstances arise that will have a major impact on the implementation of the project or the Research Council’s ability to contribute to it, cf.
-  - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Actor: The Research Council
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 18.1
   - Source text: "The Research Council may furthermore cancel the contract in the event that:  a person or undertaking outside the EEA assumes control of the Project Owner, and the terms set out under Section 9.2, final clause are met;  there is notification of a declaration of bankruptcy, or a petition for compulsory winding up or the opening of composition proceedings on the part of the Project Owner, or there is other compelling reason to believe that the Project Owner is insolvent;  a decision has been taken to close down the Project Owner’s activities or there is other compelling reason to believe that grounds exist for forced dissolution of the company;  key prerequisites underlying the contractual relationship are not fulfilled, such as the Research Council receives less funding than expected, or there are changes in public regulations or other unforeseen circumstances arise that will have a major impact on the implementation of the project or the Research Council’s ability to contribute to it, cf."
 
-- `allow` **allow_demand_repayment_of_the_disbursed_f5991f** — Reimbursement claims in the event of termination If the Research Council cancels the contract pursuant to Section 18.1, the Research Council may demand repayment of the disbursed allocations, in whole or in part, including interest on the amount from the date of the breach, in accordance with the Act relating to interest on overdue payments, etc. (LOV-1976-12-17-100).
+- `allow` **allow_demand_repayment_of_the_disbursed_880a36** — Reimbursement claims in the event of termination If the Research Council cancels the contract pursuant to Section 18.1, the Research Council may demand repayment of the disbursed allocations, in whole or in part, including interest on the amount from the date of the breach, in accordance with the Act relating to interest on overdue payments, etc. (
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 18.3
-  - Source text: "Reimbursement claims in the event of termination If the Research Council cancels the contract pursuant to Section 18.1, the Research Council may demand repayment of the disbursed allocations, in whole or in part, including interest on the amount from the date of the breach, in accordance with the Act relating to interest on overdue payments, etc. (LOV-1976-12-17-100)."
+  - Source text: "Reimbursement claims in the event of termination If the Research Council cancels the contract pursuant to Section 18.1, the Research Council may demand repayment of the disbursed allocations, in whole or in part, including interest on the amount from the date of the breach, in accordance with the Act relating to interest on overdue payments, etc. ("
 
 - `allow` **allow_demand_transfer_of_the_rights_140c6e** — Transfer of rights to project results in the event of cancellation In lieu of such reimbursement, the Research Council may demand transfer of the rights to project results.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Applies to: project results
   - Source clause: 18.4
   - Source text: "Transfer of rights to project results in the event of cancellation In lieu of such reimbursement, the Research Council may demand transfer of the rights to project results."
 
@@ -1417,79 +1424,86 @@ Status: candidate
   - Source clause: 18.4
   - Source text: "The claim for such transfer shall be submitted in writing, and the Project Owner shall surrender the rights without undue delay, and cover any costs in connection with the transfer."
 
-- `require` **require_be_submitted_to_the_ministry_470018** — In the event that the Project Owner is a public institution, disputes shall be submitted to the Ministry of Education and Research, which will decide how these shall be solved. 14 / 14 Societal and Industry-oriented Research Center – do not remove this tag
+- `require` **require_be_submitted_to_the_ministry_82374a** — In the event that the Project Owner is a public institution, disputes shall be submitted to the Ministry of Education and Research, which will decide how these shall be solved.
   - Actor: Unresolved; see source text
   - Counterparty/Recipient: Unresolved; see source text
   - Applies to: Unresolved; see source text
   - Source clause: 20
-  - Source text: "In the event that the Project Owner is a public institution, disputes shall be submitted to the Ministry of Education and Research, which will decide how these shall be solved. 14 / 14 Societal and Industry-oriented Research Center – do not remove this tag"
+  - Source text: "In the event that the Project Owner is a public institution, disputes shall be submitted to the Ministry of Education and Research, which will decide how these shall be solved."
 
 - `require` **require_to_transform_the_norwegian_continental_85f488** — To transform the Norwegian Continental Shelf (NCS) into sustainable utilization, a new way of thinking across disciplines and societal acceptance are required.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: unresolved (detached numbering)
   - Source text: "To transform the Norwegian Continental Shelf (NCS) into sustainable utilization, a new way of thinking across disciplines and societal acceptance are required."
 
-- `allow` **allow_be_considered_as_potential_storage_062354** — In addition, mature or depleted fields and saline aquifers may be considered as potential storage sites for large quantities of CO 2 (Ringrose, 2020; Halland et al., 2014), making use of existing infrastructure (Eide et al., 2019).
+- `allow` **allow_be_considered_as_potential_storage_56404b** — In addition, mature or depleted fields and saline aquifers may be considered as potential storage sites for large quantities of CO 2 (Ringrose, 2020; Halland et al.,
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 2020
-  - Source text: "In addition, mature or depleted fields and saline aquifers may be considered as potential storage sites for large quantities of CO 2 (Ringrose, 2020; Halland et al., 2014), making use of existing infrastructure (Eide et al., 2019)."
+  - Source text: "In addition, mature or depleted fields and saline aquifers may be considered as potential storage sites for large quantities of CO 2 (Ringrose, 2020; Halland et al.,"
 
 - `allow` **allow_also_increase_the_current_pre_3a0c2a** — This may also increase the current pre -drill probability of success (10 -15%) of exploration wells in the NCS with less than half of the discoveries being commercial (NPD, 2020).
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 27
   - Source text: "This may also increase the current pre -drill probability of success (10 -15%) of exploration wells in the NCS with less than half of the discoveries being commercial (NPD, 2020)."
 
 - `require` **require_assess_the_short_and_long_466bb7** — Technical feasibility, efficiency, and safety of H2 storage are impacted by fluid-rock interactions meaning that a coupled hydro-chemo-mechanical approach is required to assess the short- and long-term impact of cyclical H2 injection.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: 27
   - Source text: "Technical feasibility, efficiency, and safety of H2 storage are impacted by fluid-rock interactions meaning that a coupled hydro-chemo-mechanical approach is required to assess the short- and long-term impact of cyclical H2 injection."
 
 - `allow` **allow_contain_many_uncertain_quantities_from_cec03b** — Complex and large models for multiple scenarios ( here defined as distinct alternatives, which may contain many uncertain quantities, from political to model uncertainties ) and utilizing Big Data, digital twins and machne learning (ML) will require high performance computing.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Data
   - Source clause: unresolved (detached numbering)
   - Source text: "Complex and large models for multiple scenarios ( here defined as distinct alternatives, which may contain many uncertain quantities, from political to model uncertainties ) and utilizing Big Data, digital twins and machne learning (ML) will require high performance computing."
 
 - `require` **require_understand_how_climate_aware_investors_cb6c76** — More research is required to understand how climate - aware investors and stricter environmental policies will affect investments in physical and human capital in the petroleum sector.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: unresolved (detached numbering)
   - Source text: "More research is required to understand how climate - aware investors and stricter environmental policies will affect investments in physical and human capital in the petroleum sector."
 
 - `require` **require_be_increased_from_1_mt_c7b743** — The capacity for CO2 utilization and storage must be increased from 1 Mt/year to Gt s/year.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: unresolved (detached numbering)
   - Source text: "The capacity for CO2 utilization and storage must be increased from 1 Mt/year to Gt s/year."
 
+- `require` **require_comply_with_and_support_the_f5c4aa** — It is also important to improve input to the models (WP5) by including large scale lab data, information from time-lapse geophysical monitoring and new data from well fibre optics, etc.. Task 3.2 | Real field applications for NZE production Field production in the coming decades must comply with and support the NZE ambition.
+  - Actor: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: data; information
+  - Source clause: unresolved (detached numbering)
+  - Source text: "It is also important to improve input to the models (WP5) by including large scale lab data, information from time-lapse geophysical monitoring and new data from well fibre optics, etc.. Task 3.2 | Real field applications for NZE production Field production in the coming decades must comply with and support the NZE ambition."
+
 - `require` **require_be_aligned_fded7e** — Task 5.3 | Improved workflow for decision making To increase the potential of data science, subsurface characterization through DA, uncertainty quantification, and the decision-making process must be aligned.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: workflow; data
   - Source clause: unresolved (detached numbering)
   - Source text: "Task 5.3 | Improved workflow for decision making To increase the potential of data science, subsurface characterization through DA, uncertainty quantification, and the decision-making process must be aligned."
 
 - `allow` **allow_also_have_decreasing_appetite_on_c72585** — The market may also have decreasing appetite on HC investments, resulting in increasing Societal and Industry-oriented Research Center – do not remove this tag
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: unresolved (detached numbering)
   - Source text: "The market may also have decreasing appetite on HC investments, resulting in increasing Societal and Industry-oriented Research Center – do not remove this tag"
 
 - `allow` **allow_phd_and_postdocs_will_have_f63143** — PhD and Postdocs will have access to The Petroleum Research School of Norway (NFIP; https://nfip.no/) where relevant courses and workshops will be implemented.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
   - Source clause: unresolved (detached numbering)
   - Source text: "PhD and Postdocs will have access to The Petroleum Research School of Norway (NFIP; https://nfip.no/) where relevant courses and workshops will be implemented."
@@ -1501,16 +1515,23 @@ Status: candidate
   - Source clause: 3.4
   - Source text: "The needed solutions must be developed in collaboration between experienced researchers and the younger generation."
 
-- `require` **require_be_marked_with_uispg_ncs2030_626c04** — The invoice must be marked with: UiSPG NCS2030 Petrosenteret University of Stavanger - invoice address: Org.no: 971 564 679 Invoice address for EHF-invoices: 971564679 International invoices should be sent by email as a PDF to: faktura@uis.no Bank information: Sparebank 1 SMN, Søndre gate 4, 7011 Trondheim, Norway Account no for payment to UiS: 4209 01 01743 IBAN: NO0442090101743 Swift: SPTRNO22 Appendix 3: Background A s to UNIVERSITETET I STAVANGER, it is agreed between the Parties that, to the best of their knowledge, no Background is needed by another Party for implementation of the Project or utilisation of that other Party’s Results.
+- `allow` **allow_2019_birchall_t_senger_k_d0182b** — Bjørnseth, F., Kristiansen,T. G., Flatebø, R., Reinertsen, T., Caline, Y. Østensen, R., Tomczak, D., Solhaug, K., Leinenbach, M., and T. Jørgensen, 2019, Worlds First Simultaneous Jetting of 72 Laterals with Solids Control - Technology Development and Field Trial, SPE Norway One Day Seminar, Bergen, Norway, 14 May 2019 Birchall, T., Senger, K., Hornum, M., Olaussen, S., and A. Braathen, 2020, Underpressure in the northern Barents shelf: Causes and implications for hydrocarbon exploration.
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
   - Applies to: Unresolved; see source text
+  - Source clause: unresolved (detached numbering)
+  - Source text: "Bjørnseth, F., Kristiansen,T. G., Flatebø, R., Reinertsen, T., Caline, Y. Østensen, R., Tomczak, D., Solhaug, K., Leinenbach, M., and T. Jørgensen, 2019, Worlds First Simultaneous Jetting of 72 Laterals with Solids Control - Technology Development and Field Trial, SPE Norway One Day Seminar, Bergen, Norway, 14 May 2019 Birchall, T., Senger, K., Hornum, M., Olaussen, S., and A. Braathen, 2020, Underpressure in the northern Barents shelf: Causes and implications for hydrocarbon exploration."
+
+- `require` **require_be_marked_with_uispg_ncs2030_626c04** — The invoice must be marked with: UiSPG NCS2030 Petrosenteret University of Stavanger - invoice address: Org.no: 971 564 679 Invoice address for EHF-invoices: 971564679 International invoices should be sent by email as a PDF to: faktura@uis.no Bank information: Sparebank 1 SMN, Søndre gate 4, 7011 Trondheim, Norway Account no for payment to UiS: 4209 01 01743 IBAN: NO0442090101743 Swift: SPTRNO22 Appendix 3: Background A s to UNIVERSITETET I STAVANGER, it is agreed between the Parties that, to the best of their knowledge, no Background is needed by another Party for implementation of the Project or utilisation of that other Party’s Results.
+  - Actor: another Party
+  - Counterparty/Recipient: Unresolved; see source text
+  - Applies to: information; Background; Results
   - Source clause: unresolved (detached numbering)
   - Source text: "The invoice must be marked with: UiSPG NCS2030 Petrosenteret University of Stavanger - invoice address: Org.no: 971 564 679 Invoice address for EHF-invoices: 971564679 International invoices should be sent by email as a PDF to: faktura@uis.no Bank information: Sparebank 1 SMN, Søndre gate 4, 7011 Trondheim, Norway Account no for payment to UiS: 4209 01 01743 IBAN: NO0442090101743 Swift: SPTRNO22 Appendix 3: Background A s to UNIVERSITETET I STAVANGER, it is agreed between the Parties that, to the best of their knowledge, no Background is needed by another Party for implementation of the Project or utilisation of that other Party’s Results."
 
-- `require` **require_be_as_mentioned_describe_background_879821** — Specific limitations and/or conditions shall be as mentioned: Describe Background Specific limitations and/or conditions for implementation Specific limitations and/or conditions for Commercial Utilisation DELFI Cloud-based solutions, Including the Petrotechnical Suite (Petrel, Techlog, Eclipse, etc.) User rights for the purpose of implementation of the Project is subjected to IP, licensing, and copyrights Project Results obtained through Schlumberger’s solutions are for research purposes as per project’s description A s to EQUNIOR, it is agreed between the Parties that, to the best of their knowledge, no Background is needed by another Party for implementation of the Project or utilisation of that other Party’s Results.
+- `require` **require_be_as_mentioned_describe_background_f12814** — Specific limitations and/or conditions shall be as mentioned: Describe Background Specific limitations and/or conditions for implementation Specific limitations and/or conditions for Commercial Utilisation DELFI Cloud-based solutions, Including the Petrotechnical Suite (Petrel, Techlog, Eclipse, etc.)
   - Actor: Unresolved; see source text
-  - Counterparty/Recipient: Unresolved; see source text
-  - Applies to: Unresolved; see source text
+  - Counterparty/Recipient: Not specified
+  - Applies to: Background
   - Source clause: unresolved (detached numbering)
-  - Source text: "Specific limitations and/or conditions shall be as mentioned: Describe Background Specific limitations and/or conditions for implementation Specific limitations and/or conditions for Commercial Utilisation DELFI Cloud-based solutions, Including the Petrotechnical Suite (Petrel, Techlog, Eclipse, etc.) User rights for the purpose of implementation of the Project is subjected to IP, licensing, and copyrights Project Results obtained through Schlumberger’s solutions are for research purposes as per project’s description A s to EQUNIOR, it is agreed between the Parties that, to the best of their knowledge, no Background is needed by another Party for implementation of the Project or utilisation of that other Party’s Results."
+  - Source text: "Specific limitations and/or conditions shall be as mentioned: Describe Background Specific limitations and/or conditions for implementation Specific limitations and/or conditions for Commercial Utilisation DELFI Cloud-based solutions, Including the Petrotechnical Suite (Petrel, Techlog, Eclipse, etc.)"
