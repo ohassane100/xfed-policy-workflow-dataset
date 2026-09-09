@@ -1,0 +1,70 @@
+DATA COLLABORATION AGREEMENT
+Offshore Equipment Monitoring Demonstration
+
+Parties:
+
+Company A:
+NorthSea Operations AS
+Role: Data Owner and Host Company
+
+Company B:
+Fjord Analytics AS
+Role: Analysis Partner
+
+1. Purpose
+
+Company B may analyse Company A's offshore compressor telemetry solely for predictive-maintenance and anomaly-detection purposes.
+
+Company B may not use the data for unrelated commercial purposes, general-purpose model training, or profiling of Company A's employees.
+
+2. Data Location
+
+All raw compressor telemetry, equipment identifiers, exact timestamps, maintenance records, and raw sensor rows shall remain inside Company A's computing environment.
+
+Company B shall not download, copy, export, or otherwise transfer raw data outside Company A's environment.
+
+3. Computation
+
+Company B may submit approved analysis code for execution inside Company A's controlled computing environment.
+
+Company A must provide a controlled execution environment in which the approved analysis can run against the relevant dataset.
+
+Company B shall not execute unapproved software against Company A's data.
+
+4. Permitted Outputs
+
+Company B may receive:
+- aggregated anomaly counts;
+- feature statistics;
+- sanitized event patterns;
+- threshold summaries.
+
+Company B may not receive:
+- raw sensor rows;
+- exact equipment identifiers;
+- exact event timestamps;
+- maintenance records containing confidential operational details.
+
+5. Output Approval
+
+Company A must review and approve outputs before they are released from Company A's environment to Company B.
+
+Company B shall not bypass the output approval process.
+
+6. Confidentiality
+
+Both companies must protect confidential information obtained through the collaboration.
+
+Company B shall not disclose Company A's data or confidential outputs to third parties without Company A's written approval.
+
+7. Logging
+
+Company A must maintain a record of analyses executed against the dataset and outputs released to Company B.
+
+Company B must identify the purpose of each submitted analysis.
+
+8. Termination
+
+When the collaboration ends, Company B must delete any temporary permitted outputs that it is no longer authorised to retain.
+
+The obligation to protect confidential information continues after termination.
