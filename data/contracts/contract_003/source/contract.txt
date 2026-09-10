@@ -1,0 +1,14 @@
+DATA COLLABORATION AGREEMENT
+ Small Monitoring Demo
+Parties
+ Company A: NorthSea Operations AS (data owner and host)
+Company B: Fjord Analytics AS (analysis partner)
+1. Purpose
+Company B may analyze Company A's compressor telemetry only to detect anomalies.
+2. Data Location
+Company A must keep raw compressor telemetry inside its computing environment.
+Company B may not export raw compressor telemetry outside that environment.
+3. Outputs
+Company B may receive only aggregated anomaly counts that Company A has approved.
+4. Confidentiality
+Both parties must protect confidential information from this collaboration.

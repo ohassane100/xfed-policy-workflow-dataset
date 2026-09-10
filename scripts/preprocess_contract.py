@@ -11,12 +11,13 @@ from src.preprocessing.pdf_to_text import pdf_to_text
 
 
 def main() -> None:
-    source_dir = PROJECT_ROOT / "data" / "contracts" / "contract_001" / "source"
+    contract_id = sys.argv[1] if len(sys.argv) > 1 else "contract_001"
+    source_dir = PROJECT_ROOT / "data" / "contracts" / contract_id / "source"
     pdf_to_text(
         source_dir / "contract.pdf",
         source_dir / "contract.txt",
     )
-    print("Wrote data/contracts/contract_001/source/contract.txt")
+    print(f"Wrote data/contracts/{contract_id}/source/contract.txt")
 
 
 if __name__ == "__main__":
