@@ -4,3 +4,4 @@ __pycache__/
 tmp/
 .env
 data\contracts\contract_003\policy_extractions\algo1\POLICY.md
+src\algorithmic\**
