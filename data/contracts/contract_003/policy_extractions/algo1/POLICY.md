@@ -9,44 +9,20 @@ Status: candidate
 
 ## Parties
 
-- Company A: NorthSea Operations AS (data owner and host)
-- Company B: Fjord Analytics AS (analysis partner)
+_Unresolved; identify the parties from the source agreement._
 
 ## Enforcement Rules
 
-- `allow` **allow_analyze_company_a_s_compressor_ea8fff** — Company B may analyze Company A's compressor telemetry only to detect anomalies.
-  - Actor: Company B
-  - Counterparty/Recipient: Not specified
-  - Applies to: Unresolved; see source text
-  - Source clause: 1
-  - Source text: "Company B may analyze Company A's compressor telemetry only to detect anomalies."
-
-- `require` **require_keep_raw_compressor_telemetry_inside_664d8f** — Company A must keep raw compressor telemetry inside its computing environment.
+- `require` **require_keep_raw_compressor_telemetry_inside_d728ec** — Data Location Company A must keep raw compressor telemetry inside its computing environment.
   - Actor: Company A
   - Counterparty/Recipient: Not specified
-  - Applies to: Unresolved; see source text
+  - Applies to: Data
   - Source clause: 2
-  - Source text: "Company A must keep raw compressor telemetry inside its computing environment."
+  - Source text: "Data Location Company A must keep raw compressor telemetry inside its computing environment."
 
-- `deny` **deny_export_raw_compressor_telemetry_outside_c48713** — Company B may not export raw compressor telemetry outside that environment.
-  - Actor: Company B
-  - Counterparty/Recipient: Not specified
-  - Applies to: Unresolved; see source text
-  - Source clause: 2
-  - Source text: "Company B may not export raw compressor telemetry outside that environment."
-
-- `allow` **allow_receive_only_aggregated_anomaly_counts_8148ec** — Company B may receive only aggregated anomaly counts that Company A has approved.
-  - Actor: Company B
-  - Counterparty/Recipient: Not specified
-  - Applies to: Unresolved; see source text
-  - Source clause: 3
-  - Source text: "Company B may receive only aggregated anomaly counts that Company A has approved."
-
-- `require` **require_protect_confidential_information_from_this_a84d53** — Both parties must protect confidential information from this collaboration.
+- `require` **require_protect_confidential_information_from_this_e84c4a** — Confidentiality Both parties must protect confidential information from this collaboration.
   - Actor: parties
   - Counterparty/Recipient: Not specified
   - Applies to: confidential information
   - Source clause: 4
-  - Source text: "Both parties must protect confidential information from this collaboration."
-
-<!-- END POLICY -->
+  - Source text: "Confidentiality Both parties must protect confidential information from this collaboration."

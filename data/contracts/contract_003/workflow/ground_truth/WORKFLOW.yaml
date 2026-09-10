@@ -1,0 +1,63 @@
+# Human-authored XFed reference workflow for evaluation only.
+workflow_id: workflow_001
+contract_id: contract_003
+stage: approved
+approval_status: approved
+purpose: Detect anomalies in NorthSea Operations AS compressor telemetry.
+parties:
+  requester: Fjord Analytics AS
+  host: NorthSea Operations AS
+dataset:
+  name: Compressor telemetry
+  owner: NorthSea Operations AS
+execution:
+  location: NorthSea Operations AS computing environment
+inputs:
+  - raw compressor telemetry
+shared_outputs:
+  - approved aggregated anomaly counts
+stays_private:
+  - raw compressor telemetry
+  - confidential collaboration information
+expected_result:
+  shared:
+    - approved aggregated anomaly counts
+  private:
+    - raw compressor telemetry
+    - confidential collaboration information
+steps:
+  - id: step_1
+    actor: Fjord Analytics AS
+    action: analyze_telemetry
+    location: NorthSea Operations AS computing environment
+    description: Analyze compressor telemetry solely to detect anomalies.
+  - id: step_2
+    actor: NorthSea Operations AS
+    action: retain_raw_data
+    location: NorthSea Operations AS computing environment
+    data:
+      - raw compressor telemetry
+    description: Keep raw compressor telemetry inside the host environment.
+  - id: step_3
+    actor: NorthSea Operations AS
+    action: approve_output
+    data:
+      - aggregated anomaly counts
+    description: Approve the aggregated anomaly counts before release.
+  - id: step_4
+    actor: NorthSea Operations AS
+    action: share_output
+    recipient: Fjord Analytics AS
+    data:
+      - aggregated anomaly counts
+    description: Release the approved aggregated anomaly counts.
+  - id: step_5
+    actor: Fjord Analytics AS
+    action: receive_output
+    data:
+      - aggregated anomaly counts
+    description: Receive only the approved aggregated anomaly counts.
+  - id: step_6
+    actor: both
+    action: protect_confidential_information
+    description: Protect confidential collaboration information.

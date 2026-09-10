@@ -1,0 +1,44 @@
+{
+  "workflow_id": "workflow_001",
+  "workflow_source": "data\\contracts\\contract_003\\workflow\\generations\\llm3_merger\\WORKFLOW.yaml",
+  "workflow_issues": [
+    "The workflow requester does not match Company B from the policy."
+  ],
+  "company_a": {
+    "status": "FAIL",
+    "satisfied_rules": [
+      "rule_2a"
+    ],
+    "violated_rules": []
+  },
+  "company_b": {
+    "status": "FAIL",
+    "satisfied_rules": [
+      "rule_1"
+    ],
+    "violated_rules": [
+      {
+        "rule_id": "rule_2b",
+        "reason": "Raw compressor telemetry is processed or shared outside the host.",
+        "workflow_step": "step_2"
+      },
+      {
+        "rule_id": "rule_3",
+        "reason": "The workflow does not establish Company A approval before Company B receives aggregated counts.",
+        "workflow_step": "step_4"
+      }
+    ]
+  },
+  "shared_rules": {
+    "status": "FAIL",
+    "satisfied_rules": [],
+    "violated_rules": [
+      {
+        "rule_id": "rule_4",
+        "reason": "The workflow does not assign confidential-information protection to both parties."
+      }
+    ]
+  },
+  "overall": "FAIL",
+  "summary": "Proposed workflow violates the listed policy rules."
+}
