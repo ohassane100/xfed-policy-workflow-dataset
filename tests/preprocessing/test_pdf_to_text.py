@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from xfed.1.pdf_to_text import pdf_to_text
+from xfed.preprocessing.pdf_to_text import pdf_to_text
 
 
 class PdfToTextTests(unittest.TestCase):

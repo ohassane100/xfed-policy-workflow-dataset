@@ -1,5 +1,3 @@
-"""Stage 1.1 placeholder: PDF to schema-defined document blocks with PyMuPDF.
+from .pdf_to_text import extract_document
 
-The separate pdf_to_text module preserves the old plain-text helper only.
-It does not implement document_blocks.json extraction.
-"""
+__all__ = ['extract_document']

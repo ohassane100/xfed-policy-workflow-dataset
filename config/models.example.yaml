@@ -1,9 +1,10 @@
-# Example only. Future configuration will live in ignored config/models.yaml.
-# No code loads this file or performs model inference yet.
+# Copy to config/models.yaml and fill in the endpoint/model available to you.
 relevance_classifier:
   provider: ollama
   base_url: http://localhost:11434
   model: PLACEHOLDER
+  timeout: 300
+  num_ctx: 32768
 
 policy_generator:
   provider: ollama
