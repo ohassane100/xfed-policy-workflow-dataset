@@ -1,0 +1,5 @@
+# Preserve supplied schemas, reference notes and historical snapshot bytes.
+schemas/** -text
+legacy/demo/** -text
+*.pdf binary
+*.PDF binary

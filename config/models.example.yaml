@@ -1,0 +1,16 @@
+# Example only. Future configuration will live in ignored config/models.yaml.
+# No code loads this file or performs model inference yet.
+relevance_classifier:
+  provider: ollama
+  base_url: http://localhost:11434
+  model: PLACEHOLDER
+
+policy_generator:
+  provider: ollama
+  base_url: http://localhost:11434
+  model: qwen3:14b
+
+policy_reviewer:
+  provider: ollama
+  base_url: http://localhost:11434
+  model: PLACEHOLDER

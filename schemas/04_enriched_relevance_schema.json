@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "XFed Enriched Relevance Schema",
+  "description": "Relevant clauses prepared for policy generation. Deterministic context is supported now; semantic retrieval/RAG can be added later without changing the downstream interface.",
+  "type": "object",
+  "required": [
+    "contract_id",
+    "items"
+  ],
+  "properties": {
+    "contract_id": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "text",
+          "source",
+          "context"
+        ],
+        "properties": {
+          "chunk_id": {
+            "type": "string"
+          },
+          "clause_id": {
+            "type": "string"
+          },
+          "heading": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "description": "Unchanged text of the relevant clause."
+          },
+          "parent_clause_id": {
+            "type": "string"
+          },
+          "child_clause_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "object",
+            "required": [
+              "pages",
+              "block_ids"
+            ],
+            "properties": {
+              "pages": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "1-based source page numbers."
+              },
+              "block_ids": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "Identifiers of document_blocks.json blocks from which this chunk was formed."
+              }
+            },
+            "additionalProperties": false
+          },
+          "context": {
+            "type": "array",
+            "description": "Supporting context. Empty when self-contained. Supports deterministic context now and retrieved context later.",
+            "items": {
+              "type": "object",
+              "required": [
+                "chunk_id",
+                "relationship",
+                "text",
+                "source"
+              ],
+              "properties": {
+                "chunk_id": {
+                  "type": "string"
+                },
+                "clause_id": {
+                  "type": "string"
+                },
+                "heading": {
+                  "type": "string"
+                },
+                "relationship": {
+                  "type": "string",
+                  "enum": [
+                    "parent",
+                    "definition",
+                    "reference",
+                    "retrieved",
+                    "other"
+                  ]
+                },
+                "text": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "object",
+                  "required": [
+                    "pages",
+                    "block_ids"
+                  ],
+                  "properties": {
+                    "pages": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "description": "1-based source page numbers."
+                    },
+                    "block_ids": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Identifiers of document_blocks.json blocks from which this chunk was formed."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "retrieval": {
+                  "type": "object",
+                  "description": "Optional RAG metadata; omit for deterministic context.",
+                  "properties": {
+                    "method": {
+                      "type": "string",
+                      "description": "e.g. semantic, lexical, or hybrid."
+                    },
+                    "rank": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "score": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

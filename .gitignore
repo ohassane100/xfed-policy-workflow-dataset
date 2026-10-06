@@ -1,7 +1,12 @@
 .venv/
 __pycache__/
 *.py[cod]
-tmp/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
 .env
-data/contracts/contract_003/policy_extractions/algo1/POLICY.md
-src/algorithmic/**
+tmp/
+config/models.yaml
+contracts/*/output/*
+!contracts/*/output/.gitkeep

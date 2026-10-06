@@ -1,0 +1,714 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SignalWell Contract-to-Policy Schema",
+  "description": "XFed contract-to-policy output. Enforceable rules use ODRL 2.2 terminology and the IDS Usage Control style. Energy-domain legal metadata is represented with OSDU LegalTag and record-level legal field names. XFed traceability remains separate from the ODRL policy.",
+  "type": "object",
+  "required": [
+    "contract_id",
+    "odrlPolicy",
+    "traceability"
+  ],
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "description": "XFed source contract identifier, preserved across preprocessing stages."
+    },
+    "osdu": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Optional OSDU-aligned legal metadata. XFed keeps OSDU metadata separate from ODRL policy rules: legalTag follows the OSDU Legal Service LegalTag shape, while legal follows the OSDU record-level legal metadata shape. Populate only values supported by the contract or trusted external metadata; deployment-specific allowed values must be validated against the target OSDU data partition.",
+      "properties": {
+        "legalTag": {
+          "$ref": "#/$defs/osduLegalTag"
+        },
+        "legal": {
+          "$ref": "#/$defs/osduRecordLegal"
+        }
+      },
+      "additionalProperties": false
+    },
+    "odrlPolicy": {
+      "type": "object",
+      "required": [
+        "@context",
+        "@type",
+        "uid",
+        "profile"
+      ],
+      "properties": {
+        "@context": {
+          "type": "array",
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "const": "http://www.w3.org/ns/odrl.jsonld"
+            },
+            {
+              "type": "object",
+              "required": [
+                "ids",
+                "idsc"
+              ],
+              "properties": {
+                "ids": {
+                  "const": "https://w3id.org/idsa/core/"
+                },
+                "idsc": {
+                  "const": "https://w3id.org/idsa/code/"
+                }
+              },
+              "additionalProperties": true
+            }
+          ],
+          "description": "ODRL JSON-LD context plus IDS namespaces used by IDS Usage Control examples."
+        },
+        "@type": {
+          "const": "Agreement",
+          "description": "ODRL Agreement: rules granted between assigner and assignee parties."
+        },
+        "uid": {
+          "type": "string",
+          "description": "ODRL policy identifier."
+        },
+        "profile": {
+          "const": "http://www.w3.org/ns/odrl/2/core",
+          "description": "ODRL profile identifier used in IDS Usage Control examples."
+        },
+        "permission": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "uid",
+              "target",
+              "assigner",
+              "assignee",
+              "action"
+            ],
+            "properties": {
+              "uid": {
+                "type": "string",
+                "description": "Stable rule identifier used for XFed traceability and review."
+              },
+              "target": {
+                "type": "string",
+                "description": "ODRL target Asset."
+              },
+              "assigner": {
+                "type": "string",
+                "description": "ODRL Party granting the Permission; in an XFed data-sharing contract this may be the data holder."
+              },
+              "assignee": {
+                "type": "string",
+                "description": "ODRL Party receiving the Permission; in an XFed data-sharing contract this may be the data user."
+              },
+              "action": {
+                "type": "string",
+                "description": "Single atomic ODRL/IDS action, e.g. use, read, derive, distribute, or execute."
+              },
+              "constraint": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "leftOperand",
+                    "operator",
+                    "rightOperand"
+                  ],
+                  "properties": {
+                    "uid": {
+                      "type": "string",
+                      "description": "Optional ODRL identifier for this Constraint."
+                    },
+                    "leftOperand": {
+                      "type": "string",
+                      "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
+                    },
+                    "operator": {
+                      "type": "string",
+                      "description": "ODRL/IDS operator, e.g. eq, neq, lt, lteq, gt, gteq, isA, isAllOf, isAnyOf, isNoneOf, or isPartOf."
+                    },
+                    "rightOperand": {
+                      "description": "Value compared with the left operand. Kept JSON-generic so literals, identifiers, or lists can be represented.",
+                      "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "array",
+                        "object"
+                      ]
+                    },
+                    "dataType": {
+                      "type": "string",
+                      "description": "Optional datatype for the right operand, following ODRL terminology."
+                    },
+                    "unit": {
+                      "type": "string",
+                      "description": "Optional unit for the right operand, following ODRL terminology."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "description": "ODRL Constraints that must be satisfied for the Permission."
+              },
+              "duty": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "uid",
+                    "action"
+                  ],
+                  "properties": {
+                    "uid": {
+                      "type": "string",
+                      "description": "Stable identifier for the Duty, required by XFed for traceability/review even though ODRL makes Rule uid optional."
+                    },
+                    "target": {
+                      "type": "string",
+                      "description": "ODRL target Asset when the Duty applies to a specific Asset."
+                    },
+                    "assigner": {
+                      "type": "string",
+                      "description": "ODRL assigner Party identifier when applicable."
+                    },
+                    "assignee": {
+                      "type": "string",
+                      "description": "ODRL assignee Party identifier when applicable."
+                    },
+                    "action": {
+                      "type": "string",
+                      "description": "ODRL/IDS action to be fulfilled, e.g. delete, anonymize, inform, or reviewPolicy."
+                    },
+                    "constraint": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "leftOperand",
+                          "operator",
+                          "rightOperand"
+                        ],
+                        "properties": {
+                          "uid": {
+                            "type": "string",
+                            "description": "Optional ODRL identifier for this Constraint."
+                          },
+                          "leftOperand": {
+                            "type": "string",
+                            "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
+                          },
+                          "operator": {
+                            "type": "string",
+                            "description": "ODRL/IDS operator, e.g. eq, neq, lt, lteq, gt, gteq, isA, isAllOf, isAnyOf, isNoneOf, or isPartOf."
+                          },
+                          "rightOperand": {
+                            "description": "Value compared with the left operand. Kept JSON-generic so literals, identifiers, or lists can be represented.",
+                            "type": [
+                              "string",
+                              "number",
+                              "integer",
+                              "boolean",
+                              "array",
+                              "object"
+                            ]
+                          },
+                          "dataType": {
+                            "type": "string",
+                            "description": "Optional datatype for the right operand, following ODRL terminology."
+                          },
+                          "unit": {
+                            "type": "string",
+                            "description": "Optional unit for the right operand, following ODRL terminology."
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "description": "ODRL Constraints applying to this Duty."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "description": "ODRL Duties that are preconditions of this Permission."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "ODRL Permission rules."
+        },
+        "prohibition": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "uid",
+              "target",
+              "assigner",
+              "assignee",
+              "action"
+            ],
+            "properties": {
+              "uid": {
+                "type": "string",
+                "description": "Stable rule identifier used for XFed traceability and review."
+              },
+              "target": {
+                "type": "string",
+                "description": "ODRL target Asset."
+              },
+              "assigner": {
+                "type": "string",
+                "description": "ODRL Party issuing the Prohibition."
+              },
+              "assignee": {
+                "type": "string",
+                "description": "ODRL Party to which the Prohibition applies."
+              },
+              "action": {
+                "type": "string",
+                "description": "Single atomic ODRL/IDS action that is prohibited."
+              },
+              "constraint": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "leftOperand",
+                    "operator",
+                    "rightOperand"
+                  ],
+                  "properties": {
+                    "uid": {
+                      "type": "string",
+                      "description": "Optional ODRL identifier for this Constraint."
+                    },
+                    "leftOperand": {
+                      "type": "string",
+                      "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
+                    },
+                    "operator": {
+                      "type": "string",
+                      "description": "ODRL/IDS operator, e.g. eq, neq, lt, lteq, gt, gteq, isA, isAllOf, isAnyOf, isNoneOf, or isPartOf."
+                    },
+                    "rightOperand": {
+                      "description": "Value compared with the left operand. Kept JSON-generic so literals, identifiers, or lists can be represented.",
+                      "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "array",
+                        "object"
+                      ]
+                    },
+                    "dataType": {
+                      "type": "string",
+                      "description": "Optional datatype for the right operand, following ODRL terminology."
+                    },
+                    "unit": {
+                      "type": "string",
+                      "description": "Optional unit for the right operand, following ODRL terminology."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "description": "ODRL Constraints applying to the Prohibition."
+              },
+              "remedy": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "uid",
+                    "action"
+                  ],
+                  "properties": {
+                    "uid": {
+                      "type": "string",
+                      "description": "Stable identifier for the Duty, required by XFed for traceability/review even though ODRL makes Rule uid optional."
+                    },
+                    "target": {
+                      "type": "string",
+                      "description": "ODRL target Asset when the Duty applies to a specific Asset."
+                    },
+                    "assigner": {
+                      "type": "string",
+                      "description": "ODRL assigner Party identifier when applicable."
+                    },
+                    "assignee": {
+                      "type": "string",
+                      "description": "ODRL assignee Party identifier when applicable."
+                    },
+                    "action": {
+                      "type": "string",
+                      "description": "ODRL/IDS action to be fulfilled, e.g. delete, anonymize, inform, or reviewPolicy."
+                    },
+                    "constraint": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "leftOperand",
+                          "operator",
+                          "rightOperand"
+                        ],
+                        "properties": {
+                          "uid": {
+                            "type": "string",
+                            "description": "Optional ODRL identifier for this Constraint."
+                          },
+                          "leftOperand": {
+                            "type": "string",
+                            "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
+                          },
+                          "operator": {
+                            "type": "string",
+                            "description": "ODRL/IDS operator, e.g. eq, neq, lt, lteq, gt, gteq, isA, isAllOf, isAnyOf, isNoneOf, or isPartOf."
+                          },
+                          "rightOperand": {
+                            "description": "Value compared with the left operand. Kept JSON-generic so literals, identifiers, or lists can be represented.",
+                            "type": [
+                              "string",
+                              "number",
+                              "integer",
+                              "boolean",
+                              "array",
+                              "object"
+                            ]
+                          },
+                          "dataType": {
+                            "type": "string",
+                            "description": "Optional datatype for the right operand, following ODRL terminology."
+                          },
+                          "unit": {
+                            "type": "string",
+                            "description": "Optional unit for the right operand, following ODRL terminology."
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "description": "ODRL Constraints applying to this Duty."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "description": "Optional ODRL Duties to fulfil if the Prohibition is infringed."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "ODRL Prohibition rules."
+        },
+        "obligation": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "uid",
+              "action"
+            ],
+            "properties": {
+              "uid": {
+                "type": "string",
+                "description": "Stable identifier for the Duty, required by XFed for traceability/review even though ODRL makes Rule uid optional."
+              },
+              "target": {
+                "type": "string",
+                "description": "ODRL target Asset when the Duty applies to a specific Asset."
+              },
+              "assigner": {
+                "type": "string",
+                "description": "ODRL assigner Party identifier when applicable."
+              },
+              "assignee": {
+                "type": "string",
+                "description": "ODRL assignee Party identifier when applicable."
+              },
+              "action": {
+                "type": "string",
+                "description": "ODRL/IDS action to be fulfilled, e.g. delete, anonymize, inform, or reviewPolicy."
+              },
+              "constraint": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "leftOperand",
+                    "operator",
+                    "rightOperand"
+                  ],
+                  "properties": {
+                    "uid": {
+                      "type": "string",
+                      "description": "Optional ODRL identifier for this Constraint."
+                    },
+                    "leftOperand": {
+                      "type": "string",
+                      "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
+                    },
+                    "operator": {
+                      "type": "string",
+                      "description": "ODRL/IDS operator, e.g. eq, neq, lt, lteq, gt, gteq, isA, isAllOf, isAnyOf, isNoneOf, or isPartOf."
+                    },
+                    "rightOperand": {
+                      "description": "Value compared with the left operand. Kept JSON-generic so literals, identifiers, or lists can be represented.",
+                      "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "array",
+                        "object"
+                      ]
+                    },
+                    "dataType": {
+                      "type": "string",
+                      "description": "Optional datatype for the right operand, following ODRL terminology."
+                    },
+                    "unit": {
+                      "type": "string",
+                      "description": "Optional unit for the right operand, following ODRL terminology."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "description": "ODRL Constraints applying to this Duty."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "ODRL policy-level Duty rules referenced through the obligation property."
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "permission"
+          ]
+        },
+        {
+          "required": [
+            "prohibition"
+          ]
+        },
+        {
+          "required": [
+            "obligation"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "traceability": {
+      "type": "array",
+      "minItems": 1,
+      "description": "XFed extension kept outside the ODRL object so policy vocabulary is not redefined.",
+      "items": {
+        "type": "object",
+        "required": [
+          "ruleUid",
+          "ruleType",
+          "sourceClauses"
+        ],
+        "properties": {
+          "ruleUid": {
+            "type": "string",
+            "description": "uid of the ODRL Permission, Prohibition, or Duty being supported."
+          },
+          "ruleType": {
+            "type": "string",
+            "enum": [
+              "permission",
+              "prohibition",
+              "obligation",
+              "duty"
+            ]
+          },
+          "sourceClauses": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "chunk_id",
+                "text",
+                "relationship"
+              ],
+              "properties": {
+                "chunk_id": {
+                  "type": "string"
+                },
+                "clause_id": {
+                  "type": "string"
+                },
+                "relationship": {
+                  "type": "string",
+                  "enum": [
+                    "primary",
+                    "context"
+                  ],
+                  "description": "Whether the clause directly states the rule or supplies necessary context."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Exact supporting contract text."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "One or more source clauses supporting the rule."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$comment": "Standards alignment: ODRL = policy rules; OSDU = legal/compliance metadata. See STANDARDS_ALIGNMENT.md.",
+  "$defs": {
+    "osduLegalTag": {
+      "type": "object",
+      "description": "OSDU Legal Service LegalTag-shaped metadata candidate. Exact OSDU field names are preserved. XFed permits evidence-supported partial properties at generation time to avoid hallucination; a LegalTag must be completed and validated against the target OSDU partition before API creation.",
+      "required": [
+        "name",
+        "properties"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 100,
+          "pattern": "^[A-Za-z0-9-]+$",
+          "description": "OSDU LegalTag name (3-100 alphanumeric/hyphen characters). OSDU prefixes the data-partition name when the LegalTag is created."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional free-form OSDU LegalTag description."
+        },
+        "properties": {
+          "type": "object",
+          "description": "OSDU LegalTag properties. Only populate contract-supported or trusted external values during XFed policy generation.",
+          "properties": {
+            "countryOfOrigin": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Z]{2}$"
+              },
+              "description": "OSDU countryOfOrigin using ISO 3166-1 alpha-2 country codes."
+            },
+            "contractId": {
+              "description": "OSDU contractId: actual contract identifier, 'Unknown', or 'No Contract Related'.",
+              "anyOf": [
+                {
+                  "const": "Unknown"
+                },
+                {
+                  "const": "No Contract Related"
+                },
+                {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 40,
+                  "pattern": "^[A-Za-z0-9-]+$"
+                }
+              ]
+            },
+            "expirationDate": {
+              "description": "OSDU expirationDate in yyyy-MM-dd format when supplied; empty is allowed where OSDU permits no explicit expiration.",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                {
+                  "const": ""
+                }
+              ]
+            },
+            "dataType": {
+              "type": "string",
+              "enum": [
+                "Public Domain Data",
+                "First Party Data",
+                "Second Party Data",
+                "Third Party Data",
+                "Transferred Data"
+              ],
+              "description": "OSDU dataType. Allowed values can be data-partition specific."
+            },
+            "originator": {
+              "type": "string",
+              "minLength": 1,
+              "description": "OSDU originator: client, supplier, or other data originator."
+            },
+            "securityClassification": {
+              "type": "string",
+              "enum": [
+                "Public",
+                "Private",
+                "Confidential"
+              ],
+              "description": "OSDU securityClassification."
+            },
+            "exportClassification": {
+              "type": "string",
+              "enum": [
+                "EAR99",
+                "0A998"
+              ],
+              "description": "OSDU exportClassification. Deployment-specific allowed values must be validated against the target OSDU partition."
+            },
+            "personalData": {
+              "type": "string",
+              "enum": [
+                "Personally Identifiable",
+                "No Personal Data"
+              ],
+              "description": "OSDU personalData classification."
+            },
+            "extensionProperties": {
+              "type": "object",
+              "description": "Optional OSDU company-specific LegalTag attributes.",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "osduRecordLegal": {
+      "type": "object",
+      "description": "OSDU record-level legal metadata. This is distinct from the LegalTag definition: it associates a record with LegalTag names and other relevant data countries. The OSDU system-generated compliance status is intentionally omitted from XFed policy generation.",
+      "required": [
+        "legaltags",
+        "otherRelevantDataCountries"
+      ],
+      "properties": {
+        "legaltags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of OSDU LegalTags associated with the record."
+        },
+        "otherRelevantDataCountries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "description": "OSDU record-level otherRelevantDataCountries using ISO 3166-1 alpha-2 codes. This is not part of the LegalTag itself."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

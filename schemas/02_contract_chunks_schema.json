@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "XFed Contract Chunks Schema",
+  "description": "Output of structure-aware clause segmentation. Preserves clause hierarchy and links every chunk back to extracted document blocks.",
+  "type": "object",
+  "required": [
+    "contract_id",
+    "chunks"
+  ],
+  "properties": {
+    "contract_id": {
+      "type": "string"
+    },
+    "chunks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "text",
+          "source"
+        ],
+        "properties": {
+          "chunk_id": {
+            "type": "string"
+          },
+          "clause_id": {
+            "type": "string",
+            "description": "Original clause/section number when present."
+          },
+          "heading": {
+            "type": "string",
+            "description": "Original heading when present."
+          },
+          "text": {
+            "type": "string",
+            "description": "Original clause/subclause text, or fallback paragraph text."
+          },
+          "parent_clause_id": {
+            "type": "string",
+            "description": "Parent clause identifier when present."
+          },
+          "child_clause_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Direct child clause identifiers when present."
+          },
+          "source": {
+            "type": "object",
+            "required": [
+              "pages",
+              "block_ids"
+            ],
+            "properties": {
+              "pages": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "1-based source page numbers."
+              },
+              "block_ids": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "Identifiers of document_blocks.json blocks from which this chunk was formed."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

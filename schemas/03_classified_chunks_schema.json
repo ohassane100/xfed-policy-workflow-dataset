@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "XFed Classified Chunks Schema",
+  "description": "Output of clause-level relevance classification. Preserves the segmented chunk and attaches a constrained relevance decision.",
+  "type": "object",
+  "required": [
+    "contract_id",
+    "chunks"
+  ],
+  "properties": {
+    "contract_id": {
+      "type": "string"
+    },
+    "chunks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "text",
+          "source",
+          "classification"
+        ],
+        "properties": {
+          "chunk_id": {
+            "type": "string"
+          },
+          "clause_id": {
+            "type": "string"
+          },
+          "heading": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "description": "Unchanged text from contract_chunks.json."
+          },
+          "parent_clause_id": {
+            "type": "string"
+          },
+          "child_clause_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "object",
+            "required": [
+              "pages",
+              "block_ids"
+            ],
+            "properties": {
+              "pages": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "1-based source page numbers."
+              },
+              "block_ids": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "Identifiers of document_blocks.json blocks from which this chunk was formed."
+              }
+            },
+            "additionalProperties": false
+          },
+          "classification": {
+            "type": "object",
+            "required": [
+              "label"
+            ],
+            "properties": {
+              "label": {
+                "type": "string",
+                "enum": [
+                  "RELEVANT",
+                  "NOT_RELEVANT",
+                  "NEEDS_CONTEXT"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "description": "Optional short reason for the classification."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

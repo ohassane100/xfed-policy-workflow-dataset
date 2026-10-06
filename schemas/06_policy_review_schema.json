@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SignalWell Policy Review Schema",
+  "description": "Structured output from an independent local company-node LLM reviewing each generated ODRL rule against its XFed source-clause traceability evidence. OSDU legal metadata is intentionally not duplicated in the rule-review output; it remains metadata in the policy schema.",
+  "type": "object",
+  "required": [
+    "review_id",
+    "policy_uid",
+    "reviewer_id",
+    "rule_reviews"
+  ],
+  "properties": {
+    "review_id": {
+      "type": "string"
+    },
+    "policy_uid": {
+      "type": "string",
+      "description": "uid of odrlPolicy being reviewed."
+    },
+    "reviewer_id": {
+      "type": "string",
+      "description": "Local company/slave node performing the independent review."
+    },
+    "rule_reviews": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "rule_uid",
+          "rule_type",
+          "verdict"
+        ],
+        "properties": {
+          "rule_uid": {
+            "type": "string",
+            "description": "uid of the ODRL rule being reviewed."
+          },
+          "rule_type": {
+            "type": "string",
+            "enum": [
+              "permission",
+              "prohibition",
+              "obligation",
+              "duty"
+            ]
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "ENTAILED",
+              "CONTRADICTED",
+              "UNSUPPORTED",
+              "AMBIGUOUS"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Optional concise explanation of the verdict."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

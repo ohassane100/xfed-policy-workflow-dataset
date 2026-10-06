@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "XFed Document Blocks Schema",
+  "description": "Output of contract extraction and preprocessing. Preserves extracted text, coarse document structure, numbering when detected, and source position.",
+  "type": "object",
+  "required": [
+    "contract_id",
+    "blocks"
+  ],
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "description": "Identifier of the source contract."
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "block_id",
+          "text",
+          "page"
+        ],
+        "properties": {
+          "block_id": {
+            "type": "string",
+            "description": "Unique block identifier."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "paragraph",
+              "heading",
+              "table",
+              "other"
+            ]
+          },
+          "numbering": {
+            "type": "string",
+            "description": "Detected clause/section numbering; omit when absent."
+          },
+          "text": {
+            "type": "string",
+            "description": "Extracted text after basic cleanup while retaining original wording."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based source page."
+          },
+          "bbox": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "Optional PyMuPDF-style bounding box [x0, y0, x1, y1]."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
