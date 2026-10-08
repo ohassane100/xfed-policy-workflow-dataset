@@ -70,13 +70,12 @@ def extract_document(pdf_path: Path, contract_id: str, root=Path('.')) -> dict:
                     b['type'] = 'other'
                     b.pop('numbering', None)
             if not page_blocks:
-                warnings.warn(f"Page {page.number + 1}: no extractable text (image-only or blank); OCR not performed")
+                warnings.warn(f"Page {page.number + 1}: no extractable text (image-only or blank)")
     for repeated in margins.values():
         if len({b['page'] for b in repeated}) >= 3:
             for b in repeated:
                 b['type'] = 'other'
                 b.pop('numbering', None)
     if not blocks:
-        raise ValueError('No text could be extracted from the PDF; OCR may be required.')
+        raise ValueError('No text could be extracted from the PDF.')
     return validate(dict(contract_id=contract_id, blocks=blocks), 1, root)
-

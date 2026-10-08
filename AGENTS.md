@@ -1,5 +1,5 @@
 # Sample AGENTS.md file
- - Prefer the smallest working implementation.
+- Prefer the smallest working implementation.
 - Do not create files, folders, documentation, examples, or abstractions unless they are necessary.
 - Keep README/docs changes minimal; avoid repeating information already present elsewhere.
 - Reuse existing schemas, prompts, utilities, and project structure before adding new ones.
