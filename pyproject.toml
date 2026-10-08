@@ -10,17 +10,12 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["PyMuPDF>=1.24,<2", "jsonschema>=4.18,<5", "PyYAML>=6,<7"]
 
-[project.optional-dependencies]
-legacy-pdf = ["pypdf>=5,<7"]
-
 [tool.setuptools]
-packages = ["xfed", "xfed.preprocessing", "xfed.segmentation", "xfed.relevance", "xfed.enrichment", "xfed.llm", "xfed.common", "xfed.policy_generation", "xfed.policy_review"]
+packages = ["xfed", "xfed.extraction", "xfed.segmentation", "xfed.relevance", "xfed.enrichment", "xfed.llm", "xfed.common"]
 
 [tool.setuptools.package-dir]
 xfed = "src"
-"xfed.preprocessing" = "src/1 preprocessing"
+"xfed.extraction" = "src/1 preprocessing/1.1 extraction"
 "xfed.segmentation" = "src/1 preprocessing/1.2 segmentation"
 "xfed.relevance" = "src/1 preprocessing/1.3 relevance"
 "xfed.enrichment" = "src/1 preprocessing/1.4 enrichment"
-"xfed.policy_generation" = "src/2 policy_generation"
-"xfed.policy_review" = "src/3 policy_review"

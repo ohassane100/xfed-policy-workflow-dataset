@@ -17,9 +17,9 @@ class RejectOptionalDependencies:
             raise AssertionError('Unexpected import: ' + fullname)
 
 sys.meta_path.insert(0, RejectOptionalDependencies())
-for name in ('xfed', 'xfed.preprocessing', 'xfed.preprocessing.pdf_to_text',
+for name in ('xfed', 'xfed.extraction',
              'xfed.segmentation', 'xfed.relevance', 'xfed.enrichment',
-             'xfed.policy_generation', 'xfed.policy_review', 'xfed.llm',
+             'xfed.llm',
              'xfed.common'):
     importlib.import_module(name)
 """

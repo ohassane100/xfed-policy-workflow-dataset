@@ -7,6 +7,9 @@ python -m xfed all --through 1.2
 python -m unittest discover -s tests -v
 ```
 
+Tests mirror stages 1.1-1.4 under `tests/1 preprocessing/`. To run one stage:
+`python -m unittest discover -s "tests/1 preprocessing/1.1 extraction" -v`.
+
 For stages 1.3-1.4, copy `config/models.example.yaml` to `config/models.yaml`,
 set `relevance_classifier.base_url` and `model`, then run
 `python -m xfed all --through 1.4`. Unresolved decisions and missing-reference

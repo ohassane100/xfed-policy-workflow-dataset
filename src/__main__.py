@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 from xfed.common import write_output
-from xfed.preprocessing import extract_document
+from xfed.extraction import extract_document
 from xfed.segmentation import segment
 from xfed.relevance import classify
 from xfed.enrichment import enrich

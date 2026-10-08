@@ -1,1 +1,1 @@
-"""Tests for package structure and retained utilities."""
+"""Tests for the active pipeline and package imports."""

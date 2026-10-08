@@ -5,13 +5,3 @@ relevance_classifier:
   model: PLACEHOLDER
   timeout: 300
   num_ctx: 32768
-
-policy_generator:
-  provider: ollama
-  base_url: http://localhost:11434
-  model: qwen3:14b
-
-policy_reviewer:
-  provider: ollama
-  base_url: http://localhost:11434
-  model: PLACEHOLDER
