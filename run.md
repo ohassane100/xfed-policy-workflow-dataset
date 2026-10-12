@@ -21,3 +21,9 @@ python -m xfed all --through 1.3
 ```bash
 python -m xfed all --through 1.4
 ```
+
+## 2
+
+```bash
+python -m xfed all --through 2
+```

@@ -121,12 +121,14 @@ class ContextIndex:
         return context, list(dict.fromkeys(missing))
 
 
-def enrich(document, client, root=Path('.')):
+def enrich(document, client, root=Path('.'), progress=None):
     validate(document, 3, root)
     updated = deepcopy(document)
     index = ContextIndex(updated['chunks'])
     items = []
-    for chunk in updated['chunks']:
+    for position, chunk in enumerate(updated['chunks']):
+        if progress:
+            progress(position, len(updated['chunks']), chunk['chunk_id'])
         initial = chunk['classification']
         if initial['label'] == 'NOT_RELEVANT':
             continue
@@ -145,4 +147,6 @@ def enrich(document, client, root=Path('.')):
             chunk['classification'] = decision
         if chunk['classification']['label'] == 'RELEVANT':
             items.append(dict({k: v for k, v in chunk.items() if k != 'classification'}, context=context))
+    if progress:
+        progress(len(updated['chunks']), len(updated['chunks']), 'Complete')
     return validate(updated, 3, root), validate(dict(contract_id=document['contract_id'], items=items), 4, root)

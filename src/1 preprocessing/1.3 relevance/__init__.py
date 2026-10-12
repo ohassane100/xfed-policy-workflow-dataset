@@ -15,9 +15,13 @@ def classify_chunk(chunk, client, root=Path('.'), context=(), unresolved=()):
     return result
 
 
-def classify(document, client, root=Path('.')):
+def classify(document, client, root=Path('.'), progress=None):
     validate(document, 2, root)
     output = deepcopy(document)
-    for chunk in output['chunks']:
+    for position, chunk in enumerate(output['chunks']):
+        if progress:
+            progress(position, len(output['chunks']), chunk['chunk_id'])
         chunk['classification'] = classify_chunk(chunk, client, root)
+    if progress:
+        progress(len(output['chunks']), len(output['chunks']), 'Complete')
     return validate(output, 3, root)

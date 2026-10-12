@@ -5,3 +5,5 @@ relevance_classifier:
   model: PLACEHOLDER
   timeout: 300
   num_ctx: 32768
+  num_predict: 4096
+  # Omit think to use the model's default; some models cannot disable thinking.

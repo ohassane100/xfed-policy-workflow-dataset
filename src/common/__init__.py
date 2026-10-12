@@ -59,7 +59,7 @@ def scoped_chunks(chunks):
 
 @lru_cache(maxsize=16)
 def schema(stage, root=Path('.')):
-    names = ('document_blocks', 'contract_chunks', 'classified_chunks', 'enriched_relevance')
+    names = ('document_blocks', 'contract_chunks', 'classified_chunks', 'enriched_relevance', 'policy', 'policy_review')
     path = Path(root) / 'schemas' / f'{stage:02}_{names[stage - 1]}_schema.json'
     return json.loads(path.read_text(encoding='utf-8'))
 
@@ -72,6 +72,10 @@ def validate(value, stage, root=Path('.')):
 
 def write_output(path, value, stage, root=Path('.')):
     validate(value, stage, root)
+    write_json(path, value)
+
+
+def write_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
