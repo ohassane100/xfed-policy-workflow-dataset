@@ -63,8 +63,11 @@ def response_schema(root=Path('.')):
                 raise ValueError('Policy generation requires local schema definitions.')
             return inline(dict(original['$defs'][reference.removeprefix('#/$defs/')],
                                **{key: child for key, child in value.items() if key != '$ref'}))
-        return {key: inline(child) for key, child in value.items()
-                if key not in ('$defs', '$schema')}
+        result = {key: inline(child) for key, child in value.items()
+                  if key not in ('$defs', '$schema')}
+        if isinstance(result.get('pattern'), str):
+            result['pattern'] = result['pattern'].replace(r'\d', '[0-9]')
+        return result
 
     policy = inline(original)
     odrl = policy['properties']['odrlPolicy']
