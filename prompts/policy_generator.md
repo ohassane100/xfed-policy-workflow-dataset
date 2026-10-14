@@ -23,6 +23,11 @@ context may be cited with relationship: context, but must not independently
 create rules. Give all rules distinct uid values. The application normalises
 these identifiers after validation.
 
+The supplied context may be marked incomplete and include an omitted-context
+count. Do not infer the contents of omitted clauses. Return policy: null if an
+omitted clause may contain a condition, exception, definition, or restriction
+needed to represent a rule faithfully.
+
 ODRL rules and optional OSDU metadata are separate. Omit OSDU metadata unless
 explicitly supported by the supplied evidence. Never default unknown countries,
 personal-data classifications, security classifications, or expiry dates.

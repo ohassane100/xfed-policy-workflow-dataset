@@ -5,11 +5,11 @@ import shutil
 from tempfile import TemporaryDirectory
 import threading
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from urllib.request import urlopen
 
 from xfed.common import write_json, write_output
-from xfed.ui import Pipeline, handler
+from xfed.ui import CachedClient, Pipeline, handler
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,11 +51,45 @@ class DashboardTests(unittest.TestCase):
 
     def test_report_summary_and_current_failure(self):
         write_json(self.root / 'contracts/contract_01/output/2 policy_generation/generation_report.json',
-                   dict(status='draft', unresolved_chunks=2, clauses=[dict(generated=False), dict(generated=True)]))
+                   dict(status='draft', unresolved_chunks=2,
+                        warnings=[dict(chunk_id='c1', message='Metadata conflict.')],
+                        clauses=[dict(generated=False), dict(generated=True)]))
         self.pipeline.update(status='failed', contract='contract_01', stage='2', message='Request rejected')
         result = self.pipeline.overview()
-        self.assertEqual(result['contracts'][0]['report'], dict(status='draft', skipped=1, unresolved=2))
+        self.assertEqual(result['contracts'][0]['report'],
+                         dict(status='draft', skipped=1, unresolved=2, warnings=1))
         self.assertEqual(result['job']['message'], 'Request rejected')
+
+    def test_reset_generated_removes_stage_outputs_metadata_and_model_cache(self):
+        base = self.root / 'contracts/contract_01/output'
+        for stage in ('1.1', '1.2', '1.3', '1.4', '2'):
+            path = self.pipeline.path('contract_01', stage)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('{}', encoding='utf-8')
+        write_json(base / '2 policy_generation/generation_report.json', {'status': 'draft'})
+        write_json(base / '.runs.json', {stage: {'status': 'complete'}
+                                        for stage in ('1.1', '1.2', '1.3', '1.4', '2')})
+        write_json(base / '.llm_cache.json', {'cached': True})
+
+        self.pipeline.reset_generated('contract_01')
+
+        self.assertTrue(all(not self.pipeline.path('contract_01', stage).exists()
+                            for stage in ('1.1', '1.2', '1.3', '1.4', '2')))
+        self.assertFalse((base / '2 policy_generation/generation_report.json').exists())
+        self.assertFalse((base / '.runs.json').exists())
+        self.assertFalse((base / '.llm_cache.json').exists())
+
+    def test_run_through_two_forces_fresh_model_requests(self):
+        self.pipeline.models = Mock(return_value=[{'name': 'test-model', 'digest': 'abc'}])
+
+        with patch('xfed.ui.threading.Thread') as thread:
+            self.pipeline.start(dict(contract='contract_01', stage='2', mode='through',
+                                     model='test-model', reuse=True))
+
+        args = thread.call_args.kwargs['args']
+        self.assertEqual(args[1], ['1.1', '1.2', '1.3', '1.4', '2'])
+        self.assertFalse(args[3])
+        self.assertTrue(args[4])
 
     def test_overview_http_endpoint(self):
         server = ThreadingHTTPServer(('127.0.0.1', 0), handler(self.pipeline))
@@ -78,6 +112,34 @@ class DashboardTests(unittest.TestCase):
         request.wfile = Mock()
         request.send(dict(contracts=[]))
         request.wfile.write.assert_not_called()
+
+    def test_model_cache_separates_output_token_limits(self):
+        class Client:
+            url = 'http://localhost:11434'
+            model = 'test-model'
+            num_ctx = 4096
+            num_predict = 512
+            think = None
+            model_digest = 'test-digest'
+
+            def __init__(self):
+                self.calls = []
+
+            def generate(self, prompt, value, schema, num_predict=None):
+                self.calls.append(num_predict)
+                return dict(num_predict=num_predict)
+
+        client = Client()
+        cached = CachedClient(client, self.root / '.llm_cache.json', threading.Event(), True)
+
+        with patch('xfed.ui.write_json'):
+            first = cached.generate('prompt', {}, {}, num_predict=512)
+            retried = cached.generate('prompt', {}, {}, num_predict=1024)
+            reused = cached.generate('prompt', {}, {}, num_predict=512)
+
+        self.assertEqual(client.calls, [512, 1024])
+        self.assertEqual(first, reused)
+        self.assertEqual(retried, dict(num_predict=1024))
 
 
 if __name__ == '__main__':

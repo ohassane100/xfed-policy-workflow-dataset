@@ -48,13 +48,15 @@ class CachedClient:
                          ('url', 'model', 'num_ctx', 'num_predict', 'think', 'model_digest')}
         self.cache = read_json(path, {}) if reuse else {}
 
-    def generate(self, prompt, value, schema):
+    def generate(self, prompt, value, schema, num_predict=None):
         if self.cancel.is_set():
             raise Cancelled()
-        key = hashlib.sha256(json.dumps([self.settings, prompt, value, schema],
+        output_limit = self.settings['num_predict'] if num_predict is None else num_predict
+        settings = dict(self.settings, num_predict=output_limit)
+        key = hashlib.sha256(json.dumps([settings, prompt, value, schema],
                                        sort_keys=True).encode()).hexdigest()
         if key not in self.cache:
-            self.cache[key] = self.client.generate(prompt, value, schema)
+            self.cache[key] = self.client.generate(prompt, value, schema, num_predict=output_limit)
             write_json(self.path, self.cache)
         if self.cancel.is_set():
             raise Cancelled()
@@ -152,7 +154,9 @@ class Pipeline:
             self.cancel.clear()
             self.job = dict(status='running', contract=contract, stage=selected[0], completed=0,
                             total=0, message='Starting', log=[])
-        threading.Thread(target=self.run, args=(contract, selected, client, request.get('reuse', True)),
+        fresh_run = mode == 'through' and stage == '2'
+        reuse = request.get('reuse', True) and not fresh_run
+        threading.Thread(target=self.run, args=(contract, selected, client, reuse, fresh_run),
                          daemon=True).start()
         return self.snapshot()
 
@@ -161,12 +165,16 @@ class Pipeline:
         for contract in self.contracts():
             state = self.state(contract)
             report = state['report']
+            report_summary = None
+            if report is not None:
+                report_summary = dict(status=report['status'],
+                                      skipped=sum(not c['generated'] for c in report['clauses']),
+                                      unresolved=report.get('unresolved_chunks', 0))
+                if report.get('warnings'):
+                    report_summary['warnings'] = len(report['warnings'])
             contracts.append(dict(contract=contract, stages=state['stages'], labels=state['labels'],
                                   source_bytes=(self.base(contract) / 'input/contract.pdf').stat().st_size,
-                                  report=None if report is None else dict(
-                                      status=report['status'],
-                                      skipped=sum(not c['generated'] for c in report['clauses']),
-                                      unresolved=report.get('unresolved_chunks', 0))))
+                                  report=report_summary))
         return dict(contracts=contracts, job=self.snapshot())
 
     def invalidate(self, contract, stage):
@@ -178,11 +186,20 @@ class Pipeline:
         runs = read_json(metadata, {})
         for downstream in stages[stages.index(stage):]:
             runs.pop(downstream, None)
-        write_json(metadata, runs)
+        if runs:
+            write_json(metadata, runs)
+        else:
+            metadata.unlink(missing_ok=True)
 
-    def run(self, contract, selected, raw_client, reuse):
+    def reset_generated(self, contract):
+        self.invalidate(contract, '1.1')
+        (self.base(contract) / 'output/.llm_cache.json').unlink(missing_ok=True)
+
+    def run(self, contract, selected, raw_client, reuse, fresh_run=False):
         base = self.base(contract)
         try:
+            if fresh_run:
+                self.reset_generated(contract)
             client = CachedClient(raw_client, base / 'output/.llm_cache.json', self.cancel, reuse) if raw_client else None
             for stage in selected:
                 self.progress(0, 0, 'Starting stage ' + stage)

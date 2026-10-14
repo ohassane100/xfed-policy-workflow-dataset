@@ -20,12 +20,15 @@ class OllamaClient:
         self.model, self.timeout, self.num_ctx = model, timeout, num_ctx
         self.num_predict, self.think = num_predict, think
 
-    def generate(self, system, value, schema):
+    def generate(self, system, value, schema, num_predict=None):
         from jsonschema import Draft202012Validator
+        output_limit = self.num_predict if num_predict is None else num_predict
+        if not isinstance(output_limit, int) or not 128 <= output_limit < self.num_ctx:
+            raise ValueError('num_predict must be at least 128 and less than num_ctx.')
         payload = dict(model=self.model, stream=False, format=schema,
                        messages=[dict(role='system', content=system),
                                  dict(role='user', content=json.dumps(value, ensure_ascii=False))],
-                       options=dict(temperature=0, num_ctx=self.num_ctx, num_predict=self.num_predict))
+                       options=dict(temperature=0, num_ctx=self.num_ctx, num_predict=output_limit))
         if self.think is not None:
             payload['think'] = self.think
         request = Request(self.url, data=json.dumps(payload).encode('utf-8'),
@@ -50,14 +53,26 @@ class OllamaClient:
             raise RuntimeError(f'Ollama request failed at {self.url}: {error}') from error
         except (ValueError, UnicodeError) as error:
             raise ValueError('Ollama returned an invalid JSON response.') from error
-        if not isinstance(result, dict) or result.get('done') is not True or result.get('done_reason') == 'length':
-            raise ValueError('Ollama response incomplete or truncated; no classification accepted.')
-        if result.get('prompt_eval_count', 0) >= self.num_ctx - self.num_predict:
-            raise ValueError('Ollama context limit reached; increase num_ctx before accepting a classification.')
+        if not isinstance(result, dict):
+            raise ValueError('Ollama response incomplete or truncated; increase output tokens before accepting it.')
+        if result.get('done') is not True:
+            output_tokens = result.get('eval_count')
+            if isinstance(output_tokens, int) and output_tokens >= output_limit:
+                raise ValueError(f'Ollama output token limit reached at {output_limit} tokens; '
+                                 'increase output tokens before accepting it.')
+            raise ValueError('Ollama response incomplete or truncated; increase output tokens before accepting it.')
+        if result.get('done_reason') == 'length':
+            prompt_tokens = result.get('prompt_eval_count')
+            output_tokens = result.get('eval_count')
+            if (isinstance(prompt_tokens, int) and isinstance(output_tokens, int)
+                    and prompt_tokens + output_tokens >= self.num_ctx):
+                raise ValueError('Ollama context limit reached; reduce input context or increase num_ctx.')
+            raise ValueError(f'Ollama output token limit reached at {output_limit} tokens; '
+                             'increase output tokens before accepting it.')
         try:
             answer = json.loads(result['message']['content'])
         except (KeyError, TypeError, ValueError) as error:
-            raise ValueError('Ollama message must contain a JSON object conforming to the classification schema.') from error
+            raise ValueError('Ollama message must contain a JSON object conforming to the response schema.') from error
         Draft202012Validator(schema).validate(answer)
         return answer
 
