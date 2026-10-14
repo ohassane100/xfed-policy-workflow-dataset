@@ -49,17 +49,43 @@ def check_traceability(policy, item):
         raise ValueError('Traceability contains a nonexistent rule.')
 
 
+def response_schema(root=Path('.')):
+    original = schema(5, root)
+
+    def inline(value):
+        if isinstance(value, list):
+            return [inline(child) for child in value]
+        if not isinstance(value, dict):
+            return value
+        if '$ref' in value:
+            reference = value['$ref']
+            if not reference.startswith('#/$defs/'):
+                raise ValueError('Policy generation requires local schema definitions.')
+            return inline(dict(original['$defs'][reference.removeprefix('#/$defs/')],
+                               **{key: child for key, child in value.items() if key != '$ref'}))
+        return {key: inline(child) for key, child in value.items()
+                if key not in ('$defs', '$schema')}
+
+    policy = inline(original)
+    odrl = policy['properties']['odrlPolicy']
+    # Keep Ollama's grammar within its supported subset; validate the full schema afterwards.
+    odrl['properties']['@context'] = {'const': [
+        'http://www.w3.org/ns/odrl.jsonld',
+        {'ids': 'https://w3id.org/idsa/core/', 'idsc': 'https://w3id.org/idsa/code/'},
+    ]}
+    alternatives = odrl.pop('anyOf')
+    policy['properties']['odrlPolicy'] = {'anyOf': [
+        dict(deepcopy(odrl), required=list(dict.fromkeys(odrl['required'] + choice['required'])))
+        for choice in alternatives
+    ]}
+    return dict(type='object', required=['policy', 'reason'], additionalProperties=False,
+                properties=dict(policy={'anyOf': [policy, {'type': 'null'}]},
+                                reason=dict(type='string', minLength=1)))
+
+
 def generate(document, client, root=Path('.'), progress=None):
     validate(document, 4, root)
-    policy_schema = deepcopy(schema(5, root))
-    definitions = policy_schema.pop('$defs', {})
-    policy_schema.pop('$schema', None)
-    response_schema = dict(
-        type='object', required=['policy', 'reason'], additionalProperties=False,
-        properties=dict(policy={'anyOf': [policy_schema, {'type': 'null'}]},
-                        reason=dict(type='string', minLength=1)),
-        **{'$defs': definitions},
-    )
+    request_schema = response_schema(root)
     prompt = (Path(root) / 'prompts/policy_generator.md').read_text(encoding='utf-8')
     contract = document['contract_id']
     output = dict(contract_id=contract, odrlPolicy={
@@ -72,8 +98,8 @@ def generate(document, client, root=Path('.'), progress=None):
     for position, item in enumerate(document['items']):
         if progress:
             progress(position, len(document['items']), item['chunk_id'])
-        answer = client.generate(prompt, dict(contract_id=contract, clause=item), response_schema)
-        Draft202012Validator(response_schema).validate(answer)
+        answer = client.generate(prompt, dict(contract_id=contract, clause=item), request_schema)
+        Draft202012Validator(request_schema).validate(answer)
         report['clauses'].append(dict(chunk_id=item['chunk_id'], generated=answer['policy'] is not None,
                                       reason=answer['reason']))
         if answer['policy'] is None:

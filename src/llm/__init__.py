@@ -34,7 +34,18 @@ class OllamaClient:
             with urlopen(request, timeout=self.timeout) as response:
                 result = json.load(response)
         except HTTPError as error:
-            raise RuntimeError(f'Ollama HTTP {error.code}: check endpoint and model {self.model!r}.') from error
+            try:
+                detail = error.read(8192).decode('utf-8', errors='replace').strip()
+                try:
+                    decoded = json.loads(detail)
+                    if isinstance(decoded, dict):
+                        detail = str(decoded.get('error', detail))
+                except ValueError:
+                    pass
+            except OSError:
+                detail = ''
+            raise RuntimeError(f'Ollama HTTP {error.code} for {self.model!r}: '
+                               f'{detail[:2000] or "No error details returned."}') from error
         except (URLError, TimeoutError, OSError) as error:
             raise RuntimeError(f'Ollama request failed at {self.url}: {error}') from error
         except (ValueError, UnicodeError) as error:

@@ -1,7 +1,5 @@
 # XFed standards alignment
 
-This package keeps the existing XFed pipeline unchanged.
-
 ## ODRL
 Used for the machine-readable policy rules in `05_policy_schema.json`: permissions, prohibitions, duties/obligations, parties, actions, targets, and constraints.
 

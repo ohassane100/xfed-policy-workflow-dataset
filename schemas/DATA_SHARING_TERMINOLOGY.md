@@ -1,9 +1,5 @@
 # Data-Sharing Terminology
 
-This glossary collects the data-sharing terminology used in the XFed project and terminology appearing in **Contract 1**, **Contract 2**, and **Contract 3**. Definitions are taken from primary standards or directly from the contracts where the term is contract-specific.
-
-> **Note:** "Working definition" means the source supports the concept but does not define that exact phrase as a formal term.
-
 | Term | Concise definition | Present in / relevance | Source of definition | Status |
 |---|---|---|---|---|
 | **Data** | Any digital representation of acts, facts or information, including compilations and sound, visual or audiovisual recordings. | Contract 1 | [EU Data Act, Art. 2(1)][DA] | Standard definition |
@@ -68,22 +64,3 @@ This glossary collects the data-sharing terminology used in the XFed project and
 
 - **[ODCS-ROLES] Bitol ODCS Roles** - roles providing consumer/user access to a dataset and the type of access provided:  
   https://github.com/bitol-io/open-data-contract-standard/blob/main/docs/roles.md
-
-### Project contract sources
-
-These files are included in the XFed schema/source package and are the authoritative sources for contract-specific terminology.
-
-- **[C1] [Contract 1](./Contract%201.PDF)** - European Commission Data Act Model Contractual Terms / Standard Contractual Clauses source used in the project. Relevant locations include Annex V §1 for **Data Sharer** and the contract sections adopting EU Data Act terminology.
-- **[C2] [Contract 2](./Contract%202.pdf)** - Relevant locations: Article 30.1 for **Confidential Information**, **Contractor Data**, and **Proprietary Information**; Article 34.3 for **Accessing Party**; Article 34.7 for copying/access restrictions.
-- **[C3] [Contract 3](./Contract%203.pdf)** - Relevant locations: §1 Definitions for **Background**, **Confidential Information**, **Commercial Utilisation**, **Fair and Reasonable Conditions**, and **Project Results**; §§10.4-10.5 and 11.2 for **Access Rights**.
-
-## Terminology note for XFed
-
-For XFed policy generation, the most useful separation is:
-
-- **Contract/data-sharing roles:** Data Holder, User, Data Recipient, Data Sharer, Accessing Party.
-- **Data objects:** Data, Product Data, Related Service Data, Readily Available Data, Metadata, Contractor Data, Background, Project Results.
-- **Permitted/restricted operations:** access/read, processing/use, reproduction/copying, deletion, sharing/making available.
-- **Policy restrictions:** purpose, recipient, location/spatial restrictions, time constraints, retention.
-- **ODRL rule structure:** Permission, Prohibition, Duty, Constraint.
-
