@@ -12,7 +12,7 @@ from xfed.policy_generation import generate
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='XFed preprocessing and draft policy generation')
-    parser.add_argument('contract', choices=['contract_01', 'contract_02', 'contract_03', 'all'])
+    parser.add_argument('contract', choices=['contract_01', 'contract_02', 'contract_03', 'contract_04', 'all'])
     parser.add_argument('--through', choices=['1.1', '1.2', '1.3', '1.4', '2'], default='1.2')
     parser.add_argument('--root', type=Path, default=Path.cwd(), help='Repository root (default: current directory)')
     parser.add_argument('--config', type=Path, help='Model YAML (default: ROOT/config/models.yaml)')
@@ -21,7 +21,7 @@ def main(argv=None):
     try:
         if args.through in ('1.3', '1.4', '2'):
             client = load_client(args.config or args.root / 'config/models.yaml')
-        contracts = ['contract_01', 'contract_02', 'contract_03'] if args.contract == 'all' else [args.contract]
+        contracts = ['contract_01', 'contract_02', 'contract_03', 'contract_04'] if args.contract == 'all' else [args.contract]
         for contract in contracts:
             base = args.root / 'contracts' / contract
             output = base / 'output'

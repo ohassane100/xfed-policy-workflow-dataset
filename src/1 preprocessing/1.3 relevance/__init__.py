@@ -16,12 +16,17 @@ def classify_chunk(chunk, client, root=Path('.'), context=(), unresolved=()):
 
 
 def classify(document, client, root=Path('.'), progress=None):
+    from xfed.enrichment import ContextIndex
+
     validate(document, 2, root)
     output = deepcopy(document)
+    index = ContextIndex(output['chunks'])
     for position, chunk in enumerate(output['chunks']):
         if progress:
             progress(position, len(output['chunks']), chunk['chunk_id'])
-        chunk['classification'] = classify_chunk(chunk, client, root)
+        # Resolve structural dependencies first; full cross-references belong to enrichment.
+        context, missing = index.context_for(chunk, include_references=False)
+        chunk['classification'] = classify_chunk(chunk, client, root, context, missing)
     if progress:
         progress(len(output['chunks']), len(output['chunks']), 'Complete')
     return validate(output, 3, root)
