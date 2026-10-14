@@ -4,7 +4,6 @@ from pathlib import Path
 import re
 
 from xfed.common import DEFINITION, NUMBER, scope_heading, scoped_chunks, validate
-from xfed.relevance import classify_chunk
 
 
 REFERENCES = re.compile(rf'\b(?:articles?|clauses?|sections?|paragraphs?|provisions?)\s+({NUMBER}(?:\s*(?:,|and|or|to|[-\u2013])\s*{NUMBER})*)', re.I)
@@ -131,7 +130,7 @@ class ContextIndex:
         return context, list(dict.fromkeys(missing))
 
 
-def enrich(document, client, root=Path('.'), progress=None):
+def enrich(document, root=Path('.'), progress=None):
     validate(document, 3, root)
     updated = deepcopy(document)
     index = ContextIndex(updated['chunks'])
@@ -140,24 +139,15 @@ def enrich(document, client, root=Path('.'), progress=None):
         if progress:
             progress(position, len(updated['chunks']), chunk['chunk_id'])
         initial = chunk['classification']
-        if initial['label'] == 'NOT_RELEVANT':
-            context, missing = index.context_for(chunk, include_references=False)
-            if not context and not missing:
-                continue
+        if initial['label'] != 'RELEVANT':
+            continue
         context, missing = index.context_for(chunk)
-        if initial['label'] != 'RELEVANT' or missing:
-            decision = classify_chunk(chunk, client, root, context, missing)
-            decision = dict(decision)
-            decision['reason'] = (f"Initial {initial['label']}: {initial.get('reason', '')}; "
-                                  f"Reclassified {decision['label']}: {decision.get('reason', '')}")
-            chunk['classification'] = decision
         if missing:
-            decision = dict(chunk['classification'])
+            decision = dict(initial)
             decision['reason'] = decision.get('reason', '') + '; Unresolved context: ' + '; '.join(missing)
-            if decision['label'] == 'RELEVANT':
-                decision['label'] = 'NEEDS_CONTEXT'
+            decision['label'] = 'NEEDS_CONTEXT'
             chunk['classification'] = decision
-        if chunk['classification']['label'] == 'RELEVANT':
+        else:
             items.append(dict({k: v for k, v in chunk.items() if k != 'classification'}, context=context))
     if progress:
         progress(len(updated['chunks']), len(updated['chunks']), 'Complete')

@@ -49,6 +49,13 @@ def check_traceability(policy, item):
         raise ValueError('Traceability contains a nonexistent rule.')
 
 
+def validate_fragment(fragment, contract, item, root):
+    validate(fragment, 5, root)
+    if fragment['contract_id'] != contract:
+        raise ValueError('Generated policy changed the contract identifier.')
+    check_traceability(fragment, item)
+
+
 def response_schema(root=Path('.')):
     original = schema(5, root)
 
@@ -98,20 +105,50 @@ def generate(document, client, root=Path('.'), progress=None):
         'profile': 'http://www.w3.org/ns/odrl/2/core',
     }, traceability=[])
     report = dict(contract_id=contract, status='draft', clauses=[])
+    rejected = False
     for position, item in enumerate(document['items']):
         if progress:
             progress(position, len(document['items']), item['chunk_id'])
-        answer = client.generate(prompt, dict(contract_id=contract, clause=item), request_schema)
+        value = dict(contract_id=contract, clause=item)
+        answer = client.generate(prompt, value, request_schema)
         Draft202012Validator(request_schema).validate(answer)
-        report['clauses'].append(dict(chunk_id=item['chunk_id'], generated=answer['policy'] is not None,
-                                      reason=answer['reason']))
         if answer['policy'] is None:
+            report['clauses'].append(dict(chunk_id=item['chunk_id'], generated=False,
+                                          reason=answer['reason']))
             continue
         fragment = answer['policy']
-        validate(fragment, 5, root)
-        if fragment['contract_id'] != contract:
-            raise ValueError('Generated policy changed the contract identifier.')
-        check_traceability(fragment, item)
+        try:
+            validate_fragment(fragment, contract, item, root)
+        except ValueError as error:
+            if str(error) == 'Every generated rule needs the current clause as primary evidence.':
+                correction = (
+                    f'{prompt}\n\nCorrection: The previous response failed validation: {error} '
+                    'For every rule, cite this clause itself as primary evidence using its exact '
+                    'chunk_id and complete text. Cite supporting clauses only as context. If this '
+                    'clause does not directly support a rule, return policy null.'
+                )
+                answer = client.generate(correction, value, request_schema)
+                Draft202012Validator(request_schema).validate(answer)
+                if answer['policy'] is None:
+                    report['clauses'].append(dict(chunk_id=item['chunk_id'], generated=False,
+                                                  reason=answer['reason']))
+                    continue
+                fragment = answer['policy']
+                try:
+                    validate_fragment(fragment, contract, item, root)
+                except ValueError as retry_error:
+                    report['clauses'].append(dict(
+                        chunk_id=item['chunk_id'], generated=False,
+                        reason=f'Generated policy rejected after correction attempt: {retry_error}'))
+                    rejected = True
+                    continue
+            else:
+                report['clauses'].append(dict(chunk_id=item['chunk_id'], generated=False,
+                                              reason=f'Generated policy rejected: {error}'))
+                rejected = True
+                continue
+        report['clauses'].append(dict(chunk_id=item['chunk_id'], generated=True,
+                                      reason=answer['reason']))
         id_map = {}
         for number, (_, rule) in enumerate(rules(fragment['odrlPolicy']), 1):
             uid = f"urn:xfed:{contract}:{item['chunk_id']}:r{number}"
@@ -132,6 +169,8 @@ def generate(document, client, root=Path('.'), progress=None):
     if progress:
         progress(len(document['items']), len(document['items']), 'Complete')
     if not output['traceability']:
-        report['status'] = 'no_supported_rules'
+        report['status'] = 'generation_rejected' if rejected else 'no_supported_rules'
         return None, report
+    if rejected:
+        report['status'] = 'draft_with_rejections'
     return validate(output, 5, root), report

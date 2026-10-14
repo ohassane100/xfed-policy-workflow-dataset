@@ -138,7 +138,7 @@ class Pipeline:
             if not self.state(contract)['stages'][previous]['ready']:
                 raise ValueError(f'Run stage {previous} first.')
         client = None
-        if any(s in ('1.3', '1.4', '2') for s in selected):
+        if any(s in ('1.3', '2') for s in selected):
             available = {m['name']: m for m in self.models()}
             if request.get('model') not in available:
                 raise ValueError('Select a model installed on this Ollama server.')
@@ -200,7 +200,7 @@ class Pipeline:
                 elif stage == '1.3':
                     result = classify(source, client, self.root, self.progress)
                 elif stage == '1.4':
-                    updated, result = enrich(source, client, self.root, self.progress)
+                    updated, result = enrich(source, self.root, self.progress)
                     self.progress(len(updated['chunks']), len(updated['chunks']), 'Saving enrichment')
                     write_output(self.path(contract, '1.3'), updated, 3, self.root)
                 else:
@@ -214,8 +214,8 @@ class Pipeline:
                 meta_path = base / 'output/.runs.json'
                 meta = read_json(meta_path, {})
                 meta[stage] = dict(time=datetime.now(timezone.utc).isoformat(),
-                                   model=raw_client.model if stage in ('1.3', '1.4', '2') else None,
-                                   options=vars(raw_client) if raw_client and stage in ('1.3', '1.4', '2') else None,
+                                   model=raw_client.model if stage in ('1.3', '2') else None,
+                                   options=vars(raw_client) if raw_client and stage in ('1.3', '2') else None,
                                    status='complete' if result is not None else 'no_supported_rules')
                 write_json(meta_path, meta)
                 with self.lock:

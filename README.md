@@ -22,6 +22,8 @@ tasks. It supports stages 1.1-1.4 and 2, independent stage runs, output inspecti
 cancellation between operations, and cached model requests for retry.
 Rerunning a stage invalidates its downstream outputs.
 
+Ollama is used for relevance classification (1.3) and policy creation (2); enrichment (1.4) resolves context deterministically.
+
 Stage 2 uses Ollama JSON-schema structured outputs and saves an unreviewed
 policy draft plus a generation report. Source text/IDs and rule traceability
 are checked, but schema validity is not proof of contractual correctness.

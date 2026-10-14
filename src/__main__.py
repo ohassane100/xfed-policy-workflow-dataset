@@ -55,7 +55,7 @@ def main(argv=None):
             write_output(paths['classified_chunks.json'], classified, 3, args.root)
             if args.through == '1.3':
                 continue
-            classified, enriched = enrich(classified, client, args.root)
+            classified, enriched = enrich(classified, args.root)
             write_output(paths['classified_chunks.json'], classified, 3, args.root)
             write_output(paths['enriched_relevance.json'], enriched, 4, args.root)
             pending = sum(c['classification']['label'] == 'NEEDS_CONTEXT' for c in classified['chunks'])

@@ -101,43 +101,32 @@ class RelevanceContextTests(unittest.TestCase):
         self.assertEqual([item['chunk_id'] for item in context], ['r'])
         self.assertEqual(missing, [])
 
-    def test_enrichment_recovers_previously_excluded_purpose(self):
+    def test_enrichment_does_not_reclassify_excluded_clauses(self):
         parent = chunk('p', 'Data may only be used for these purposes:', '3.1', label='RELEVANT')
         child = chunk('c', '(a) issuing invoices;', '3.1(a)', '3.1', label='NOT_RELEVANT')
         document = dict(contract_id='test', chunks=[parent, child])
         original = deepcopy(document)
 
-        def decide(value):
-            self.assertEqual(value['clause']['chunk_id'], 'c')
-            self.assertIn('p', [item['chunk_id'] for item in value['context']])
-            self.assertTrue(all('classification' not in item for item in value['context']))
-            return 'RELEVANT'
-
-        updated, enriched = enrich(document, RecordingClient(decide), ROOT)
+        updated, enriched = enrich(document, ROOT)
         self.assertEqual(document, original)
-        self.assertEqual(updated['chunks'][1]['classification']['label'], 'RELEVANT')
-        self.assertEqual({item['chunk_id'] for item in enriched['items']}, {'p', 'c'})
-        self.assertIn('Initial NOT_RELEVANT', updated['chunks'][1]['classification']['reason'])
+        self.assertEqual(updated['chunks'][1]['classification']['label'], 'NOT_RELEVANT')
+        self.assertEqual({item['chunk_id'] for item in enriched['items']}, {'p'})
 
     def test_unresolved_reference_still_prevents_policy_input(self):
         provision = chunk('c', 'Use of Data is subject to clause 3.2.', '3.1', label='RELEVANT')
-        updated, enriched = enrich(dict(contract_id='test', chunks=[provision]),
-                                   RecordingClient(lambda value: 'RELEVANT'), ROOT)
+        updated, enriched = enrich(dict(contract_id='test', chunks=[provision]), ROOT)
         self.assertEqual(updated['chunks'][0]['classification']['label'], 'NEEDS_CONTEXT')
         self.assertEqual(enriched['items'], [])
 
     def test_missing_parent_of_excluded_clause_is_reconsidered(self):
         child = chunk('c', '(a) issuing invoices;', '3.1(a)', '3.1', label='NOT_RELEVANT')
-        client = RecordingClient(lambda value: 'NEEDS_CONTEXT')
-        updated, enriched = enrich(dict(contract_id='test', chunks=[child]), client, ROOT)
-        self.assertEqual(len(client.calls), 1)
-        self.assertEqual(updated['chunks'][0]['classification']['label'], 'NEEDS_CONTEXT')
+        updated, enriched = enrich(dict(contract_id='test', chunks=[child]), ROOT)
+        self.assertEqual(updated['chunks'][0]['classification']['label'], 'NOT_RELEVANT')
         self.assertEqual(enriched['items'], [])
 
-    def test_unrelated_excluded_text_does_not_trigger_another_request(self):
-        client = RecordingClient(lambda value: self.fail('No context requires reclassification'))
+    def test_unrelated_excluded_text_is_ignored(self):
         document = dict(contract_id='test', chunks=[chunk('c', '162', label='NOT_RELEVANT')])
-        updated, enriched = enrich(document, client, ROOT)
+        updated, enriched = enrich(document, ROOT)
         self.assertEqual(updated, document)
         self.assertEqual(enriched['items'], [])
 
