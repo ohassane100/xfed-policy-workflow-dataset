@@ -156,6 +156,19 @@ class Pipeline:
                          daemon=True).start()
         return self.snapshot()
 
+    def overview(self):
+        contracts = []
+        for contract in self.contracts():
+            state = self.state(contract)
+            report = state['report']
+            contracts.append(dict(contract=contract, stages=state['stages'], labels=state['labels'],
+                                  source_bytes=(self.base(contract) / 'input/contract.pdf').stat().st_size,
+                                  report=None if report is None else dict(
+                                      status=report['status'],
+                                      skipped=sum(not c['generated'] for c in report['clauses']),
+                                      unresolved=report.get('unresolved_chunks', 0))))
+        return dict(contracts=contracts, job=self.snapshot())
+
     def invalidate(self, contract, stage):
         stages = list(STAGES)
         for downstream in stages[stages.index(stage):]:
@@ -225,14 +238,17 @@ def handler(pipeline):
     class Handler(BaseHTTPRequestHandler):
         def send(self, value, status=200, content_type='application/json'):
             body = value if isinstance(value, bytes) else json.dumps(value).encode('utf-8')
-            self.send_response(status)
-            self.send_header('Content-Type', content_type)
-            self.send_header('Content-Length', str(len(body)))
-            self.send_header('Cache-Control', 'no-store')
-            self.send_header('X-Content-Type-Options', 'nosniff')
-            self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'")
-            self.end_headers()
-            self.wfile.write(body)
+            try:
+                self.send_response(status)
+                self.send_header('Content-Type', content_type)
+                self.send_header('Content-Length', str(len(body)))
+                self.send_header('Cache-Control', 'no-store')
+                self.send_header('X-Content-Type-Options', 'nosniff')
+                self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'")
+                self.end_headers()
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
 
         def allowed(self):
             host = urlsplit('http://' + self.headers.get('Host', '')).hostname
@@ -256,6 +272,8 @@ def handler(pipeline):
                     self.send(dict(models=pipeline.models()))
                 elif route.path == '/api/state':
                     self.send(pipeline.state(query['contract'][0]))
+                elif route.path == '/api/overview':
+                    self.send(pipeline.overview())
                 elif route.path in ('/api/output', '/api/pdf'):
                     contract = query['contract'][0]
                     if route.path == '/api/pdf':
