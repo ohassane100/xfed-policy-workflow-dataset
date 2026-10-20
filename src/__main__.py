@@ -21,6 +21,7 @@ def main(argv=None):
     try:
         if args.through in ('1.3', '1.4', '2'):
             client = load_client(args.config or args.root / 'config/models.yaml')
+            client.preflight()
         contracts = ['contract_01', 'contract_02', 'contract_03', 'contract_04'] if args.contract == 'all' else [args.contract]
         for contract in contracts:
             base = args.root / 'contracts' / contract
@@ -66,7 +67,9 @@ def main(argv=None):
                 write_json(output / '2 policy_generation/generation_report.json', report)
                 if policy is not None:
                     write_output(paths['policy.json'], policy, 5, args.root)
-                print(f"{contract}: policy draft " + ('saved' if policy is not None else 'has no supported rules'), flush=True)
+                print(f"{contract}: {report['status']}", flush=True)
+                if report['status'] == 'generation_rejected':
+                    raise ValueError('No policy generated. Inspect rejected clauses in generation_report.json.')
     except Exception as error:
         parser.exit(1, f'XFed: {error}\n')
 

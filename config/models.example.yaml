@@ -1,8 +1,11 @@
 # Copy to config/models.yaml and fill in the endpoint/model available to you.
+# Add execution.base_urls for separately exposed GPU replicas.
+execution:
+  workers_per_endpoint: 1
 relevance_classifier:
   provider: ollama
   base_url: http://localhost:11434
-  model: PLACEHOLDER
+  model: llama3.1:70b
   timeout: 300
   num_ctx: 32768
   num_predict: 4096

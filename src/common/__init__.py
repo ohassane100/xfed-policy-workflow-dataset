@@ -3,6 +3,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 
 
 NUMBER = r"\d{1,3}(?:\.\d{1,3})*(?:\([a-z0-9]+\))*"
@@ -88,3 +89,40 @@ def write_json(path, value):
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
+
+
+def map_chunks(items, operation, client, progress=None):
+    """Bound in-flight work and collect results in source order."""
+    items = list(items)
+    workers = getattr(client, 'workers', 1)
+    if not isinstance(workers, int) or isinstance(workers, bool) or workers < 1:
+        raise ValueError('workers must be a positive integer.')
+    if progress:
+        progress(0, len(items), 'Starting')
+    if workers == 1:
+        results = []
+        for item in items:
+            results.append(operation(item))
+            if progress:
+                progress(len(results), len(items), item['chunk_id'])
+        return results
+    results = [None] * len(items)
+    pool = ThreadPoolExecutor(max_workers=workers)
+    pending, next_index, completed = {}, 0, 0
+    try:
+        while next_index < len(items) or pending:
+            while next_index < len(items) and len(pending) < workers:
+                pending[pool.submit(operation, items[next_index])] = next_index
+                next_index += 1
+            done, _ = wait(pending, return_when=FIRST_COMPLETED)
+            for future in done:
+                index = pending.pop(future)
+                results[index] = future.result()
+                completed += 1
+                if progress:
+                    progress(completed, len(items), items[index]['chunk_id'])
+        return results
+    finally:
+        for future in pending:
+            future.cancel()
+        pool.shutdown(wait=True, cancel_futures=True)

@@ -1,0 +1,384 @@
+# Gorina5 HPC Setup — XFed Project Context and Technical Report
+
+**Date:** October 12, 2026  
+**University:** University of Stavanger (UiS)  
+**Project:** XFed — Federated Large Domain Model System  
+**Supervisor:** Prof. Chunming Rong  
+**Repository:** `~/git/xfed-policy-workflow-dataset`
+
+## 1. Project context
+
+The XFed project involves translating legal or business contracts into structured, machine-readable policies, reviewing those policies using LLMs, and eventually generating and validating executable workflows.
+
+The agreed pipeline is:
+
+1. **Contract preprocessing:** Extract PDF text and split it into contract clauses.
+2. **Policy generation:** A central LLM converts contract clauses into structured `policy.json`.
+3. **Policy review:** Independent company-side LLMs verify policies against their source clauses using labels such as ENTAILED, CONTRADICTED, UNSUPPORTED, and AMBIGUOUS.
+4. **Human approval:** Policies are approved or revised before further processing.
+5. **Workflow generation:** Approved policies are converted into executable YAML workflows.
+6. **Workflow validation and execution:** Later stages verify that workflows satisfy the agreed policies.
+
+The immediate goal is to deploy LLMs on UiS's Gorina5 infrastructure to support the contract-to-policy pipeline, particularly policy generation and independent review.
+
+## 2. Gorina5 infrastructure
+
+**Server:** `gorina5`  
+**Username:** `ohassane`  
+**Home directory:** `/home/stud/ohassane`  
+**Project directory:** `~/git/xfed-policy-workflow-dataset`
+
+### GPU hardware
+
+- NVIDIA Blackwell architecture.
+- Supervisor indicated approximately **80 GB VRAM per GPU**.
+- Previous GPU inspection suggested multiple GPUs, but exact available device count and memory should be verified.
+- Supervisor confirmed that **Slurm GPU allocation is not required for the intended use of Gorina5**.
+
+Verification command:
+
+```bash
+nvidia-smi --query-gpu=index,name,memory.total --format=csv
+```
+
+Gorina5 should be treated separately from the older Slurm-managed A100 nodes.
+
+## 3. Python installation problems
+
+Initially, Gorina5 provided system Python but lacked a usable Python package-management environment.
+
+### Problem A: pip unavailable
+
+```bash
+python3 --version
+# Python 3.12.3
+
+python3 -m pip --version
+# /usr/bin/python3: No module named pip
+```
+
+### Problem B: Python venv failed
+
+```bash
+python3 -m venv ~/testenv
+```
+
+Error:
+
+```text
+The virtual environment was not created successfully
+because ensurepip is not available.
+```
+
+The system recommended installing `python3.12-venv`, but administrator privileges were unavailable.
+
+### Problem C: Conda initially unavailable
+
+```bash
+conda --version
+# Command 'conda' not found
+```
+
+### Solution: UiS's shared Miniconda installation
+
+The UiS GPU documentation identified the `uenv` command, which loads university-provided software environments.
+
+Executed:
+
+```bash
+uenv miniconda3-py39
+```
+
+Verification:
+
+```text
+conda 23.1.0
+pip 23.0.1 from /opt/miniconda39/lib/python3.9/site-packages/pip
+```
+
+This successfully provided Conda and pip without requiring sudo.
+
+### Creating the XFed environment
+
+Executed:
+
+```bash
+conda create -n xfed python=3.11 pip -y
+```
+
+**Result: SUCCESS**
+
+The environment was created at:
+
+```text
+/home/stud/ohassane/.conda/envs/xfed
+```
+
+Installed environment components include:
+
+- Python 3.11.17
+- pip 26.2.1
+- Isolated Conda dependencies
+
+Activation:
+
+```bash
+uenv miniconda3-py39
+conda activate xfed
+```
+
+Verification still recommended:
+
+```bash
+python --version
+python -m pip --version
+which python
+```
+
+**Conclusion:** The Python environment creation problem is resolved. Activation and package installation within the environment should still be tested.
+
+## 4. Miniconda library warnings
+
+When loading Miniconda, several warnings appeared:
+
+```text
+libtinfo.so.6: no version information available
+libstdc++.so.6: version GLIBCXX_3.4.30 not found
+```
+
+These occurred when utilities such as `dig`, `host`, and `nslookup` were invoked.
+
+Likely explanation: The shared Miniconda installation introduces library paths that conflict with certain system executables.
+
+Despite these warnings:
+
+- Conda worked.
+- pip worked.
+- The XFed environment was created successfully.
+
+**Status:** Non-blocking for environment creation, but should be investigated if other system commands fail.
+
+## 5. Slurm and GPU allocation
+
+The UiS GPU documentation describes Slurm scheduling for older GPU nodes.
+
+### Slurm head node
+
+```bash
+ssh gorina11
+```
+
+The documentation states that Slurm jobs are launched from Gorina11 and stored under:
+
+```text
+/bhome/$USER/
+```
+
+Example GPU request:
+
+```bash
+srun -p gpu --gres=gpu:1 --pty bash
+```
+
+Previously, GPU allocation selected Gorina8 rather than Gorina5.
+
+### Documented GPU nodes
+
+| Node | Hardware | Scheduling |
+|---|---|---|
+| Gorina4 | NVIDIA Tesla P100 | Manual reservation |
+| Gorina6 | NVIDIA Tesla V100 | Manual reservation |
+| Gorina7 | 4× NVIDIA A100 40 GB | Slurm |
+| Gorina8 | 4× NVIDIA A100 40 GB | Slurm |
+| Gorina5 | NVIDIA Blackwell | Supervisor says no Slurm allocation required |
+
+The UiS documentation was last updated in January 2025 and does not describe the newer Gorina5 Blackwell setup.
+
+**Conclusion:** Slurm is not required for the current Gorina5 workflow according to the supervisor. Shared GPU usage policies and device selection should still be confirmed.
+
+## 6. Ollama API discovery
+
+Supervisor provided the official Ollama API documentation:
+
+https://docs.ollama.com/api/introduction
+
+Ollama exposes a REST API, normally at:
+
+```text
+http://localhost:11434/api
+```
+
+### Server connectivity test
+
+Executed on Gorina5:
+
+```bash
+curl http://localhost:11434/api/tags
+```
+
+Actual response:
+
+```json
+{"models":[]}
+```
+
+This confirms:
+
+- An Ollama-compatible API endpoint is reachable on Gorina5.
+- The endpoint responds correctly to model-list requests.
+- No models are currently listed by that endpoint.
+
+It does **not** yet confirm GPU inference, model-download permissions, or the server's underlying process configuration.
+
+### Proposed next test: Download Qwen3
+
+After confirming model-pull permissions with the supervisor:
+
+```bash
+curl http://localhost:11434/api/pull \
+  -H "Content-Type: application/json" \
+  -d '{"model":"qwen3:4b","stream":false}'
+```
+
+Then verify the available models:
+
+```bash
+curl http://localhost:11434/api/tags
+```
+
+Test inference:
+
+```bash
+curl http://localhost:11434/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3:4b",
+    "prompt": "Explain what a data-sharing policy is.",
+    "stream": false
+  }'
+```
+
+Check GPU activity during inference:
+
+```bash
+nvidia-smi
+```
+
+**Important:** Do not download models or start additional Ollama servers without confirming the server's sharing and storage arrangements.
+
+## 7. Python integration with Ollama
+
+Once an LLM is available, Python can call the REST API directly.
+
+Example:
+
+```python
+import requests
+
+url = "http://localhost:11434/api/generate"
+
+payload = {
+    "model": "qwen3:4b",
+    "prompt": "Extract the data-sharing obligations from this contract clause.",
+    "stream": False,
+}
+
+response = requests.post(url, json=payload, timeout=300)
+response.raise_for_status()
+
+print(response.json()["response"])
+```
+
+Install the Python dependency inside the XFed environment:
+
+```bash
+conda activate xfed
+python -m pip install requests
+```
+
+For structured policy generation, use Ollama's JSON-schema structured-output capabilities together with Pydantic.
+
+This is particularly relevant to the existing XFed contract-to-policy architecture.
+
+## 8. Current implementation status
+
+| Requirement | Status |
+|---|---|
+| SSH access to Gorina5 | Complete |
+| System Python available | Complete |
+| Shared Miniconda identified | Complete |
+| pip accessible through Miniconda | Complete |
+| XFed Conda environment created | Complete |
+| Environment activation verified | Pending |
+| Blackwell GPU hardware identified | Partially verified |
+| GPU allocation requirements clarified | Complete — supervisor says no Slurm |
+| Ollama API reachable | Complete |
+| Ollama model available | Pending |
+| GPU inference verified | Pending |
+| XFed Python pipeline connected to Ollama | Pending |
+
+## 9. Remaining implementation steps
+
+1. Activate the `xfed` Conda environment and verify Python and pip.
+2. Install project dependencies inside that environment.
+3. Confirm whether the existing Ollama API is shared and whether model downloads are permitted.
+4. Make Qwen3 4B or another suitable model available.
+5. Run a successful inference request.
+6. Confirm GPU utilization with `nvidia-smi`.
+7. Connect the existing XFed Python pipeline to the Ollama REST API.
+8. Test contract-to-policy generation and policy review.
+
+## 10. Relevant resources
+
+**UiS GPU and Slurm documentation**
+
+https://gitlab.ux.uis.no/unix/gpu
+
+Includes:
+- Slurm quickstart
+- GPU job scripts
+- `uenv` and Miniconda configuration
+- GPU node information
+- Python/PyTorch environment examples
+
+**UiS UNIX documentation**
+
+https://foswiki.ux.uis.no/bin/view/Info/WebHome
+
+**UiS GPU resource page**
+
+https://gpu.ux.uis.no/
+
+**Ollama API documentation**
+
+https://docs.ollama.com/api/introduction
+
+**Ollama API model listing**
+
+https://docs.ollama.com/api/tags
+
+**Ollama API generation**
+
+https://docs.ollama.com/api/generate
+
+**Ollama API model downloads**
+
+https://docs.ollama.com/api/pull
+
+**Ollama structured outputs**
+
+https://docs.ollama.com/capabilities/structured-outputs
+
+## 11. Final conclusion
+
+The Gorina5 setup has progressed significantly.
+
+The initial problems with missing pip, Conda, and Python virtual environments were addressed by discovering UiS's `uenv miniconda3-py39` environment and successfully creating an isolated Python 3.11 environment.
+
+The supervisor clarified that Gorina5 does not require the Slurm GPU allocation procedure described for the older A100 nodes.
+
+An Ollama API is already reachable at `localhost:11434`, removing the immediate need to install an Ollama server.
+
+**The primary remaining infrastructure task is to make an LLM available through the existing Ollama API and verify that inference runs on the Blackwell GPU.**
+
+After that, development can focus on integrating the existing XFed contract preprocessing, policy generation, and policy review pipeline with the GPU-hosted LLM.

@@ -14,19 +14,16 @@ represented in the schema. Never fabricate a party, asset, date, external law,
 identifier, or selected contractual option. Descriptive party/asset labels
 must be grounded in the supplied text; do not invent deployment identifiers.
 
-A non-null policy must follow the supplied policy schema, preserve contract_id,
-and include traceability for every rule, including nested duties and remedies.
+A non-null policy must follow the supplied response schema and include
+traceability for every rule, including nested duties and remedies.
 Traceability ruleType must match permission, prohibition, obligation, or duty.
-Copy source chunk_id, optional clause_id, and the complete source text exactly.
+Copy source chunk_id and optional clause_id exactly. Omit source text,
+contract_id and policy boilerplate (@context, @type, policy uid, profile).
+The application fills these fields from the input. Rule uid values are required.
 Every rule must cite the current clause with relationship: primary. Supporting
 context may be cited with relationship: context, but must not independently
 create rules. Give all rules distinct uid values. The application normalises
 these identifiers after validation.
-
-The supplied context may be marked incomplete and include an omitted-context
-count. Do not infer the contents of omitted clauses. Return policy: null if an
-omitted clause may contain a condition, exception, definition, or restriction
-needed to represent a rule faithfully.
 
 ODRL rules and optional OSDU metadata are separate. Omit OSDU metadata unless
 explicitly supported by the supplied evidence. Never default unknown countries,

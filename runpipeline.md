@@ -1,13 +1,22 @@
 # Run Pipeline
 
+## Sources
+
+https://gitlab.ux.uis.no/unix/gpu
+
 ## 1. UI - Gorina5
 
 ```bash
 cd ~/git/xfed-policy-workflow-dataset
 git pull --ff-only
 "$HOME/.conda/envs/xfed/bin/python" -m pip install -e .
-"$HOME/.conda/envs/xfed/bin/python" -m xfed.ui
+"$HOME/.conda/envs/xfed/bin/python" -m xfed.ui --gpus 0,1
 ```
+
+This starts one Ollama API worker on GPU 0 and one on GPU 1, using the existing
+model cache. Ctrl+C stops the dashboard and these workers. To use all seven,
+pass `--gpus 0,1,2,3,4,5,6`. The existing service on port 11434 stays running.
+The login must have access to the Ollama server executable and its model cache.
 
 ## 2. Tunnel - ssh1
 

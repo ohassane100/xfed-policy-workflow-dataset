@@ -17,8 +17,14 @@ class ContextIndex:
         self.scope_names = defaultdict(list)
         self.sections = defaultdict(list)
         self.children = defaultdict(list)
+        self.main_scopes = {}
+        main_scope = 0
         for scope, chunk in scoped_chunks(chunks):
             heading = scope_heading(chunk['heading']) if chunk.get('heading') else None
+            if scope not in self.main_scopes:
+                if not heading:
+                    main_scope = scope
+                self.main_scopes[scope] = main_scope
             if heading:
                 self.scope_names[heading].append(scope)
             self.scopes[chunk['chunk_id']] = scope
@@ -55,7 +61,10 @@ class ContextIndex:
                     attach(child, relationship, True)
 
         def resolve(number, relationship, descendants=False, target_scope=None):
-            candidates = self.clauses.get((scope if target_scope is None else target_scope, number), [])
+            selected_scope = scope if target_scope is None else target_scope
+            candidates = self.clauses.get((selected_scope, number), [])
+            if not candidates and relationship == 'reference' and target_scope is None and self.main_scopes[scope] != scope:
+                candidates = self.clauses.get((self.main_scopes[scope], number), [])
             if len(candidates) != 1:
                 missing.append(f'{number}: ' + ('ambiguous provision' if candidates else 'provision not found in this section'))
                 return None
@@ -80,7 +89,9 @@ class ContextIndex:
             if re.match(r'\s+of\s+(?:the\s+)?(?:Regulation|Directive|Data Act|GDPR|[A-Z][\w -]*Act)\b', suffix):
                 missing.append(match.group() + ': external legal reference')
                 continue
-            target_scope = scope
+            target_scope = None
+            if re.match(r'\s+of\s+(?:(?:the|this)\s+)?(?:main\s+(?:agreement|contract)|agreement|contract)\b', suffix, re.I):
+                target_scope = self.main_scopes[scope]
             qualifier = re.match(r'\s+(?:of|in)\s+(?:the\s+)?((?:Annex|Appendix|Exhibit)\s+(?:[IVXLCDM]+|[A-Z]|\d+)\b)', suffix, re.I)
             if qualifier:
                 qualified_sections.add((match.end() + qualifier.start(1), match.end() + qualifier.end(1)))
