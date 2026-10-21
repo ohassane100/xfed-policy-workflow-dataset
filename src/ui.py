@@ -20,6 +20,8 @@ from xfed.relevance import classify
 from xfed.enrichment import enrich
 from xfed.llm import OllamaPool, load_client
 from xfed.policy_generation import generate
+from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
+from xfed.evaluation import load_reference, reference_summary, run_evaluation
 
 
 STAGES = {
@@ -67,12 +69,20 @@ class CachedClient:
         else:
             yield self
 
-    def generate(self, prompt, value, schema, num_predict=None, think=None):
+    def generate(self, prompt, value, schema, num_predict=None, think=None, num_ctx=None, num_batch=None,
+                 truncate=None, compact_json=False):
         if self.cancel.is_set():
             raise Cancelled()
         output_limit = self.settings['num_predict'] if num_predict is None else num_predict
         effective_think = self.settings['think'] if think is None else think
         settings = dict(self.settings, num_predict=output_limit, think=effective_think)
+        if num_ctx is not None:
+            settings['num_ctx'] = num_ctx
+        for key, value_setting in (('num_batch', num_batch), ('truncate', truncate)):
+            if value_setting is not None:
+                settings[key] = value_setting
+        if compact_json:
+            settings['compact_json'] = True
         key = hashlib.sha256(json.dumps([settings, prompt, value, schema],
                                        sort_keys=True).encode()).hexdigest()
         with self.lock:
@@ -82,6 +92,11 @@ class CachedClient:
             options = dict(num_predict=output_limit)
             if effective_think is not None:
                 options['think'] = effective_think
+            options.update({key: setting for key, setting in
+                            (('num_ctx', num_ctx), ('num_batch', num_batch), ('truncate', truncate))
+                            if setting is not None})
+            if compact_json:
+                options['compact_json'] = True
             result = self.client.generate(prompt, value, schema, **options)
             with self.lock:
                 self.cache[key] = deepcopy(result)
@@ -98,7 +113,8 @@ class Pipeline:
         self.ollama_url = ollama_url.rstrip('/')
         self.worker_config = load_client(config) if config else None
         self.defaults = dict(model=None, timeout=600, num_ctx=32768, num_predict=4096, think=None,
-                             relevance_num_predict=512, relevance_think=None, relevance_batch_size=4, keep_alive='30m')
+                             relevance_num_predict=128, relevance_think=None, relevance_batch_size=4,
+                             relevance_compact=True, relevance_num_ctx=0, relevance_num_batch=None, keep_alive='30m')
         if self.worker_config:
             self.ollama_url = self.worker_config.clients[0].url.removesuffix('/api/chat')
             self.defaults.update({key: getattr(self.worker_config, key) for key in self.defaults})
@@ -114,6 +130,8 @@ class Pipeline:
         self.ollama_url = self.replica_urls[0].rstrip('/')
         self.lock, self.cancel = threading.Lock(), threading.Event()
         self.job = dict(status='idle', stage=None, completed=0, total=0, message='Ready', log=[])
+        self.benchmark_report = None
+        self.evaluation_report = None
 
     def contracts(self):
         return sorted(p.name for p in (self.root / 'contracts').iterdir()
@@ -191,6 +209,47 @@ class Pipeline:
         return dict(contract=contract, stages=stages, labels=labels, source_locations=locations,
                     report=read_json(report), job=self.snapshot())
 
+    def make_client(self, request):
+        available = {m['name']: m for m in self.models()}
+        model = request.get('model')
+        if not isinstance(model, str) or model not in available:
+            raise ValueError('Choose an installed primary model.')
+        parallel = request.get('parallel', False)
+        if type(parallel) is not bool:
+            raise ValueError('parallel must be true or false.')
+        worker_models = request.get('worker_models')
+        if parallel:
+            if (not isinstance(worker_models, list) or not 2 <= len(worker_models) <= 32 or
+                    any(not isinstance(name, str) or name not in available for name in worker_models) or
+                    len(set(worker_models)) != len(worker_models) or worker_models[0] != model):
+                raise ValueError('Choose 2 to 32 distinct installed models, starting with the primary model.')
+            workers = len(worker_models)
+            endpoints, workers_per_endpoint = [self.ollama_url], 1
+        else:
+            if worker_models is not None:
+                raise ValueError('Enable parallelization to use multiple models.')
+            workers = request.get('workers', self.worker_capacity)
+            if type(workers) is not int or not 1 <= workers <= self.worker_capacity:
+                raise ValueError(f'workers must be between 1 and {self.worker_capacity}.')
+            # Use all configured replicas before adding requests to an endpoint.
+            endpoints = self.replica_urls[:min(workers, len(self.replica_urls))]
+            workers_per_endpoint = self.workers_per_endpoint
+        client = OllamaPool(endpoints, model, workers_per_endpoint=workers_per_endpoint,
+                            workers=workers, worker_models=worker_models,
+                            timeout=request.get('timeout', self.defaults['timeout']),
+                            num_ctx=request.get('num_ctx', self.defaults['num_ctx']),
+                            num_predict=request.get('num_predict', self.defaults['num_predict']),
+                            think=request.get('think', self.defaults['think']),
+                            relevance_num_predict=request.get('relevance_num_predict', self.defaults['relevance_num_predict']),
+                            relevance_think=request.get('relevance_think', self.defaults['relevance_think']),
+                            relevance_batch_size=request.get('relevance_batch_size', self.defaults['relevance_batch_size']),
+                            relevance_compact=request.get('relevance_compact', self.defaults['relevance_compact']),
+                            relevance_num_ctx=request.get('relevance_num_ctx', self.defaults['relevance_num_ctx']),
+                            relevance_num_batch=request.get('relevance_num_batch', self.defaults['relevance_num_batch']),
+                            keep_alive=self.defaults['keep_alive'])
+        client.preflight()
+        return client
+
     def start(self, request):
         contract, stage = request.get('contract'), request.get('stage')
         self.path(contract, stage)
@@ -204,26 +263,7 @@ class Pipeline:
                 raise ValueError(f'Run stage {previous} first.')
         client = None
         if any(s in ('1.3', '2') for s in selected):
-            available = {m['name']: m for m in self.models()}
-            model = request.get('model')
-            if not isinstance(model, str) or model not in available:
-                raise ValueError('Choose one model installed with the same digest on every replica.')
-            workers = request.get('workers', self.worker_capacity)
-            if type(workers) is not int or not 1 <= workers <= self.worker_capacity:
-                raise ValueError(f'workers must be between 1 and {self.worker_capacity}.')
-            # Use all configured replicas before adding parallel requests to an endpoint.
-            endpoints = self.replica_urls[:min(workers, len(self.replica_urls))]
-            client = OllamaPool(endpoints, model, workers_per_endpoint=self.workers_per_endpoint,
-                                workers=workers,
-                                timeout=request.get('timeout', self.defaults['timeout']),
-                                num_ctx=request.get('num_ctx', self.defaults['num_ctx']),
-                                num_predict=request.get('num_predict', self.defaults['num_predict']),
-                                think=request.get('think', self.defaults['think']),
-                                relevance_num_predict=request.get('relevance_num_predict', self.defaults['relevance_num_predict']),
-                                relevance_think=request.get('relevance_think', self.defaults['relevance_think']),
-                                relevance_batch_size=request.get('relevance_batch_size', self.defaults['relevance_batch_size']),
-                                keep_alive=self.defaults['keep_alive'])
-            client.preflight()
+            client = self.make_client(request)
         with self.lock:
             if self.job['status'] in ('running', 'cancelling'):
                 raise ValueError('A job is already running. Wait or cancel it first.')
@@ -253,6 +293,105 @@ class Pipeline:
                                   source_bytes=(self.base(contract) / 'input/contract.pdf').stat().st_size,
                                   report=report_summary))
         return dict(contracts=contracts, job=self.snapshot())
+
+    def start_benchmark(self, request):
+        contract, model = request.get('contract'), request.get('model')
+        document = read_json(self.path(contract, '1.2'))
+        if document is None:
+            raise ValueError('Run step 1.2 before comparing classification settings.')
+        validate(document, 2, self.root)
+        if model not in {entry['name'] for entry in self.models()}:
+            raise ValueError('Choose one installed model for the comparison.')
+        limit = request.get('limit', 24)
+        if type(limit) is not int or limit < 0:
+            raise ValueError('Benchmark limit must be a nonnegative integer; 0 means all clauses.')
+        variants = request.get('variants', list(DEFAULT_VARIANTS))
+        if not isinstance(variants, list) or not variants or any(name not in VARIANTS for name in variants):
+            raise ValueError('Choose supported benchmark variants.')
+        options = dict(num_ctx=request.get('num_ctx', self.defaults['num_ctx']),
+                       timeout=request.get('timeout', self.defaults['timeout']),
+                       think=request.get('think', self.defaults['think']))
+        OllamaPool([self.replica_urls[0]], model, num_predict=128, **options)
+        options['variants'] = variants
+        with self.lock:
+            if self.job['status'] in ('running', 'cancelling'):
+                raise ValueError('A job is already running. Wait or cancel it first.')
+            self.cancel.clear()
+            self.active_client = None
+            self.benchmark_report = None
+            self.job = dict(status='running', contract=contract, stage='1.3', mode='benchmark',
+                            completed=0, total=0, message='Comparing settings on a sample; saved outputs are preserved', log=[])
+        threading.Thread(target=self.run_benchmark, args=(document, model, limit, options), daemon=True).start()
+        return self.snapshot()
+
+    def run_benchmark(self, document, model, limit, options):
+        def completed(result, report):
+            if result['status'] == 'complete':
+                message = (f"{result['name']}: {result['duration_seconds']:.2f}s, "
+                           f"{result.get('label_agreement', 0):.1%} labels match baseline")
+            else:
+                message = f"{result['name']}: {result['error']}"
+            with self.lock:
+                self.job['log'].append(message)
+                self.benchmark_report = deepcopy(report)
+        try:
+            report = compare_settings(document, self.replica_urls[0], model, self.root, limit=limit,
+                                      progress=self.progress, completed=completed, cancel=self.cancel, **options)
+            failed = any(result['status'] == 'failed' for result in report['runs'])
+            self.update(status='failed' if failed else 'complete',
+                        message='Comparison finished; inspect timings and changed labels before choosing settings')
+        except (Cancelled, InterruptedError):
+            self.update(status='cancelled', message='Comparison cancelled; completed measurements are available')
+        except Exception as error:
+            self.update(status='failed', message=str(error))
+
+    def benchmark_result(self):
+        with self.lock:
+            return deepcopy(self.benchmark_report)
+
+    def start_evaluation(self, request):
+        options = dict(task=request.get('task', 'both'), split=request.get('split', 'dev'),
+                       source=request.get('source', 'all'))
+        if (options['task'] not in ('classification', 'policy', 'both') or options['split'] not in ('dev', 'test')
+                or options['source'] not in ('all', 'real', 'synthetic')):
+            raise ValueError('Choose a supported evaluation task, split and source type.')
+        data = load_reference(self.root)
+        if not any(case['split'] == options['split'] and (options['source'] == 'all' or case['source_type'] == options['source'])
+                   for name in ('classification', 'policy') if options['task'] in (name, 'both') for case in data[name]):
+            raise ValueError('No reference cases match this evaluation selection.')
+        client = self.make_client(request)
+        with self.lock:
+            if self.job['status'] in ('running', 'cancelling'):
+                raise ValueError('A job is already running. Wait or cancel it first.')
+            self.cancel.clear()
+            self.active_client = client
+            self.evaluation_report = None
+            self.job = dict(status='running', contract='reference set', stage='1.3', mode='evaluation',
+                            completed=0, total=0, message='Evaluating frozen references; pipeline outputs are preserved', log=[])
+        threading.Thread(target=self.run_evaluation, args=(data, client, options), daemon=True).start()
+        return self.snapshot()
+
+    def run_evaluation(self, data, client, options):
+        def completed(report):
+            with self.lock:
+                self.evaluation_report = deepcopy(report)
+                self.job['log'].append('Saved ' + ', '.join(report['execution']) + ' evaluation predictions')
+        try:
+            report = run_evaluation(data, client, self.root, progress=self.progress,
+                                    cancel=self.cancel, completed=completed, **options)
+            with self.lock:
+                self.evaluation_report = report
+            errors = sum(value.get('errors', value.get('failures', 0)) for task in report['metrics'].values() for value in task.values() if not value.get('aggregate'))
+            self.update(status='complete', message=f"Evaluation complete; {errors} failed cases; references: {report['reference_status']}")
+        except (Cancelled, InterruptedError):
+            self.update(status='cancelled', message='Evaluation cancelled; completed task predictions are available')
+        except Exception as error:
+            self.update(status='failed', message=str(error))
+
+    def evaluation_result(self):
+        with self.lock:
+            report = deepcopy(self.evaluation_report)
+        return dict(reference=reference_summary(load_reference(self.root)), report=report)
 
     def invalidate(self, contract, stage):
         stages = list(STAGES)
@@ -381,6 +520,10 @@ def handler(pipeline):
                     self.send(pipeline.state(query['contract'][0]))
                 elif route.path == '/api/overview':
                     self.send(pipeline.overview())
+                elif route.path == '/api/benchmark':
+                    self.send(dict(report=pipeline.benchmark_result()))
+                elif route.path == '/api/evaluation':
+                    self.send(pipeline.evaluation_result())
                 elif route.path in ('/api/output', '/api/pdf'):
                     contract = query['contract'][0]
                     if route.path == '/api/pdf':
@@ -412,6 +555,10 @@ def handler(pipeline):
                     raise ValueError('Expected a JSON object.')
                 if self.path == '/api/run':
                     self.send(pipeline.start(request), 202)
+                elif self.path == '/api/benchmark':
+                    self.send(pipeline.start_benchmark(request), 202)
+                elif self.path == '/api/evaluation':
+                    self.send(pipeline.start_evaluation(request), 202)
                 elif self.path == '/api/cancel':
                     self.send(pipeline.stop())
                 else:
@@ -441,7 +588,7 @@ def main():
                         replica_urls, args.workers_per_endpoint)
     server = ThreadingHTTPServer(('127.0.0.1', args.port), handler(pipeline))
     print(f'XFed UI: http://127.0.0.1:{server.server_port}', flush=True)
-    print(f'Same-model workers: {pipeline.worker_capacity}; endpoints: ' +
+    print(f'Single-model request slots: {pipeline.worker_capacity}; endpoints: ' +
           ', '.join(pipeline.replica_urls), flush=True)
     try:
         server.serve_forever()

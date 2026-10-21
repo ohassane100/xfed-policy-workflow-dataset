@@ -10,7 +10,8 @@ from urllib.request import Request, urlopen
 
 class OllamaClient:
     def __init__(self, base_url, model, timeout=300, num_ctx=32768, num_predict=512, think=None, main_gpu=None,
-                 relevance_num_predict=512, relevance_think=None, relevance_batch_size=4, keep_alive='30m'):
+                 relevance_num_predict=128, relevance_think=None, relevance_batch_size=4, keep_alive='30m',
+                 relevance_compact=True, relevance_num_ctx=0, relevance_num_batch=None):
         if not isinstance(base_url, str) or urlsplit(base_url).scheme not in ('http', 'https') or not urlsplit(base_url).hostname:
             raise ValueError('Set a valid HTTP(S) Ollama base_url.')
         if not isinstance(model, str) or not model.strip() or model == 'PLACEHOLDER':
@@ -31,8 +32,16 @@ class OllamaClient:
             raise ValueError('keep_alive must be an Ollama duration string or integer.')
         if type(relevance_batch_size) is not int or not 1 <= relevance_batch_size <= 16:
             raise ValueError('relevance_batch_size must be between 1 and 16.')
+        if type(relevance_compact) is not bool:
+            raise ValueError('relevance_compact must be true or false.')
+        if type(relevance_num_ctx) is not int or (relevance_num_ctx != 0 and not 1024 <= relevance_num_ctx <= num_ctx):
+            raise ValueError('relevance_num_ctx must be 0 (automatic), or between 1024 and num_ctx.')
+        if relevance_num_batch is not None and (type(relevance_num_batch) is not int or relevance_num_batch < 1):
+            raise ValueError('relevance_num_batch must be a positive integer or omitted.')
         self.relevance_batch_size = relevance_batch_size
         self.relevance_num_predict, self.relevance_think = relevance_num_predict, relevance_think
+        self.relevance_compact = relevance_compact
+        self.relevance_num_ctx, self.relevance_num_batch = relevance_num_ctx, relevance_num_batch
         self.keep_alive = keep_alive
         self._stats_lock = Lock()
         self.reset_stats()
@@ -45,14 +54,15 @@ class OllamaClient:
         with self._stats_lock:
             self.stats = dict(responses=0, request_seconds=0.0, load_seconds=0.0,
                               prompt_seconds=0.0, generation_seconds=0.0, prompt_tokens=0,
-                              output_tokens=0)
+                              output_tokens=0, context_requests={})
 
     def metadata(self):
         result = {key: getattr(self, key, None) for key in
                   ('url', 'model', 'model_digest', 'timeout', 'num_ctx', 'num_predict', 'think',
-                   'main_gpu', 'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive')}
+                   'main_gpu', 'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
+                   'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch')}
         with self._stats_lock:
-            result['performance'] = dict(self.stats)
+            result['performance'] = dict(self.stats, context_requests=dict(self.stats['context_requests']))
         return result
 
     def preflight(self):
@@ -64,18 +74,33 @@ class OllamaClient:
         self.model_digest = model['digest']
         return self.metadata()
 
-    def generate(self, system, value, schema, num_predict=None, think=None):
+    def generate(self, system, value, schema, num_predict=None, think=None, num_ctx=None, num_batch=None,
+                 truncate=None, compact_json=False):
         from jsonschema import Draft202012Validator
         output_limit = self.num_predict if num_predict is None else num_predict
-        if not isinstance(output_limit, int) or not 128 <= output_limit < self.num_ctx:
+        context_limit = self.num_ctx if num_ctx is None else num_ctx
+        if type(context_limit) is not int or context_limit <= 512:
+            raise ValueError('num_ctx must exceed 512.')
+        if not isinstance(output_limit, int) or not 128 <= output_limit < context_limit:
             raise ValueError('num_predict must be at least 128 and less than num_ctx.')
+        if num_batch is not None and (type(num_batch) is not int or num_batch < 1):
+            raise ValueError('num_batch must be a positive integer or omitted.')
+        if truncate is not None and type(truncate) is not bool:
+            raise ValueError('truncate must be true, false, or omitted.')
         effective_think = self.think if think is None else think
         if effective_think is not None and not isinstance(effective_think, bool):
             raise ValueError('think must be true, false, or omitted.')
         payload = dict(model=self.model, stream=False, format=schema, keep_alive=self.keep_alive,
                        messages=[dict(role='system', content=system),
-                                 dict(role='user', content=json.dumps(value, ensure_ascii=False))],
-                       options=dict(temperature=0, num_ctx=self.num_ctx, num_predict=output_limit))
+                                 dict(role='user', content=json.dumps(value, ensure_ascii=False,
+                                      **({'separators': (',', ':')} if compact_json else {})))],
+                       options=dict(temperature=0, num_ctx=context_limit, num_predict=output_limit))
+        if num_batch is not None:
+            payload['options']['num_batch'] = num_batch
+        if truncate is not None:
+            payload['truncate'] = truncate
+            if not truncate:
+                payload['shift'] = False
         if effective_think is not None:
             payload['think'] = effective_think
         if self.main_gpu is not None:
@@ -97,7 +122,7 @@ class OllamaClient:
                     pass
             except OSError:
                 detail = ''
-            if 'context' in detail.lower() and any(word in detail.lower() for word in ('exceed', 'limit')):
+            if 'context' in detail.lower() and any(word in detail.lower() for word in ('exceed', 'limit', 'too long')):
                 raise ValueError(f'Ollama context limit reached: {detail[:1000]}') from error
             raise RuntimeError(f'Ollama HTTP {error.code} for {self.model!r}: '
                                f'{detail[:2000] or "No error details returned."}') from error
@@ -109,6 +134,8 @@ class OllamaClient:
             raise ValueError('Ollama response incomplete or truncated; increase output tokens before accepting it.')
         with self._stats_lock:
             self.stats['responses'] += 1
+            contexts = self.stats['context_requests']
+            contexts[str(context_limit)] = contexts.get(str(context_limit), 0) + 1
             self.stats['request_seconds'] += perf_counter() - started
             for key, source, divisor in (
                 ('load_seconds', 'load_duration', 1e9),
@@ -130,7 +157,7 @@ class OllamaClient:
             prompt_tokens = result.get('prompt_eval_count')
             output_tokens = result.get('eval_count')
             if (isinstance(prompt_tokens, int) and isinstance(output_tokens, int)
-                    and prompt_tokens + output_tokens >= self.num_ctx):
+                    and prompt_tokens + output_tokens >= context_limit):
                 raise ValueError('Ollama context limit reached; reduce input context or increase num_ctx.')
             raise ValueError(f'Ollama output token limit reached at {output_limit} tokens; '
                              'increase output tokens before accepting it.')
@@ -154,11 +181,21 @@ class OllamaPool:
                 or not 1 <= workers_per_endpoint <= 32):
             raise ValueError('workers_per_endpoint must be between 1 and 32.')
         if worker_models is not None:
-            raise ValueError('Choose one model per run. Use separate base_urls for identical GPU replicas.')
-        self.clients = [OllamaClient(url, model, **options) for url in base_urls]
+            if (not isinstance(worker_models, list) or not 2 <= len(worker_models) <= 32 or
+                    any(not isinstance(name, str) or not name.strip() for name in worker_models) or
+                    len(set(worker_models)) != len(worker_models)):
+                raise ValueError('Choose between 2 and 32 distinct worker models.')
+            if model is not None and model != worker_models[0]:
+                raise ValueError('The primary model must be the first worker model.')
+            if workers_per_endpoint != 1:
+                raise ValueError('Use one request per model when parallelizing different models.')
+        self.parallel_models = worker_models is not None
+        self.clients = [OllamaClient(url, name, **options)
+                        for url in base_urls for name in (worker_models if self.parallel_models else [model])]
         first = self.clients[0]
         for key in ('model', 'timeout', 'num_ctx', 'num_predict', 'think', 'main_gpu',
-                    'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive'):
+                    'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
+                    'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch'):
             setattr(self, key, getattr(first, key))
         self.url = first.url
         self.model = ' + '.join(dict.fromkeys(c.model for c in self.clients))
@@ -177,10 +214,16 @@ class OllamaPool:
     def preflight(self):
         for client in self.clients:
             client.preflight()
-        digests = {client.model_digest for client in self.clients}
-        if len(digests) != 1:
+        digests = {}
+        for client in self.clients:
+            if digests.setdefault(client.model, client.model_digest) != client.model_digest:
+                raise ValueError('Each model must have the same digest on every worker endpoint.')
+        if not self.parallel_models and len(set(digests.values())) != 1:
             raise ValueError('All worker endpoints must serve the same model digest.')
-        self.model_digest = digests.pop()
+        if self.parallel_models and len(set(digests.values())) != len(digests):
+            raise ValueError('Choose different models; some selected names refer to the same model digest.')
+        self.model_digests = digests
+        self.model_digest = None if self.parallel_models else next(iter(digests.values()))
         return self.metadata()
 
     def reset_assignments(self):
@@ -207,8 +250,9 @@ class OllamaPool:
 
     def metadata(self):
         result = self.clients[0].metadata()
-        result.update(base_urls=[c.url.removesuffix('/api/chat') for c in self.clients],
+        result.update(base_urls=list(dict.fromkeys(c.url.removesuffix('/api/chat') for c in self.clients)),
                       model=self.model, model_digest=getattr(self, 'model_digest', None),
+                      model_digests=dict(getattr(self, 'model_digests', {})), parallel_models=self.parallel_models,
                       models=[c.metadata() for c in self.clients],
                       workers=self.workers, workers_per_endpoint=self.workers_per_endpoint)
         with self._lock:
@@ -239,7 +283,10 @@ def load_client(path):
                       timeout=settings.get('timeout', 300), num_ctx=settings.get('num_ctx', 32768),
                       num_predict=settings.get('num_predict', 512), think=settings.get('think'),
                       main_gpu=settings.get('main_gpu'),
-                      relevance_num_predict=settings.get('relevance_num_predict', 512),
+                      relevance_num_predict=settings.get('relevance_num_predict', 128),
                       relevance_think=settings.get('relevance_think'),
                       relevance_batch_size=settings.get('relevance_batch_size', 4),
+                      relevance_compact=settings.get('relevance_compact', True),
+                      relevance_num_ctx=settings.get('relevance_num_ctx', 0),
+                      relevance_num_batch=settings.get('relevance_num_batch'),
                       keep_alive=settings.get('keep_alive', '30m'))

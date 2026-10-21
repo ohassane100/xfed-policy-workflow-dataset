@@ -27,6 +27,8 @@
 <main class="app-main">
   <div id="error" class="error hidden" role="alert"></div>
   <div id="job-panel" class="job hidden" aria-live="polite"><div class="jobrow"><div class="job-left"><span id="job-badge" class="badge">Ready</span><span id="job-message" class="jobmessage">Ready</span></div><div class="job-right"><span id="job-count"></span><button id="cancel" class="hidden">Cancel job</button></div></div><div id="progress" class="progress"><div id="progress-fill"></div></div><div id="run-log" class="runlog"></div><div id="model-runs" class="runlog"></div></div>
+  <details id="benchmark-results" class="report hidden"><summary>Step 1.3 speed comparison</summary><p id="benchmark-summary"></p><div id="benchmark-table" class="table-scroll"></div><button id="benchmark-download">Download comparison JSON</button></details>
+  <details id="evaluation-results" class="report hidden"><summary>Reference evaluation results</summary><p id="evaluation-summary"></p><div id="evaluation-table" class="table-scroll"></div><details><summary>Per-class metrics, confusion matrices and uncertainty</summary><pre id="evaluation-details"></pre></details><button id="evaluation-download">Download evaluation JSON</button></details>
   <section id="dashboard-screen" class="screen">
     <div class="pagehead"><div><div class="eyebrow">Dashboard</div><h1>Overview</h1><p id="overview-note">Contract workspace</p></div><button class="primary" id="open-workspace">Open pipeline</button></div>
     <div class="overview-layout"><div>
@@ -46,9 +48,12 @@
     <div class="pipeline-contract"><label for="contract">Source contract</label><select id="contract" aria-label="Source contract"></select><span class="badge neutral">1 preprocessing &rarr; 2 policy generation</span></div>
     <nav id="stage-nav" class="stage-nav" aria-label="Pipeline stages"></nav>
     <div class="pagehead"><div><div class="eyebrow" id="eyebrow">Contract preprocessing</div><h1 id="title">Extraction</h1><p id="subtitle">document_blocks.json</p></div><span id="stage-badge" class="badge">Not run</span></div>
-    <section aria-label="Run settings"><div class="pipeline-settings"><div class="field model-field"><label for="model">Model for 1.3 and 2</label><div class="modelrow"><select id="model"><option value="">Checking installed models...</option></select><button id="refresh" class="refresh" title="Refresh installed models" aria-label="Refresh installed models"></button></div></div><div class="field"><label for="model-count">Concurrent requests</label><input id="model-count" type="number" value="1" min="1" max="1" step="1"></div><div class="actions"><button id="run-step" class="primary">Run step 1.1</button><button id="run-through">Run through 2</button></div></div>
+    <section aria-label="Run settings"><div class="pipeline-settings"><div class="field model-field"><label id="model-setting-label" for="model">Model for 1.3 and 2</label><div class="modelrow"><select id="model"><option value="">Checking installed models...</option></select><button id="refresh" class="refresh" title="Refresh installed models" aria-label="Refresh installed models"></button></div></div><div id="request-count-field" class="field"><label for="model-count">Concurrent requests</label><input id="model-count" type="number" value="1" min="1" max="1" step="1"></div><div class="actions"><button id="run-step" class="primary">Run step 1.1</button><button id="run-through">Run through 2</button></div></div>
+    <label class="check"><input type="checkbox" id="parallel" disabled>Parallelize with different models</label>
+    <div id="parallel-options" class="settings hidden"><div class="field"><label for="parallel-model-count">Number of models</label><input id="parallel-model-count" type="number" value="2" min="2" max="2" step="1"></div></div>
     <p id="worker-note"></p>
-    <details class="advanced"><summary>Generation settings</summary><div class="settings"><div class="field"><label for="num_ctx">Context tokens</label><input id="num_ctx" type="number" value="32768" min="1024" max="262144" step="1024"></div><div class="field"><label for="num_predict">Policy output tokens (2)</label><input id="num_predict" type="number" value="4096" min="128" max="131072" step="128"></div><div class="field"><label for="relevance_batch_size">Clauses per classification request (1.3)</label><input id="relevance_batch_size" type="number" value="4" min="1" max="16" step="1"></div><div class="field"><label for="relevance_num_predict">Classification output tokens (1.3)</label><input id="relevance_num_predict" type="number" value="512" min="128" max="131072" step="128"></div><div class="field"><label for="relevance_think">Classification thinking (1.3)</label><select id="relevance_think"><option value="default">Use model/run default</option><option value="off">Off (if supported)</option><option value="on">On</option></select></div><div class="field"><label for="think">Run thinking default</label><select id="think"><option value="default">Model default</option><option value="off">Off</option><option value="on">On</option></select></div><div class="field"><label for="timeout">Timeout (seconds)</label><input id="timeout" type="number" value="600" min="10" max="3600" step="10"></div></div><label class="check"><input type="checkbox" id="reuse" checked>Reuse completed model requests</label></details></section>
+    <details class="advanced"><summary>Generation settings</summary><div class="settings"><div class="field"><label for="num_ctx">Maximum context tokens</label><input id="num_ctx" type="number" value="32768" min="1024" max="262144" step="1024"></div><div class="field"><label for="num_predict">Policy output tokens (2)</label><input id="num_predict" type="number" value="4096" min="128" max="131072" step="128"></div><div class="field"><label for="relevance_batch_size">Clauses per classification request (1.3)</label><input id="relevance_batch_size" type="number" value="4" min="1" max="16" step="1"></div><div class="field"><label for="relevance_compact">Classification answers (1.3)</label><select id="relevance_compact"><option value="true">Labels only (faster)</option><option value="false">Labels and optional reasons</option></select></div><div class="field"><label for="relevance_num_ctx">Classification context tokens (0 = auto)</label><input id="relevance_num_ctx" type="number" value="0" min="0" max="262144" step="1024"></div><div class="field"><label for="relevance_num_batch">Classification prompt batch tokens (0 = auto)</label><input id="relevance_num_batch" type="number" value="0" min="0" max="65536" step="128"></div><div class="field"><label for="relevance_num_predict">Classification output tokens (1.3)</label><input id="relevance_num_predict" type="number" value="128" min="128" max="131072" step="128"></div><div class="field"><label for="relevance_think">Classification thinking (1.3)</label><select id="relevance_think"><option value="default">Use model/run default</option><option value="off">Off (if supported)</option><option value="on">On</option></select></div><div class="field"><label for="think">Run thinking default</label><select id="think"><option value="default">Model default</option><option value="off">Off</option><option value="on">On</option></select></div><div class="field"><label for="timeout">Timeout (seconds)</label><input id="timeout" type="number" value="600" min="10" max="3600" step="10"></div></div><label class="check"><input type="checkbox" id="reuse" checked>Reuse completed model requests</label><p><button id="benchmark">Compare 1.3 settings</button> Measures a 24-clause sample using the same model and preserves saved outputs.</p></details></section>
+    <details class="advanced"><summary>Evaluation against reference set</summary><p id="evaluation-reference-note">Frozen examples cover classification and policy generation. Pipeline outputs are preserved.</p><div class="settings"><div class="field"><label for="evaluation-task">Task</label><select id="evaluation-task"><option value="both">Classification and policy</option><option value="classification">Classification only</option><option value="policy">Policy generation only</option></select></div><div class="field"><label for="evaluation-split">Split</label><select id="evaluation-split"><option value="dev">Development</option><option value="test">Held-out test</option></select></div><div class="field"><label for="evaluation-source">Sources</label><select id="evaluation-source"><option value="all">All (reported separately)</option><option value="real">Real contracts</option><option value="synthetic">Synthetic contract</option></select></div></div><p><button id="evaluate">Evaluate reference set</button> Uses the selected models and generation settings, without cached answers.</p></details>
     <div class="summary"><div class="metric"><div><span id="total-label">Blocks</span><strong id="total">0</strong></div></div><div class="metric ready"><div><span>Relevant</span><strong id="relevant">0</strong></div></div><div class="metric"><div><span>Not relevant</span><strong id="not-relevant">0</strong></div></div><div class="metric pending"><div><span>Needs context</span><strong id="pending">0</strong></div></div></div>
     <section class="output" aria-label="Stage output"><div class="outputtop"><div class="tabs" role="tablist"><button class="tab active" data-view="records" role="tab" aria-selected="true">Records</button><button class="tab" data-view="json" role="tab" aria-selected="false">JSON</button><button class="tab" data-view="pdf" role="tab" aria-selected="false">Source PDF</button></div><button id="download" class="download" disabled>Download JSON</button></div>
     <div id="records-view"><div class="filterbar"><input id="search" type="search" placeholder="Search output" aria-label="Search output"><select id="filter" aria-label="Classification filter"><option value="">All classifications</option><option>RELEVANT</option><option>NOT_RELEVANT</option><option>NEEDS_CONTEXT</option></select><span id="record-count" class="recordcount">0 records</span></div><div class="workspace"><div class="list"><div class="listhead"><span>Identifier</span><span>Source text</span><span>Page</span></div><div id="record-list"></div></div><article id="inspector" class="inspector"><div class="empty"><strong>No output yet</strong>Awaiting stage 1.1</div></article></div><div class="pagination"><span id="page-label">0 records</span><div><button id="previous" aria-label="Previous records" title="Previous records"></button> <button id="next" aria-label="Next records" title="Next records"></button></div></div></div>
@@ -98,10 +103,39 @@ async function api(path,body){const res=await fetch(path,body===undefined?{}:{me
 function showError(error){$('error').textContent=String(error.message||error);$('error').classList.remove('hidden');}
 function clearError(){$('error').classList.add('hidden');}
 function contract(){return $('contract').value;}
+function selectedModels(){return [$('model').value,...[...document.querySelectorAll('.parallel-model')].map(select=>select.value)];}
+function modelSettings(){
+ const parallel=$('parallel').checked,names=parallel?selectedModels():[$('model').value],thinking=$('think').value;
+ return {model:names[0],parallel,worker_models:parallel?names:undefined,workers:parallel?names.length:Number($('model-count').value),
+  num_ctx:Number($('num_ctx').value),num_predict:Number($('num_predict').value),relevance_num_predict:Number($('relevance_num_predict').value),
+  relevance_batch_size:Number($('relevance_batch_size').value),relevance_compact:$('relevance_compact').value==='true',
+  relevance_num_ctx:Number($('relevance_num_ctx').value),relevance_num_batch:Number($('relevance_num_batch').value)||null,
+  relevance_think:$('relevance_think').value==='default'?null:$('relevance_think').value==='on',timeout:Number($('timeout').value),
+  think:thinking==='default'?null:thinking==='on'};
+}
 function renderWorkers(){
  const count=Math.min(workerCapacity,Math.max(1,Math.floor(Number($('model-count').value)||1)));
  $('model-count').max=workerCapacity;$('model-count').value=count;
- $('worker-note').textContent=count>1?count+' requests may run concurrently using the same model. Actual parallelism depends on the shared server.':'One request at a time using the selected model.';
+ if(installedModels.length<2)$('parallel').checked=false;
+ const parallel=$('parallel').checked,maximum=Math.min(32,installedModels.length);
+ const modelCount=Math.min(Math.max(2,maximum),Math.max(2,Math.floor(Number($('parallel-model-count').value)||2)));
+ $('parallel-model-count').max=Math.max(2,maximum);$('parallel-model-count').value=modelCount;
+ const previous=selectedModels().slice(1),chosen=[$('model').value];
+ for(let index=1;index<modelCount;index++){
+  const prior=previous[index-1];
+  const name=installedModels.some(model=>model.name===prior)&&!chosen.includes(prior)?prior:installedModels.find(model=>!chosen.includes(model.name))?.name;
+  if(!name)break;chosen.push(name);
+ }
+ document.querySelectorAll('.parallel-model-field').forEach(field=>field.remove());
+ chosen.slice(1).forEach((name,index)=>{
+  const field=element('div',undefined,'field parallel-model-field'),label=element('label','Model '+(index+2)+' for 1.3 and 2'),select=element('select',undefined,'parallel-model');
+  select.id='parallel-model-'+(index+2);label.htmlFor=select.id;
+  for(const model of installedModels){const option=new Option(model.name+' / '+(model.details?.quantization_level||'unknown quantisation'),model.name);option.disabled=model.name!==name&&chosen.includes(model.name);select.append(option);}
+  select.value=name;select.onchange=renderWorkers;field.append(label,select);$('parallel-options').append(field);
+ });
+ $('parallel-options').classList.toggle('hidden',!parallel);$('request-count-field').classList.toggle('hidden',parallel);
+ $('model-setting-label').textContent=parallel?'Model 1 for 1.3 and 2':'Model for 1.3 and 2';
+ $('worker-note').textContent=parallel?chosen.length+' models share the clauses, with one request per model at a time. Ollama manages GPU placement.':count>1?count+' requests may run concurrently using the same model. Actual parallelism depends on the shared server.':'One request at a time using the selected model.';
  controls();
 }
 function workerLabel(worker){return worker.model+' / '+new URL(worker.url).host;}
@@ -125,16 +159,24 @@ function nav(){
 }
 function controls(){
  const index=stages.findIndex(s=>s[0]===stage);
+ const parallel=$('parallel').checked,names=parallel?selectedModels():[$('model').value];
+ const ready=names.every(name=>installedModels.some(model=>model.name===name))&&(!parallel||(names.length===Number($('parallel-model-count').value)&&new Set(names).size===names.length));
  $('run-step').textContent='Run step '+stage;
- $('run-step').disabled=!contract()||busy||loading||(index>0&&!state?.stages[stages[index-1][0]]?.ready)||(['1.3','2'].includes(stage)&&!$('model').value);
- $('run-through').disabled=!contract()||busy||loading||!$('model').value;
+ $('run-step').disabled=!contract()||busy||loading||(index>0&&!state?.stages[stages[index-1][0]]?.ready)||(['1.3','2'].includes(stage)&&!ready);
+ $('benchmark').disabled=busy||loading||!state?.stages['1.2']?.ready||!$('model').value;
+ $('evaluate').disabled=busy||!ready;
+ $('run-through').disabled=!contract()||busy||loading||!ready;
  $('cancel').classList.toggle('hidden',!busy);
  $('cancel').disabled=state?.job.status==='cancelling'||overview?.job.status==='cancelling';
- ['model','model-count','num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_think','think','timeout','reuse','contract'].forEach(id=>$(id).disabled=busy);
+ ['model','model-count','num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_compact','relevance_num_ctx','relevance_num_batch','relevance_think','think','timeout','reuse','contract'].forEach(id=>$(id).disabled=busy);
+ $('parallel').disabled=busy||installedModels.length<2;$('parallel-model-count').disabled=busy||!parallel;
+ $('parallel').title=installedModels.length<2?'At least two installed models are needed.':'';
+ document.querySelectorAll('.parallel-model').forEach(select=>select.disabled=busy||!parallel);
+ ['evaluation-task','evaluation-split','evaluation-source'].forEach(id=>$(id).disabled=busy);
  $('download').disabled=!output;
  document.querySelector('[data-view="pdf"]').disabled=!contract();
  $('open-workspace').disabled=!contract();
- const model=$('model').value;
+ const model=names.filter(Boolean).join(' + ');
  $('model-label').textContent=model?model:modelsOK?'No installed model':modelsChecked?'Ollama unavailable':'Checking Ollama';
  $('model-chip').classList.toggle('pending',!model);
  $('model-chip').title=model||$('connection').textContent;
@@ -159,7 +201,7 @@ async function refreshModels(){
   if(!installedModels.length)sel.append(new Option('No chat models installed',''));
   if(installedModels.some(m=>m.name===prior))sel.value=prior;
   else if(installedModels.some(m=>m.name===preferredModel))sel.value=preferredModel;
-  $('connection').textContent=installedModels.length+' installed models / '+workerCapacity+' concurrent request slots';
+  $('connection').textContent=installedModels.length+' installed models';
   $('connection-dot').classList.add('on');modelsOK=true;renderWorkers();
  }catch(error){$('connection').textContent='Ollama unavailable';$('connection-dot').classList.remove('on');modelsOK=false;$('model').replaceChildren(new Option('Ollama unavailable',''));showError(error);}
  finally{modelsChecked=true;$('refresh').disabled=false;controls();renderNotices();refreshOverview();}
@@ -179,19 +221,62 @@ function setView(next){view=next;document.querySelectorAll('.tab').forEach(b=>{b
 function prettyContract(id){return id.replace('contract_','Contract ');}
 function stageName(id){return stages.find(s=>s[0]===id)?.[1]||id;}
 function pill(text,tone='neutral'){return element('span',text,'badge '+tone);}
+let benchmarkReport=null,benchmarkKey='',evaluationReport=null,evaluationKey='';
 function updateJob(job){
  busy=['running','cancelling'].includes(job.status);
  $('job-panel').classList.toggle('hidden',job.status==='idle');
  $('model-runs').textContent=(job.workers||[]).map(w=>workerLabel(w)+' / '+w.completed+' processed').join('  |  ');
  $('job-badge').textContent=job.status==='complete'?'Complete':job.status==='cancelling'?'Cancelling':job.status==='running'?'Running':job.status==='failed'?'Failed':'Cancelled';
  $('job-badge').className='badge '+(job.status==='failed'?'danger':job.status==='complete'?'success':'neutral');
- $('job-message').textContent=job.status==='idle'?'Ready':prettyContract(job.contract)+' / '+job.stage+' '+stageName(job.stage)+' / '+job.message;
+ $('job-message').textContent=job.status==='idle'?'Ready':(job.mode==='evaluation'?'Reference evaluation':prettyContract(job.contract)+' / '+job.stage+' '+stageName(job.stage))+' / '+job.message;
  $('job-count').textContent=job.total?job.completed+' / '+job.total:'';
  $('run-log').textContent=(job.log||[]).join('  |  ');
  $('progress-fill').style.width=(job.total?100*job.completed/job.total:job.status==='complete'?100:0)+'%';
  $('progress').classList.toggle('indeterminate',busy&&!job.total);
  $('progress').classList.toggle('failed',job.status==='failed');
+ if(job.mode==='benchmark'&&!busy){const key=job.contract+'/'+job.status+'/'+(job.log||[]).length;if(key!==benchmarkKey){benchmarkKey=key;refreshBenchmark();}}
+ if(job.mode==='evaluation'&&!busy){const key=job.status+'/'+(job.log||[]).length;if(key!==evaluationKey){evaluationKey=key;refreshEvaluation();}}
  controls();
+}
+async function refreshBenchmark(){
+ try{
+  const data=await api('/api/benchmark');if(!data.report)return;benchmarkReport=data.report;
+  const panel=$('benchmark-results');panel.classList.remove('hidden');panel.open=true;
+  $('benchmark-summary').textContent=prettyContract(benchmarkReport.contract)+' / '+benchmarkReport.model+' / '+benchmarkReport.sampled_chunk_ids.length+' clauses. Timings exclude warmup. Label agreement is with the baseline, not ground-truth accuracy. Review changed labels in the downloaded report.';
+  const table=element('table',undefined,'data-table'),head=element('tr');
+  ['Setting','Seconds','Speedup','Labels match','Prompt tokens','Output tokens'].forEach(name=>head.append(element('th',name)));
+  const thead=element('thead');thead.append(head);table.append(thead);const body=element('tbody');
+  const names={baseline:'1 clause / previous format',batch4:'4 clauses / previous format',compact:'Compact answers',context:'Automatic context',output:'128 output tokens per clause',batch8:'8 clauses per request',prefill4096:'4096 prompt batch tokens'};
+  for(const run of benchmarkReport.runs){
+   const row=element('tr');row.append(element('td',names[run.name]||run.name));
+   if(run.status!=='complete'){const cell=element('td',run.error);cell.colSpan=5;row.append(cell);}
+   else{const stats=run.options.models[0].performance;[run.duration_seconds.toFixed(2),run.speedup.toFixed(2)+'x',(run.label_agreement*100).toFixed(1)+'%',Math.round(stats.prompt_tokens),Math.round(stats.output_tokens)].forEach(value=>row.append(element('td',String(value))));}
+   body.append(row);
+  }
+  table.append(body);$('benchmark-table').replaceChildren(table);
+ }catch(error){showError(error);}
+}
+async function refreshEvaluation(){
+ try{
+  const data=await api('/api/evaluation'),counts=data.reference.counts;
+  $('evaluation-reference-note').textContent='Draft references: '+Object.values(counts.classification).reduce((a,b)=>a+b,0)+' classification cases and '+Object.values(counts.policy).reduce((a,b)=>a+b,0)+' policy cases. Review the annotations independently before publication. Development and test use separate contracts.';
+  if(!data.report)return;evaluationReport=data.report;
+  const panel=$('evaluation-results');panel.classList.remove('hidden');panel.open=true;
+  const scored=Boolean(evaluationReport.metrics);
+  $('evaluation-summary').textContent=evaluationReport.split+' split. '+(scored?'Reference status: '+evaluationReport.reference_status+'. Classification uses three-class macro precision/recall/F1. Policy uses exact canonical rule slots and exact-case accuracy; it does not establish legal equivalence. Cohorts are reported separately.':'Task predictions are available for download; scoring has not completed.');
+  const table=element('table',undefined,'data-table'),head=element('tr');
+  ['Task / cohort','Cases','Accuracy','Precision','Recall','F1','95% Wilson accuracy interval','Failures'].forEach(name=>head.append(element('th',name)));
+  const thead=element('thead');thead.append(head);table.append(thead);const body=element('tbody');
+  const percent=value=>value==null?'—':(value*100).toFixed(1)+'%';
+  const cohortNames={real:'Real contracts',synthetic:'Synthetic contract',coverage:'Coverage',context_challenge:'Context challenge',operative:'Operative clauses',abstention_control:'Abstention controls',all_curated_cases:'All curated policy cases'};
+  for(const [task,groups] of Object.entries(evaluationReport.metrics||{}))for(const [name,metrics] of Object.entries(groups)){
+   const policy=task==='policy',scores=policy?metrics.canonical_rules:{precision:metrics.macro_precision,recall:metrics.macro_recall,f1:metrics.macro_f1};
+   const interval=policy?metrics.exact_case_wilson_ci95:metrics.accuracy_wilson_ci95,row=element('tr');
+   [(policy?'Policy':'Classification')+' / '+name.split('/').map(value=>cohortNames[value]||value).join(' / '),metrics.n,percent(policy?metrics.exact_case_accuracy:metrics.accuracy),percent(scores.precision),percent(scores.recall),percent(scores.f1),interval?interval.map(percent).join(' to '):'—',policy?metrics.failures:metrics.errors].forEach(value=>row.append(element('td',String(value))));body.append(row);
+  }
+  table.append(body);$('evaluation-table').replaceChildren(table);
+  $('evaluation-details').textContent=JSON.stringify({metrics:evaluationReport.metrics,interval_note:evaluationReport.interval_note,limitations:evaluationReport.metric_notes},null,2);
+ }catch(error){showError(error);}
 }
 function openContract(id,step){
  $('contract').value=id;state=null;$('pdf').removeAttribute('src');clearError();
@@ -242,8 +327,9 @@ function renderNotices(){
  const notices=[];
  if(modelsChecked&&!modelsOK)notices.push({title:'Ollama unavailable',message:'No model connection.',action:'Open model settings',open:()=>showScreen('pipeline')});
  const job=overview?.job||state?.job;
- if(job?.status==='failed')notices.push({title:'Stage '+job.stage+' failed',message:job.message,action:'Inspect '+prettyContract(job.contract),open:()=>openContract(job.contract,job.stage)});
- if(job&&['running','cancelling'].includes(job.status))notices.push({title:prettyContract(job.contract)+' / '+stageName(job.stage),message:job.completed+' / '+job.total+' records / '+job.status,action:'Open current stage',open:()=>openContract(job.contract,job.stage)});
+ const openJob=()=>job.mode==='evaluation'?showScreen('pipeline'):openContract(job.contract,job.stage);
+ if(job?.status==='failed')notices.push({title:job.mode==='evaluation'?'Reference evaluation failed':'Stage '+job.stage+' failed',message:job.message,action:'Inspect run',open:openJob});
+ if(job&&['running','cancelling'].includes(job.status))notices.push({title:job.mode==='evaluation'?'Reference evaluation':prettyContract(job.contract)+' / '+stageName(job.stage),message:job.completed+' / '+job.total+' / '+job.status,action:'Open current run',open:openJob});
  for(const c of overview?.contracts||[]){
   if(c.labels.NEEDS_CONTEXT)notices.push({title:prettyContract(c.contract),message:c.labels.NEEDS_CONTEXT+' clauses need context.',action:'Inspect relevance',open:()=>openContract(c.contract,'1.3')});
   if(c.report?.skipped)notices.push({title:prettyContract(c.contract)+' / Policy draft',message:c.report.skipped+' clauses skipped during generation.',action:'Open generation report',open:()=>{openContract(c.contract,'2');$('report').open=true;}});
@@ -314,8 +400,26 @@ async function refreshState(){
  }catch(error){if(request===stateRequest)showError(error);}
  finally{if(request===stateRequest){loading=false;controls();}}
 }
-async function run(mode){clearError();const nums=['model-count','num_ctx','num_predict','relevance_num_predict','relevance_batch_size','timeout'];for(const n of nums)if(!$(n).checkValidity()){document.querySelector('.advanced').open=true;$(n).reportValidity();return;}if(Math.max(Number($('num_predict').value),Number($('relevance_num_predict').value))>=Number($('num_ctx').value)){showError('Output tokens must be less than context tokens.');return;}const workers=Number($('model-count').value);if(!$('model').value){showError('Choose one installed model.');return;}const target=mode==='through'?'2':stage;if(mode==='through'){if(!confirm('Run through 2 will delete generated stage outputs, run metadata, and cached model responses for this contract, then regenerate from 1.1. Continue?'))return;}else if(state?.stages[target]?.ready){if(!confirm('Replace this stage and its downstream outputs? Completed model requests can be reused.'))return;}try{const thinking=$('think').value;await api('/api/run',{contract:contract(),stage:target,mode,model:$('model').value,workers,num_ctx:Number($('num_ctx').value),num_predict:Number($('num_predict').value),relevance_num_predict:Number($('relevance_num_predict').value),relevance_batch_size:Number($('relevance_batch_size').value),relevance_think:$('relevance_think').value==='default'?null:$('relevance_think').value==='on',timeout:Number($('timeout').value),think:thinking==='default'?null:thinking==='on',reuse:mode==='through'?false:$('reuse').checked});await refreshState();}catch(error){showError(error);}}
-$('run-step').onclick=()=>run('step');$('run-through').onclick=()=>run('through');$('cancel').onclick=async()=>{try{await api('/api/cancel',{});if(screen==='pipeline')await refreshState();else await refreshOverview();}catch(error){showError(error);}};$('refresh').onclick=refreshModels;$('model').onchange=controls;$('model-count').onchange=renderWorkers;$('search').oninput=()=>{page=0;renderRecords();};$('filter').onchange=()=>{page=0;renderRecords();};$('previous').onclick=()=>{page--;renderRecords();};$('next').onclick=()=>{page++;renderRecords();};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('contract').onchange=()=>{clearError();$('pdf').removeAttribute('src');outputKey='';selectStage(stage);if(view==='pdf')setView('pdf');};$('download').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=contract()+'_'+stages.find(s=>s[0]===stage)[2];link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+async function run(mode){
+ clearError();const parallel=$('parallel').checked;
+ const nums=[parallel?'parallel-model-count':'model-count','num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_num_ctx','relevance_num_batch','timeout'];
+ for(const name of nums)if(!$(name).checkValidity()){document.querySelector('.advanced').open=true;$(name).reportValidity();return;}
+ if(Math.max(Number($('num_predict').value),Number($('relevance_num_predict').value))>=Number($('num_ctx').value)){showError('Output tokens must be less than context tokens.');return;}
+ const names=parallel?selectedModels():[$('model').value];
+ if(names.some(name=>!installedModels.some(model=>model.name===name))||(parallel&&(names.length!==Number($('parallel-model-count').value)||new Set(names).size!==names.length))){showError('Choose a different installed model for each worker.');return;}
+ const target=mode==='through'?'2':stage;
+ if(mode==='through'){if(!confirm('Run through 2 will delete generated stage outputs, run metadata, and cached model responses for this contract, then regenerate from 1.1. Continue?'))return;}
+ else if(state?.stages[target]?.ready){if(!confirm('Replace this stage and its downstream outputs? Completed model requests can be reused.'))return;}
+ try{
+  await api('/api/run',{contract:contract(),stage:target,mode,...modelSettings(),reuse:mode==='through'?false:$('reuse').checked});
+  await refreshState();
+ }catch(error){showError(error);}
+}
+$('benchmark').onclick=async()=>{clearError();benchmarkKey='';$('benchmark-results').classList.add('hidden');try{await api('/api/benchmark',{contract:contract(),model:$('model').value,limit:24,num_ctx:Number($('num_ctx').value),timeout:Number($('timeout').value),think:$('think').value==='default'?null:$('think').value==='on'});await refreshState();}catch(error){showError(error);}};
+$('benchmark-download').onclick=()=>{if(!benchmarkReport)return;const url=URL.createObjectURL(new Blob([JSON.stringify(benchmarkReport,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=benchmarkReport.contract+'_benchmark.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('evaluate').onclick=async()=>{clearError();evaluationKey='';$('evaluation-results').classList.add('hidden');try{await api('/api/evaluation',{...modelSettings(),task:$('evaluation-task').value,split:$('evaluation-split').value,source:$('evaluation-source').value});await refreshState();}catch(error){showError(error);}};
+$('evaluation-download').onclick=()=>{if(!evaluationReport)return;const url=URL.createObjectURL(new Blob([JSON.stringify(evaluationReport,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='xfed_evaluation_'+evaluationReport.split+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('run-step').onclick=()=>run('step');$('run-through').onclick=()=>run('through');$('cancel').onclick=async()=>{try{await api('/api/cancel',{});if(screen==='pipeline')await refreshState();else await refreshOverview();}catch(error){showError(error);}};$('refresh').onclick=refreshModels;$('model').onchange=renderWorkers;$('model-count').onchange=renderWorkers;$('parallel').onchange=renderWorkers;$('parallel-model-count').onchange=renderWorkers;$('search').oninput=()=>{page=0;renderRecords();};$('filter').onchange=()=>{page=0;renderRecords();};$('previous').onclick=()=>{page--;renderRecords();};$('next').onclick=()=>{page++;renderRecords();};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('contract').onchange=()=>{clearError();$('pdf').removeAttribute('src');outputKey='';selectStage(stage);if(view==='pdf')setView('pdf');};$('download').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=contract()+'_'+stages.find(s=>s[0]===stage)[2];link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 $('brand').onclick=()=>showScreen('dashboard');
@@ -327,16 +431,18 @@ $('contract-search').oninput=()=>renderContractTable('contracts-table',$('contra
   const config=await api('/api/config');
   preferredModel=config.model_defaults?.model||'';
   workerCapacity=config.workers||1;preferredModels=config.preferred_models||[];
-  $('model-count').value=workerCapacity;
-  for(const field of ['num_ctx','num_predict','relevance_num_predict','relevance_batch_size','timeout'])if(config.model_defaults?.[field])$(field).value=config.model_defaults[field];
+  $('model-count').value=Math.min(workerCapacity,(config.replica_urls||[config.ollama_url]).length);
+  for(const field of ['num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_num_ctx','relevance_num_batch','timeout'])if(config.model_defaults?.[field])$(field).value=config.model_defaults[field];
   if(typeof config.model_defaults?.think==='boolean')$('think').value=config.model_defaults.think?'on':'off';
   if(typeof config.model_defaults?.relevance_think==='boolean')$('relevance_think').value=config.model_defaults.relevance_think?'on':'off';
+  if(typeof config.model_defaults?.relevance_compact==='boolean')$('relevance_compact').value=String(config.model_defaults.relevance_compact);
   $('endpoint').textContent=(config.replica_urls||[config.ollama_url]).join(', ');
   $('contract').replaceChildren(...config.contracts.map(c=>new Option(prettyContract(c),c)));
   showScreen(location.hash.slice(1)||'dashboard',false);
   await selectStage(stage);
   refreshModels();
   await refreshOverview();
+  refreshEvaluation();
   setInterval(()=>screen==='pipeline'?refreshState():refreshOverview(),2000);
  }catch(error){showError(error);}
 })();
