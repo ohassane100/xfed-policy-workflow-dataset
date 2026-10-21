@@ -75,6 +75,8 @@ class CachedClient:
             raise Cancelled()
         output_limit = self.settings['num_predict'] if num_predict is None else num_predict
         effective_think = self.settings['think'] if think is None else think
+        if effective_think == 'auto':
+            effective_think = getattr(self.client, 'auto_think', None)
         settings = dict(self.settings, num_predict=output_limit, think=effective_think)
         if num_ctx is not None:
             settings['num_ctx'] = num_ctx
@@ -112,7 +114,7 @@ class Pipeline:
         self.active_client = None
         self.ollama_url = ollama_url.rstrip('/')
         self.worker_config = load_client(config) if config else None
-        self.defaults = dict(model=None, timeout=600, num_ctx=16384, num_predict=4096, think=None,
+        self.defaults = dict(model=None, timeout=600, num_ctx=16384, num_predict=4096, think='auto',
                              relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1,
                              relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None, keep_alive='30m')
         if self.worker_config:

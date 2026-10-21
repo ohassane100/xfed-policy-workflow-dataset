@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 
 
 class OllamaClient:
-    def __init__(self, base_url, model, timeout=300, num_ctx=32768, num_predict=512, think=None, main_gpu=None,
+    def __init__(self, base_url, model, timeout=300, num_ctx=32768, num_predict=512, think='auto', main_gpu=None,
                  relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1, keep_alive='30m',
                  relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None, cancel=None):
         if not isinstance(base_url, str) or urlsplit(base_url).scheme not in ('http', 'https') or not urlsplit(base_url).hostname:
@@ -23,8 +23,8 @@ class OllamaClient:
             raise ValueError('timeout must be positive and num_ctx must exceed 512.')
         if not isinstance(num_predict, int) or not 128 <= num_predict < num_ctx:
             raise ValueError('num_predict must be at least 128 and less than num_ctx.')
-        if think is not None and not isinstance(think, bool):
-            raise ValueError('think must be true, false, or omitted.')
+        if think is not None and not isinstance(think, bool) and think != 'auto':
+            raise ValueError('think must be auto, true, false, or null.')
         if main_gpu is not None and (type(main_gpu) is not int or main_gpu < 0):
             raise ValueError('main_gpu must be a nonnegative integer or omitted.')
         if type(relevance_num_predict) is not int or not 128 <= relevance_num_predict < num_ctx:
@@ -43,7 +43,7 @@ class OllamaClient:
             raise ValueError('relevance_num_batch must be a positive integer or omitted.')
         self.relevance_batch_size = relevance_batch_size
         self.relevance_num_predict, self.relevance_think = relevance_num_predict, relevance_think
-        self.auto_relevance_think = None
+        self.auto_think, self.auto_relevance_think = None, None
         self.relevance_compact = relevance_compact
         self.relevance_num_ctx, self.relevance_num_batch = relevance_num_ctx, relevance_num_batch
         self.keep_alive = keep_alive
@@ -102,7 +102,7 @@ class OllamaClient:
         result = {key: getattr(self, key, None) for key in
                   ('url', 'model', 'model_digest', 'timeout', 'num_ctx', 'num_predict', 'think',
                    'main_gpu', 'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
-                   'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch', 'auto_relevance_think')}
+                   'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch', 'auto_think', 'auto_relevance_think')}
         with self._stats_lock:
             result['performance'] = dict(self.stats, context_requests=dict(self.stats['context_requests']))
             result['active_request'] = None
@@ -120,8 +120,10 @@ class OllamaClient:
         if not model or not model.get('digest'):
             raise ValueError(f'{self.model!r} is not installed at {self.url}.')
         self.model_digest = model['digest']
-        self.auto_relevance_think = None
-        if self.relevance_think == 'auto' and 'thinking' in model.get('capabilities', []):
+        self.auto_think, self.auto_relevance_think = None, None
+        family = model.get('details', {}).get('family', '')
+        if ((self.relevance_think == 'auto' or self.think == 'auto') and
+                ('thinking' in model.get('capabilities', []) or family in ('qwen35', 'qwen35moe'))):
             request = Request(self.url.removesuffix('/api/chat') + '/api/show',
                               data=json.dumps(dict(model=self.model)).encode(),
                               headers={'Content-Type': 'application/json'})
@@ -135,9 +137,10 @@ class OllamaClient:
             # Older Ollama versions lack thinking.values. Qwen3.5 documents its on/off switch;
             # retain the model default for other families without explicit capability metadata.
             if isinstance(values, list):
-                self.auto_relevance_think = False if any(value is False for value in values) else None
+                self.auto_think = False if any(value is False for value in values) else None
             elif family in ('qwen35', 'qwen35moe'):
-                self.auto_relevance_think = False
+                self.auto_think = False
+            self.auto_relevance_think = self.auto_think
         return self.metadata()
 
     def generate(self, system, value, schema, num_predict=None, think=None, num_ctx=None, num_batch=None,
@@ -156,6 +159,8 @@ class OllamaClient:
         if truncate is not None and type(truncate) is not bool:
             raise ValueError('truncate must be true, false, or omitted.')
         effective_think = self.think if think is None else think
+        if effective_think == 'auto':
+            effective_think = self.auto_think
         if effective_think is not None and not isinstance(effective_think, bool):
             raise ValueError('think must be true, false, or omitted.')
         payload = dict(model=self.model, stream=True, format=schema, keep_alive=self.keep_alive,
@@ -466,7 +471,7 @@ def load_client(path):
     return OllamaPool(urls, settings.get('model'),
                       workers_per_endpoint=execution.get('workers_per_endpoint', 1),
                       timeout=settings.get('timeout', 300), num_ctx=settings.get('num_ctx', 32768),
-                      num_predict=settings.get('num_predict', 512), think=settings.get('think'),
+                      num_predict=settings.get('num_predict', 512), think=settings.get('think', 'auto'),
                       main_gpu=settings.get('main_gpu'),
                       relevance_num_predict=settings.get('relevance_num_predict', 4096),
                       relevance_think=settings.get('relevance_think', 'auto'),

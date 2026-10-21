@@ -8,6 +8,11 @@ time limitation, and asset restriction. Use one atomic action per rule. Do not
 convert guidance, definitions, headings, alternatives not selected by the
 parties, or mere references into unconditional rights or obligations.
 
+Conditional rights and procedural duties still count: preserve their conditions.
+An enumerated item may inherit its actor, action and restrictions from supplied
+parents or context. Represent shall/must requirements as obligations, not merely
+permissions. Do not turn absence of a right into a ban on a different action.
+
 Return policy: null with a concise reason if no enforceable rule can be safely
 represented, necessary evidence is absent, or a condition cannot be faithfully
 represented in the schema. Never fabricate a party, asset, date, external law,

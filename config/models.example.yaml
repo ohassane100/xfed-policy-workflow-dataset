@@ -6,6 +6,7 @@ relevance_classifier:
   timeout: 300
   num_ctx: 16384
   num_predict: 4096
+  think: auto  # Disable optional policy thinking when the model supports it.
   relevance_num_predict: 4096
   relevance_batch_size: 1
   relevance_compact: false
@@ -13,4 +14,4 @@ relevance_classifier:
   # Optional relevance_num_batch: 1024 controls prompt-processing tokens, not clause count.
   keep_alive: 30m
   relevance_think: auto  # Disable thinking for classification only when supported.
-  # Omit think to preserve the policy model's default; some models cannot disable thinking.
+  # Set think: null to use the policy model's default, or true to request thinking.

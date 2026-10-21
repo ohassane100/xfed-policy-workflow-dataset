@@ -61,6 +61,24 @@ def validate_fragment(fragment, contract, item, root):
     if fragment['contract_id'] != contract:
         raise ValueError('Generated policy changed the contract identifier.')
     check_traceability(fragment, item)
+    evidence = '\n'.join(clause['text'] for clause in [item, *item['context']])
+
+    def grounded_identifiers(value):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if key != 'uid':
+                    grounded_identifiers(child)
+        elif isinstance(value, list):
+            for child in value:
+                grounded_identifiers(child)
+        elif isinstance(value, str) and value.startswith('#') and value not in evidence:
+            raise ValueError('Invented deployment identifier ' + repr(value) +
+                             '; use descriptive labels grounded in the supplied evidence.')
+
+    grounded_identifiers(fragment['odrlPolicy'])
+    for tag in fragment.get('osdu', {}).get('legal', {}).get('legaltags', []):
+        if tag not in evidence:
+            raise ValueError('LegalTag names must be explicitly supplied in the evidence; omit unsupported OSDU metadata.')
 
 
 CONTEXT_PRIORITY = {'parent': 0, 'definition': 1, 'other': 2, 'reference': 3, 'retrieved': 4}
@@ -121,6 +139,10 @@ def generate_answer(client, prompt, contract, item, output_schema):
         except ValueError as error:
             message = str(error).lower()
             if 'output token limit reached' in message:
+                last = getattr(client, 'last_request', None) or {}
+                if last.get('thinking_chars') and not last.get('answer_chars'):
+                    raise ValueError(f'{error} Reasoning exhausted the budget without an answer; '
+                                     'use Policy thinking Auto or Off instead of repeating the request.') from error
                 if output_retries == 0 and output_limit < maximum_output_limit:
                     output_limit = maximum_output_limit
                     output_retries += 1

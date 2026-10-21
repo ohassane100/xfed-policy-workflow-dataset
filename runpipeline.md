@@ -77,15 +77,19 @@ force a short answer to use the entire allowance.
 It uses the server's thinking-control metadata when available and Qwen3.5's documented
 on/off control on older Ollama versions; other models retain their default.
 Choose **Use model/run default** or **On** to evaluate reasoning explicitly.
-Policy-generation thinking is unchanged. The default run context is 16384 tokens,
+**Policy thinking (2)** also defaults to **Auto (off when supported)**. Select
+**Model default** or **On** when measuring reasoning explicitly. A response that
+exhausts its output budget on reasoning without an answer is not automatically
+repeated with a larger budget. The default run context is 16384 tokens,
 as in the earlier UI. Classification context **0 (run setting)** uses that same
 allocation; smaller allocations are optional. Complete evidence is retained:
 requests forbid truncation and context shifting, and can retry with the run's
 maximum context on overflow. **Prompt batch tokens** maps to Ollama's `num_batch`
 for classification only; 0 preserves server automatic selection.
-While a request runs, its worker displays **Waiting for Ollama**, **Thinking**, or
-**Generating answer**, with elapsed time. Character counts describe received text,
-not tokens. Completed request timings and token totals remain available in run metadata.
+Worker rows show the model, requested GPU, completed count and current activity.
+Detailed request timings and token totals remain available in run metadata.
+Policy validation rejects fragment identifiers and LegalTag names absent from the
+supplied evidence. Schema and evidence checks still do not establish semantic correctness.
 
 After restarting the updated UI, open **Generation settings → Compare 1.3 settings**
 at the existing browser URL. It uses the primary model and existing Ollama API, displays a comparison
