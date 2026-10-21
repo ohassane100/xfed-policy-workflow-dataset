@@ -46,16 +46,18 @@ class ContextIndex:
 
     def context_for(self, chunk, include_references=True):
         scope = self.scopes[chunk['chunk_id']]
-        context, missing, seen = [], [], set()
+        context, missing, seen, expanded = [], [], set(), set()
 
         def attach(target, relationship, descendants=False):
             key = (target['chunk_id'], target['text'])
-            if target['chunk_id'] == chunk['chunk_id'] or key in seen:
+            if target['chunk_id'] == chunk['chunk_id']:
                 return
-            seen.add(key)
-            value = {k: target[k] for k in ('chunk_id', 'clause_id', 'heading', 'text', 'source') if k in target}
-            context.append(dict(value, relationship=relationship))
-            if descendants:
+            if key not in seen:
+                seen.add(key)
+                value = {k: target[k] for k in ('chunk_id', 'clause_id', 'heading', 'text', 'source') if k in target}
+                context.append(dict(value, relationship=relationship))
+            if descendants and target['chunk_id'] not in expanded:
+                expanded.add(target['chunk_id'])
                 target_scope = self.scopes[target['chunk_id']]
                 for child in self.children.get((target_scope, target.get('clause_id')), []):
                     attach(child, relationship, True)
@@ -82,10 +84,16 @@ class ContextIndex:
         children = list(chunk.get('child_clause_ids', []))
         children.extend(child['clause_id'] for child in self.children.get((scope, chunk.get('clause_id')), [])
                         if 'clause_id' in child)
+        if chunk.get('heading', '').strip() == chunk['text'].strip() and not chunk['text'].rstrip().endswith(':'):
+            # A standalone heading does not need an entire section to classify its own meaning.
+            children = []
         for child in dict.fromkeys(children):
             resolve(child, 'other', True)
-        for match in (REFERENCES.finditer(chunk['text']) if include_references else ()):
-            suffix = chunk['text'][match.end():match.end() + 100]
+        # A list item inherits restrictions from its parents, including their references.
+        reference_text = '\n'.join([chunk['text']] + [entry['text'] for entry in context
+                                                   if entry['relationship'] == 'parent'])
+        for match in (REFERENCES.finditer(reference_text) if include_references else ()):
+            suffix = reference_text[match.end():match.end() + 100]
             if re.match(r'\s+of\s+(?:the\s+)?(?:Regulation|Directive|Data Act|GDPR|[A-Z][\w -]*Act)\b', suffix):
                 missing.append(match.group() + ': external legal reference')
                 continue
@@ -111,7 +119,7 @@ class ContextIndex:
                     missing.append(match.group() + ': range not resolved')
             for number in numbers:
                 resolve(number, 'reference', True, target_scope)
-        for match in (re.finditer(r'\b(?:Annex|Appendix|Exhibit)\s+(?:[IVXLCDM]+|[A-Z]|\d+)\b', chunk['text'], re.I)
+        for match in (re.finditer(r'\b(?:Annex|Appendix|Exhibit)\s+(?:[IVXLCDM]+|[A-Z]|\d+)\b', reference_text, re.I)
                       if include_references else ()):
             if match.span() in qualified_sections:
                 continue
@@ -123,21 +131,27 @@ class ContextIndex:
                     attach(target, 'reference')
         if self.terms:
             texts = [chunk['text']] + [item['text'] for item in context]
-            for term, pattern in self.terms.items():
-                if not any(pattern.search(text) for text in texts):
-                    continue
-                definitions = self.definitions[term]
-                local = [d for s, d in definitions if s == scope]
-                candidates = local or [d for s, d in definitions if s == 0]
-                precise = [d for d in candidates if re.search(r'\b(?:means|shall mean|has the meaning)\b', d['text'].splitlines()[0])]
-                if precise:
-                    candidates = precise
-                if len(candidates) == 1:
-                    attach(candidates[0], 'definition')
-                elif any(d['chunk_id'] == chunk['chunk_id'] for d in candidates):
-                    continue
-                elif candidates:
-                    missing.append(term + ': ambiguous definition')
+            checked = set()
+            while True:
+                terms = [term for term, pattern in self.terms.items() if term not in checked
+                         and any(pattern.search(text) for text in texts)]
+                if not terms:
+                    break
+                for term in terms:
+                    checked.add(term)
+                    definitions = self.definitions[term]
+                    local = [d for s, d in definitions if s == scope]
+                    candidates = local or [d for s, d in definitions if s == self.main_scopes[scope]]
+                    precise = [d for d in candidates if re.search(r'\b(?:means|shall mean|has the meaning)\b', d['text'].splitlines()[0])]
+                    if precise:
+                        candidates = precise
+                    if len(candidates) == 1:
+                        attach(candidates[0], 'definition')
+                    elif any(d['chunk_id'] == chunk['chunk_id'] for d in candidates):
+                        continue
+                    elif candidates:
+                        missing.append(term + ': ambiguous definition')
+                texts = [chunk['text']] + [item['text'] for item in context]
         return context, list(dict.fromkeys(missing))
 
 
@@ -153,13 +167,11 @@ def enrich(document, root=Path('.'), progress=None):
         if initial['label'] != 'RELEVANT':
             continue
         context, missing = index.context_for(chunk)
+        item = dict({k: v for k, v in chunk.items() if k != 'classification'}, context=context)
         if missing:
-            decision = dict(initial)
-            decision['reason'] = decision.get('reason', '') + '; Unresolved context: ' + '; '.join(missing)
-            decision['label'] = 'NEEDS_CONTEXT'
-            chunk['classification'] = decision
-        else:
-            items.append(dict({k: v for k, v in chunk.items() if k != 'classification'}, context=context))
+            # Relevance and whether all policy conditions can be encoded are different decisions.
+            item['unresolved_references'] = missing
+        items.append(item)
     if progress:
         progress(len(updated['chunks']), len(updated['chunks']), 'Complete')
     return validate(updated, 3, root), validate(dict(contract_id=document['contract_id'], items=items), 4, root)

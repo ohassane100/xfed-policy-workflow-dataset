@@ -136,6 +136,8 @@ def classify_batch(items, client, root=Path('.'), num_ctx=None):
             raise ValueError('Batch response must classify each supplied chunk exactly once.')
         return [decisions[identifier] for identifier in identifiers]
     except (ValueError, ValidationError) as error:
+        if hasattr(client, 'discard_last_response'):
+            client.discard_last_response()
         if 'output token limit reached' in str(error).lower():
             raise ValueError(f'Classification failed: {error} '
                              'Adjust Classification thinking or Classification output tokens (1.3). '
@@ -150,7 +152,7 @@ def classify_batch(items, client, root=Path('.'), num_ctx=None):
                 classify_batch(items[middle:], client, root, num_ctx))
 
 
-def classification_batches(document, client, root=Path('.'), chunk_ids=None):
+def classification_batches(document, client, root=Path('.'), chunk_ids=None, include_references=False):
     from xfed.enrichment import ContextIndex
 
     validate(document, 2, root)
@@ -162,7 +164,7 @@ def classification_batches(document, client, root=Path('.'), chunk_ids=None):
     for chunk in document['chunks']:
         if chunk_ids is not None and chunk['chunk_id'] not in chunk_ids:
             continue
-        context, missing = index.context_for(chunk, include_references=False)
+        context, missing = index.context_for(chunk, include_references=include_references)
         source = {key: value for key, value in chunk.items() if key != 'classification'}
         item = dict(clause=source, context=list(context), unresolved_references=list(missing))
         items.append(item)
@@ -199,4 +201,38 @@ def classify(document, client, root=Path('.'), progress=None):
                            client, report if progress else None)
     for chunk, decision in zip(output['chunks'], (value for group in decisions for value in group)):
         chunk['classification'] = decision
+    # Resolve genuine uncertainty with additional source evidence, not another blind retry.
+    initial = {item['clause']['chunk_id']: item for group in work for item in group['items']}
+    pending = {chunk['chunk_id'] for chunk in output['chunks']
+               if chunk['classification']['label'] == 'NEEDS_CONTEXT'
+               and 'safe input budget' not in chunk['classification'].get('reason', '').lower()
+               and 'context limit reached' not in chunk['classification'].get('reason', '').lower()}
+    if pending:
+        retry = classification_batches(document, client, root, pending, include_references=True)
+        retry = [dict(group, items=[item for item in group['items']
+                                   if item['context'] != initial[item['clause']['chunk_id']]['context']])
+                 for group in retry]
+        retry = [dict(group, chunk_ids=[item['clause']['chunk_id'] for item in group['items']],
+                      chunk_id=group['items'][0]['clause']['chunk_id']) for group in retry if group['items']]
+        if retry:
+            extra = sum(len(group['items']) for group in retry)
+            if progress:
+                progress(len(output['chunks']), len(output['chunks']) + extra, 'Resolving uncertain clauses with referenced evidence')
+            lengths = {group['chunk_id']: len(group['items']) for group in retry}
+            completed = len(output['chunks'])
+            def report_retry(done, total, message):
+                nonlocal completed
+                if done:
+                    completed += lengths[message]
+                if progress:
+                    progress(completed, len(output['chunks']) + extra, 'Resolving referenced context: ' + message)
+            resolved = map_chunks(retry, lambda group, worker: classify_batch(
+                group['items'], worker, root, group['num_ctx']), client, report_retry if progress else None)
+            by_id = {item['clause']['chunk_id']: decision for group, values in zip(retry, resolved)
+                     for item, decision in zip(group['items'], values)}
+            for chunk in output['chunks']:
+                if chunk['chunk_id'] in by_id:
+                    chunk['classification'] = by_id[chunk['chunk_id']]
+    if progress:
+        progress(len(output['chunks']), len(output['chunks']), 'Complete')
     return validate(output, 3, root)

@@ -20,6 +20,7 @@ from xfed.relevance import classify
 from xfed.enrichment import enrich
 from xfed.llm import OllamaPool, load_client
 from xfed.policy_generation import generate
+from xfed.policy_review import review, fingerprint
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
 from xfed.evaluation import load_reference, reference_summary, run_evaluation
 
@@ -30,8 +31,9 @@ STAGES = {
     '1.3': ('1 preprocessing/1.3 relevance/classified_chunks.json', 3, 'chunks'),
     '1.4': ('1 preprocessing/1.4 enrichment/enriched_relevance.json', 4, 'items'),
     '2': ('2 policy_generation/policy.json', 5, 'traceability'),
+    '3': ('3 policy_review/policy_review.json', 6, 'clause_reviews'),
 }
-PREFERRED_MODELS = ['llama3.1:70b', 'deepseek-r1:70b', 'gemma3:27b']
+PREFERRED_MODELS = ['qwen3.5:27b', 'qwen3.5:35b', 'qwen3.5:9b', 'gemma3:27b', 'llama3.1:70b']
 
 
 def read_json(path, default=None):
@@ -87,6 +89,7 @@ class CachedClient:
             settings['compact_json'] = True
         key = hashlib.sha256(json.dumps([settings, prompt, value, schema],
                                        sort_keys=True).encode()).hexdigest()
+        self.last_cache_key = key
         with self.lock:
             cached = key in self.cache
             result = deepcopy(self.cache[key]) if cached else None
@@ -106,6 +109,12 @@ class CachedClient:
         if self.cancel.is_set():
             raise Cancelled()
         return result
+
+    def discard_last_response(self):
+        """A downstream evidence/semantic validation failure must not become a reusable answer."""
+        with self.lock:
+            if self.cache.pop(getattr(self, 'last_cache_key', None), None) is not None:
+                write_json(self.path, self.cache)
 
 
 class Pipeline:
@@ -183,6 +192,12 @@ class Pipeline:
             if value is not None:
                 try:
                     validate(value, version, self.root)
+                    if stage == '3':
+                        current = dict(policy=fingerprint(read_json(self.path(contract, '2'))),
+                                       enriched=fingerprint(read_json(self.path(contract, '1.4'))),
+                                       classified=fingerprint(read_json(self.path(contract, '1.3'))))
+                        if current != value['input_hashes']:
+                            raise ValueError('Review inputs changed; run policy review again.')
                 except Exception as exc:
                     error = str(exc).splitlines()[0]
             stages[stage] = dict(ready=value is not None and error is None,
@@ -195,8 +210,12 @@ class Pipeline:
             if label in labels:
                 labels[label] += 1
         report = self.output(contract) / '2 policy_generation/generation_report.json'
+        reviewed = read_json(self.path(contract, '3'))
+        review_summary = ({key: reviewed.get(key) for key in
+                           ('status', 'summary', 'evidence_errors', 'conflicts', 'requires_human_approval')}
+                          if isinstance(reviewed, dict) else None)
         return dict(contract=contract, stages=stages, labels=labels, source_locations=locations,
-                    report=read_json(report), job=self.snapshot())
+                    report=read_json(report), review=review_summary, job=self.snapshot())
 
     def make_client(self, request):
         available = {m['name']: m for m in self.models()}
@@ -243,10 +262,13 @@ class Pipeline:
         selected = list(STAGES)[:list(STAGES).index(stage) + 1] if mode == 'through' else [stage]
         if mode == 'step' and stage != '1.1':
             previous = list(STAGES)[list(STAGES).index(stage) - 1]
-            if not self.state(contract)['stages'][previous]['ready']:
+            state = self.state(contract)
+            empty_policy = stage == '3' and state['report'] is not None and state['report']['status'] in (
+                'no_supported_rules', 'generation_rejected')
+            if not state['stages'][previous]['ready'] and not empty_policy:
                 raise ValueError(f'Run stage {previous} first.')
         client = None
-        if any(s in ('1.3', '2') for s in selected):
+        if any(s in ('1.3', '2', '3') for s in selected):
             client = self.make_client(request)
         with self.lock:
             if self.job['status'] in ('running', 'cancelling'):
@@ -255,7 +277,7 @@ class Pipeline:
             self.active_client = client
             self.job = dict(status='running', contract=contract, stage=selected[0], completed=0,
                             total=0, message='Preparing pipeline inputs', log=[])
-        fresh_run = mode == 'through' and stage == '2'
+        fresh_run = mode == 'through' and stage in ('2', '3')
         reuse = request.get('reuse', True) and not fresh_run
         threading.Thread(target=self.run, args=(contract, selected, client, reuse, fresh_run),
                          daemon=True).start()
@@ -354,18 +376,25 @@ class Pipeline:
             self.cancel.clear()
             self.active_client = client
             self.evaluation_report = None
-            self.job = dict(status='running', contract='reference set', stage='1.3', mode='evaluation',
+            self.job = dict(status='running', contract='reference set', stage='2' if options['task'] == 'policy' else '1.3', mode='evaluation',
                             completed=0, total=0, message='Evaluating frozen references; pipeline outputs are preserved', log=[])
         threading.Thread(target=self.run_evaluation, args=(data, client, options), daemon=True).start()
         return self.snapshot()
 
     def run_evaluation(self, data, client, options):
+        def progress(done, total, message):
+            if message.startswith(('Policy', 'Starting policy')):
+                self.update(stage='2')
+            elif message.startswith(('Classification', 'Starting classification')):
+                self.update(stage='1.3')
+            self.progress(done, total, message)
+
         def completed(report):
             with self.lock:
                 self.evaluation_report = deepcopy(report)
                 self.job['log'].append('Saved ' + ', '.join(report['execution']) + ' evaluation predictions')
         try:
-            report = run_evaluation(data, client, self.root, progress=self.progress,
+            report = run_evaluation(data, client, self.root, progress=progress,
                                     cancel=self.cancel, completed=completed, **options)
             with self.lock:
                 self.evaluation_report = report
@@ -385,7 +414,8 @@ class Pipeline:
         stages = list(STAGES)
         for downstream in stages[stages.index(stage):]:
             self.path(contract, downstream).unlink(missing_ok=True)
-        (self.output(contract) / '2 policy_generation/generation_report.json').unlink(missing_ok=True)
+        if stages.index(stage) <= stages.index('2'):
+            (self.output(contract) / '2 policy_generation/generation_report.json').unlink(missing_ok=True)
         metadata = self.output(contract) / '.runs.json'
         runs = read_json(metadata, {})
         for downstream in stages[stages.index(stage):]:
@@ -407,14 +437,14 @@ class Pipeline:
             client = CachedClient(raw_client, self.output(contract) / '.llm_cache.json', self.cancel, reuse) if raw_client else None
             for stage in selected:
                 stage_started = perf_counter()
-                if raw_client and stage in ('1.3', '2'):
+                if raw_client and stage in ('1.3', '2', '3'):
                     raw_client.reset_assignments()
                 self.progress(0, 0, 'Starting stage ' + stage)
                 self.update(stage=stage)
                 # Keep the required upstream input in memory before invalidation.
                 previous = list(STAGES)[list(STAGES).index(stage) - 1] if stage != '1.1' else None
                 source = read_json(self.path(contract, previous)) if previous else None
-                if previous:
+                if previous and not (stage == '3' and source is None):
                     validate(source, STAGES[previous][1], self.root)
                 self.invalidate(contract, stage)
                 if stage == '1.1':
@@ -427,11 +457,21 @@ class Pipeline:
                     updated, result = enrich(source, self.root, self.progress)
                     self.progress(len(updated['chunks']), len(updated['chunks']), 'Saving enrichment')
                     write_output(self.path(contract, '1.3'), updated, 3, self.root)
-                else:
+                elif stage == '2':
                     result, report = generate(source, client, self.root, self.progress)
                     report['unresolved_chunks'] = self.state(contract)['labels']['NEEDS_CONTEXT']
                     self.progress(len(source['items']), len(source['items']), 'Saving policy draft')
                     write_json(self.output(contract) / '2 policy_generation/generation_report.json', report)
+                else:
+                    segmented = read_json(self.path(contract, '1.2'))
+                    classified = read_json(self.path(contract, '1.3'))
+                    original_chunks = [{key: value for key, value in chunk.items() if key != 'classification'}
+                                       for chunk in classified['chunks']]
+                    if original_chunks != segmented['chunks']:
+                        raise ValueError('Classified source text changed since segmentation; rerun preprocessing.')
+                    result = review(source, read_json(self.path(contract, '1.4')),
+                                    classified, client, self.root, self.progress,
+                                    read_json(self.output(contract) / '2 policy_generation/generation_report.json'))
                 self.progress(self.snapshot()['completed'], self.snapshot()['total'], 'Saving stage ' + stage)
                 if result is not None:
                     write_output(self.path(contract, stage), result, STAGES[stage][1], self.root)
@@ -439,17 +479,20 @@ class Pipeline:
                 meta = read_json(meta_path, {})
                 meta[stage] = dict(time=datetime.now(timezone.utc).isoformat(),
                                    duration_seconds=round(perf_counter() - stage_started, 3),
-                                   model=raw_client.model if stage in ('1.3', '2') else None,
-                                   options=raw_client.metadata() if raw_client and stage in ('1.3', '2') else None,
-                                   status=report['status'] if stage == '2' else 'complete')
+                                   model=raw_client.model if stage in ('1.3', '2', '3') else None,
+                                   options=raw_client.metadata() if raw_client and stage in ('1.3', '2', '3') else None,
+                                   status=result['status'] if stage == '3' else report['status'] if stage == '2' else 'complete')
                 write_json(meta_path, meta)
                 with self.lock:
-                    self.job['log'].append(f'{stage}: ' + (report['status'] if stage == '2' else 'saved')
+                    self.job['log'].append(f'{stage}: ' + meta[stage]['status']
                                            + f" ({meta[stage]['duration_seconds']:.3f}s)")
-                if stage == '2' and report['status'] == 'generation_rejected':
+                if stage == '2' and report['status'] == 'generation_rejected' and '3' not in selected:
                     self.finish('failed', 'No policy generated. Inspect the rejected clauses in the generation report.')
                     return
-            self.finish('complete', 'Finished')
+            if selected[-1] == '3':
+                self.finish('complete', 'Review finished: ' + result['status'] + '. Human approval required.')
+            else:
+                self.finish('complete', 'Finished')
         except (Cancelled, InterruptedError):
             self.finish('cancelled', 'Cancelled. Completed model requests are saved for retry.')
         except Exception as exc:

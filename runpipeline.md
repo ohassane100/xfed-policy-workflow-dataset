@@ -45,7 +45,7 @@ Open [http://127.0.0.1:8875](http://127.0.0.1:8875).
 Select the contract and primary model. Enable **Parallelize with different models**,
 set **Number of models**, and choose the additional models in the dropdowns.
 Each selected model gets one concurrent request worker through the existing API;
-workers share clauses in steps 1.3 and 2. Saved run metadata records the model and
+workers share clauses in steps 1.3, 2 and 3. Saved run metadata records the model and
 digest used for each clause. Ollama controls concurrent model loading and GPU placement.
 For separate cards on the reported Ollama 0.32.6 server, set **GPU index for model 1**
 to `0` and **GPU index for model 2** to `1` for the Qwen3.5 9B/35B pair.
@@ -90,6 +90,19 @@ Worker rows show the model, requested GPU, completed count and current activity.
 Detailed request timings and token totals remain available in run metadata.
 Policy validation rejects fragment identifiers and LegalTag names absent from the
 supplied evidence. Schema and evidence checks still do not establish semantic correctness.
+
+**Run step 3 / Policy review** checks every primary clause, including classifier
+negatives and generator abstentions, for missing rules and classification disagreements.
+It reviews rule modality, parties, assets and conditions against source evidence,
+records model/digest provenance, and flags exact duplicate/conflicting rule content.
+Select a different qualified model before running step 3 for stronger review;
+same-model reviews are recorded explicitly. **Run through review** uses the same
+selected pool throughout and does not guarantee a different reviewer per clause.
+Review can take longer because it audits all clauses. Failed/oversized requests
+remain incomplete. No review result constitutes human approval or an accuracy score.
+Use the frozen **Development** split to qualify models separately before combining
+them; keep the held-out test split for final comparisons. Generation reports
+separate generated clauses, abstentions needing review, and rejected responses per model.
 
 After restarting the updated UI, open **Generation settings → Compare 1.3 settings**
 at the existing browser URL. It uses the primary model and existing Ollama API, displays a comparison

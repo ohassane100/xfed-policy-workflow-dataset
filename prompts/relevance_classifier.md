@@ -19,6 +19,11 @@ inherit its action, actor, conditions or purpose from a parent. Do not discard
 such an item just because it does not repeat words like "data" or "use".
 
 Judge meaning, conditions and exceptions, not the presence of keywords:
+- Decide whether this primary text has substantive contractual meaning before
+  using the topic of its parent or section. Do not promote a standalone heading
+  merely because that section contains important rules.
+- Relevance is not a grant of permission. Dataset descriptions and definitions
+  can be relevant supporting material without creating an operative policy rule.
 - Standalone headings, title fragments, table of contents entries, page numbers,
   bibliographic citations and explanatory commentary are NOT_RELEVANT as
   independent contractual clauses. They may support other clauses as context.
@@ -26,6 +31,8 @@ Judge meaning, conditions and exceptions, not the presence of keywords:
 - Missing detail does not automatically mean missing evidence of relevance.
   A requirement to use data only for agreed purposes is RELEVANT even if those
   purposes are unspecified. Do not invent the purposes or fill placeholders.
+  If supplied text already clearly affects data rights or duties, classify it
+  RELEVANT even when a referenced restriction is needed to extract the exact rule.
 - Permitted data-use purposes, switching/export deadlines, surviving
   confidentiality obligations, and liability or remedies for data-related
   breaches can be RELEVANT. A general business or liability label is not a
@@ -42,3 +49,4 @@ On every classification, use the attached context to resolve dependencies. Retur
 RELEVANT or NOT_RELEVANT when justified, otherwise keep NEEDS_CONTEXT and explain
 what is missing. Never invent an absent provision or assume the contents of an
 external legal reference. Do not treat missing evidence as NOT_RELEVANT.
+Keep any reason to one or two specific sentences about this primary clause.
