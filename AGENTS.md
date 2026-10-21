@@ -6,3 +6,7 @@
 - Do not silently expand project scope.
 - Delete temporary/generated development artifacts instead of committing them.
 - When a new file is truly necessary, keep it focused on one clear responsibility.
+
+## Branch workflow
+- Develop, commit, and push on `dev`.
+- Treat `main` as read-only: do not commit or push directly to it. Submit changes through a pull request from `dev` to `main`.

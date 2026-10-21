@@ -26,7 +26,7 @@
 </header>
 <main class="app-main">
   <div id="error" class="error hidden" role="alert"></div>
-  <div id="job-panel" class="job hidden" aria-live="polite"><div class="jobrow"><div class="job-left"><span id="job-badge" class="badge">Ready</span><span id="job-message" class="jobmessage">Ready</span></div><div class="job-right"><span id="job-count"></span><button id="cancel" class="hidden">Cancel job</button></div></div><div id="progress" class="progress"><div id="progress-fill"></div></div><div id="run-log" class="runlog"></div><div id="model-runs" class="runlog"></div></div>
+  <div id="job-panel" class="job hidden" aria-live="polite"><div class="jobrow"><div class="job-left"><span id="job-badge" class="badge">Ready</span><span id="job-message" class="jobmessage">Ready</span></div><div class="job-right"><span id="job-count"></span><button id="cancel" class="hidden">Cancel &amp; unload</button></div></div><div id="progress" class="progress"><div id="progress-fill"></div></div><div id="run-log" class="runlog"></div><div id="model-runs" class="runlog"></div></div>
   <details id="benchmark-results" class="report hidden"><summary>Step 1.3 speed comparison</summary><p id="benchmark-summary"></p><div id="benchmark-table" class="table-scroll"></div><button id="benchmark-download">Download comparison JSON</button></details>
   <details id="evaluation-results" class="report hidden"><summary>Reference evaluation results</summary><p id="evaluation-summary"></p><div id="evaluation-table" class="table-scroll"></div><details><summary>Per-class metrics, confusion matrices and uncertainty</summary><pre id="evaluation-details"></pre></details><button id="evaluation-download">Download evaluation JSON</button></details>
   <section id="dashboard-screen" class="screen">
@@ -48,7 +48,7 @@
     <div class="pipeline-contract"><label for="contract">Source contract</label><select id="contract" aria-label="Source contract"></select><span class="badge neutral">1 preprocessing &rarr; 2 policy generation</span></div>
     <nav id="stage-nav" class="stage-nav" aria-label="Pipeline stages"></nav>
     <div class="pagehead"><div><div class="eyebrow" id="eyebrow">Contract preprocessing</div><h1 id="title">Extraction</h1><p id="subtitle">document_blocks.json</p></div><span id="stage-badge" class="badge">Not run</span></div>
-    <section aria-label="Run settings"><div class="pipeline-settings"><div class="field model-field"><label id="model-setting-label" for="model">Model for 1.3 and 2</label><div class="modelrow"><select id="model"><option value="">Checking installed models...</option></select><button id="refresh" class="refresh" title="Refresh installed models" aria-label="Refresh installed models"></button></div></div><div class="actions"><button id="run-step" class="primary">Run step 1.1</button><button id="run-through">Run through 2</button></div></div>
+    <section aria-label="Run settings"><div class="pipeline-settings"><div class="field model-field"><label id="model-setting-label" for="model">Model for 1.3 and 2</label><div class="modelrow"><select id="model"><option value="">Checking installed models...</option></select><button id="refresh" class="refresh" title="Refresh installed models" aria-label="Refresh installed models"></button></div></div><div class="actions"><button id="run-step" class="primary">Run step 1.1</button><button id="run-through">Run through 2</button><button id="unload" title="Unload selected models from memory; keep downloaded files" disabled>Unload selected models</button></div></div>
     <label class="check"><input type="checkbox" id="parallel" disabled>Parallelize with different models</label>
     <div id="parallel-options" class="settings hidden"><div class="field"><label for="parallel-model-count">Number of models</label><input id="parallel-model-count" type="number" value="2" min="2" max="2" step="1"></div><div class="field"><label for="primary-gpu">GPU index for model 1</label><input id="primary-gpu" type="number" min="0" step="1" placeholder="Auto"></div></div>
     <p id="worker-note"></p>
@@ -97,7 +97,7 @@ function icon(name){const svg=document.createElementNS('http://www.w3.org/2000/s
 document.querySelectorAll('.metrics .metric-icon').forEach((el,i)=>el.replaceChildren(icon(['file','layers','warning','policy'][i])));
 $('refresh').replaceChildren(icon('refresh'));$('previous').replaceChildren(icon('left'));$('next').replaceChildren(icon('right'));$('download').prepend(icon('download'));$('download').style.display='flex';$('download').style.alignItems='center';$('download').style.gap='6px';
 const stages=[['1.1','Extraction','document_blocks.json','blocks'],['1.2','Segmentation','contract_chunks.json','chunks'],['1.3','Relevance','classified_chunks.json','chunks'],['1.4','Enrichment','enriched_relevance.json','items'],['2','Policy creation','policy.json','traceability']];
-let stage='1.1',state=null,output=null,records=[],selected=null,page=0,view='records',outputKey='',busy=false,modelsOK=false,modelsChecked=false,loading=false,stateRequest=0,screen='dashboard',overview=null,overviewLoading=false,overviewKey='',preferredModel='',installedModels=[],preferredModels=[],gpuSelectionAvailable=false;
+let stage='1.1',state=null,output=null,records=[],selected=null,page=0,view='records',outputKey='',busy=false,modelsOK=false,modelsChecked=false,loading=false,stateRequest=0,screen='dashboard',overview=null,overviewLoading=false,overviewKey='',preferredModel='',installedModels=[],preferredModels=[],gpuSelectionAvailable=false,modelUnloadingAvailable=false;
 function element(tag,text,cls){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;}
 async function api(path,body){const res=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json();if(!res.ok)throw Error(data.error||'Request failed');return data;}
 function showError(error){$('error').textContent=String(error.message||error);$('error').classList.remove('hidden');}
@@ -168,7 +168,10 @@ function controls(){
  $('benchmark').disabled=busy||loading||!state?.stages['1.2']?.ready||!$('model').value;
  $('evaluate').disabled=busy||!ready;
  $('run-through').disabled=!contract()||busy||loading||!ready;
- $('cancel').classList.toggle('hidden',!busy);
+ $('unload').disabled=busy||!ready||!modelUnloadingAvailable;
+ $('unload').title=modelUnloadingAvailable?'Unload selected models from memory; keep downloaded files':'Restart the updated UI server to enable model unloading';
+ const currentJob=screen==='pipeline'?state?.job:overview?.job;
+ $('cancel').classList.toggle('hidden',!busy||currentJob?.mode==='unload');
  $('cancel').disabled=state?.job.status==='cancelling'||overview?.job.status==='cancelling';
  ['model','num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_compact','relevance_num_ctx','relevance_num_batch','relevance_think','think','timeout','reuse','contract'].forEach(id=>$(id).disabled=busy);
  $('parallel').disabled=busy||installedModels.length<2;$('parallel-model-count').disabled=busy||!parallel;
@@ -229,20 +232,20 @@ let benchmarkReport=null,benchmarkKey='',evaluationReport=null,evaluationKey='';
 function updateJob(job){
  busy=['running','cancelling'].includes(job.status);
  $('job-panel').classList.toggle('hidden',job.status==='idle');
- $('model-runs').textContent=(job.workers||[]).map(w=>{
-  const request=w.active_request,last=w.last_request;
-  let text=workerLabel(w)+' / '+w.completed+' completed';
-  if(w.assigned!=null)text+=' / '+w.assigned+' assigned';
-  if(w.failed)text+=' / '+w.failed+' failed';
-  if(w.active_chunks?.length)text+=' / active: '+w.active_chunks.join(', ');
-  if(w.performance)text+=' / '+w.performance.responses+' API responses';
-  if(request){text+=' / '+request.phase+' / '+request.elapsed_seconds+'s';if(request.thinking_chars)text+=' / '+request.thinking_chars+' thinking characters';if(request.answer_chars)text+=' / '+request.answer_chars+' answer characters';}
-  else if(last)text+=' / last request '+last.duration_seconds+'s'+(last.output_tokens!=null?' / '+last.output_tokens+' output tokens':'');
-  return text;
- }).join('  |  ');
+ $('model-runs').replaceChildren(...(job.mode==='unload'?[]:job.workers||[]).map(w=>{
+  let activity='Idle';
+  if(job.status==='cancelling')activity='Stopping';
+  else if(w.active_request)activity=({'Waiting for Ollama':'Waiting','Generating answer':'Generating','Thinking':'Thinking'})[w.active_request.phase]||'Processing';
+  else if(w.active_chunks?.length)activity='Processing';
+  else if(job.status!=='running')activity=job.status==='complete'?'Finished':'Stopped';
+  const gpu=w.main_gpu==null?'GPU Auto':'GPU '+w.main_gpu;
+  const row=element('div',[w.model,gpu,w.completed+' completed',w.failed?w.failed+' failed':null,activity].filter(Boolean).join(' · '));
+  row.title=w.main_gpu==null?'Ollama chooses GPU placement.':'Requested GPU '+w.main_gpu+'.';
+  return row;
+ }));
  $('job-badge').textContent=job.status==='complete'?'Complete':job.status==='cancelling'?'Cancelling':job.status==='running'?'Running':job.status==='failed'?'Failed':'Cancelled';
  $('job-badge').className='badge '+(job.status==='failed'?'danger':job.status==='complete'?'success':'neutral');
- $('job-message').textContent=job.status==='idle'?'Ready':(job.mode==='evaluation'?'Reference evaluation':prettyContract(job.contract)+' / '+job.stage+' '+stageName(job.stage))+' / '+job.message;
+ $('job-message').textContent=job.status==='idle'?'Ready':(job.mode==='unload'?'Model unloading':job.mode==='evaluation'?'Reference evaluation':prettyContract(job.contract)+' / '+job.stage+' '+stageName(job.stage))+' / '+job.message;
  $('job-count').textContent=job.total?job.completed+' / '+job.total:'';
  $('run-log').textContent=(job.log||[]).join('  |  ');
  $('progress-fill').style.width=(job.total?100*job.completed/job.total:job.status==='complete'?100:0)+'%';
@@ -341,9 +344,9 @@ function renderNotices(){
  const notices=[];
  if(modelsChecked&&!modelsOK)notices.push({title:'Ollama unavailable',message:'No model connection.',action:'Open model settings',open:()=>showScreen('pipeline')});
  const job=overview?.job||state?.job;
- const openJob=()=>job.mode==='evaluation'?showScreen('pipeline'):openContract(job.contract,job.stage);
- if(job?.status==='failed')notices.push({title:job.mode==='evaluation'?'Reference evaluation failed':'Stage '+job.stage+' failed',message:job.message,action:'Inspect run',open:openJob});
- if(job&&['running','cancelling'].includes(job.status))notices.push({title:job.mode==='evaluation'?'Reference evaluation':prettyContract(job.contract)+' / '+stageName(job.stage),message:job.completed+' / '+job.total+' / '+job.status,action:'Open current run',open:openJob});
+ const openJob=()=>['evaluation','unload'].includes(job.mode)?showScreen('pipeline'):openContract(job.contract,job.stage);
+ if(job?.status==='failed')notices.push({title:job.mode==='unload'?'Model unloading failed':job.mode==='evaluation'?'Reference evaluation failed':'Stage '+job.stage+' failed',message:job.message,action:'Inspect run',open:openJob});
+ if(job&&['running','cancelling'].includes(job.status))notices.push({title:job.mode==='unload'?'Model unloading':job.mode==='evaluation'?'Reference evaluation':prettyContract(job.contract)+' / '+stageName(job.stage),message:job.completed+' / '+job.total+' / '+job.status,action:'Open current run',open:openJob});
  for(const c of overview?.contracts||[]){
   if(c.labels.NEEDS_CONTEXT)notices.push({title:prettyContract(c.contract),message:c.labels.NEEDS_CONTEXT+' clauses need context.',action:'Inspect relevance',open:()=>openContract(c.contract,'1.3')});
   if(c.report?.skipped)notices.push({title:prettyContract(c.contract)+' / Policy draft',message:c.report.skipped+' clauses skipped during generation.',action:'Open generation report',open:()=>{openContract(c.contract,'2');$('report').open=true;}});
@@ -433,6 +436,14 @@ $('benchmark').onclick=async()=>{clearError();benchmarkKey='';$('benchmark-resul
 $('benchmark-download').onclick=()=>{if(!benchmarkReport)return;const url=URL.createObjectURL(new Blob([JSON.stringify(benchmarkReport,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=benchmarkReport.contract+'_benchmark.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('evaluate').onclick=async()=>{clearError();evaluationKey='';$('evaluation-results').classList.add('hidden');try{await api('/api/evaluation',{...modelSettings(),task:$('evaluation-task').value,split:$('evaluation-split').value,source:$('evaluation-source').value});await refreshState();}catch(error){showError(error);}};
 $('evaluation-download').onclick=()=>{if(!evaluationReport)return;const url=URL.createObjectURL(new Blob([JSON.stringify(evaluationReport,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='xfed_evaluation_'+evaluationReport.split+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('unload').onclick=async()=>{
+ clearError();$('unload').disabled=true;
+ try{
+  const names=$('parallel').checked?selectedModels():[$('model').value];
+  updateJob(await api('/api/unload',{models:names}));
+  if(screen==='pipeline')await refreshState();else await refreshOverview();
+ }catch(error){showError(error);controls();}
+};
 $('run-step').onclick=()=>run('step');$('run-through').onclick=()=>run('through');$('cancel').onclick=async()=>{try{await api('/api/cancel',{});if(screen==='pipeline')await refreshState();else await refreshOverview();}catch(error){showError(error);}};$('refresh').onclick=refreshModels;$('model').onchange=renderWorkers;$('parallel').onchange=renderWorkers;$('parallel-model-count').onchange=renderWorkers;$('search').oninput=()=>{page=0;renderRecords();};$('filter').onchange=()=>{page=0;renderRecords();};$('previous').onclick=()=>{page--;renderRecords();};$('next').onclick=()=>{page++;renderRecords();};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('contract').onchange=()=>{clearError();$('pdf').removeAttribute('src');outputKey='';selectStage(stage);if(view==='pdf')setView('pdf');};$('download').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=contract()+'_'+stages.find(s=>s[0]===stage)[2];link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
@@ -445,6 +456,7 @@ $('contract-search').oninput=()=>renderContractTable('contracts-table',$('contra
   const config=await api('/api/config');
   preferredModel=config.model_defaults?.model||'';
   gpuSelectionAvailable=config.worker_gpu_selection===true;
+  modelUnloadingAvailable=config.model_unloading===true;
   preferredModels=config.preferred_models||[];
   for(const field of ['num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_num_ctx','relevance_num_batch','timeout'])if(config.model_defaults?.[field])$(field).value=config.model_defaults[field];
   if(typeof config.model_defaults?.think==='boolean')$('think').value=config.model_defaults.think?'on':'off';

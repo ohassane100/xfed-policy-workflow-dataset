@@ -3,6 +3,9 @@
 Run the private pipeline dashboard on Gorina5 from the repository root:
 
 ```bash
+git fetch origin
+git checkout dev
+git pull --ff-only origin dev
 uenv miniconda3-py39
 conda activate xfed
 python -m pip install -e .

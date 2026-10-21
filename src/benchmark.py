@@ -85,7 +85,8 @@ def run_variant(document, chunk_ids, client, root, progress=None):
 
 
 def compare_settings(document, base_url, model, root=Path('.'), limit=24, num_ctx=32768, timeout=600,
-                     variants=DEFAULT_VARIANTS, progress=None, completed=None, cancel=None, think=None):
+                     variants=DEFAULT_VARIANTS, progress=None, completed=None, cancel=None, think=None,
+                     client_ready=None):
     chunk_ids = selected_chunks(document, limit or len(document['chunks']), root)
     report = dict(contract=document['contract_id'], model=model, sampled_chunk_ids=sorted(chunk_ids), runs=[])
     reference, digest = None, None
@@ -100,7 +101,9 @@ def compare_settings(document, base_url, model, root=Path('.'), limit=24, num_ct
         checkpoint(0, 0, name + ': warming model')
         settings = settings_for(name, num_ctx)
         client = OllamaPool([base_url], model, num_ctx=num_ctx, num_predict=min(4096, num_ctx - 1), think=think,
-                            timeout=timeout, workers_per_endpoint=1, **settings)
+                            timeout=timeout, workers_per_endpoint=1, cancel=cancel, **settings)
+        if client_ready:
+            client_ready(client)
         try:
             client.preflight()
             if digest is not None and client.model_digest != digest:
