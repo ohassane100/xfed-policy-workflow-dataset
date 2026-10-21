@@ -10,8 +10,8 @@ from urllib.request import Request, urlopen
 
 class OllamaClient:
     def __init__(self, base_url, model, timeout=300, num_ctx=32768, num_predict=512, think=None, main_gpu=None,
-                 relevance_num_predict=128, relevance_think=None, relevance_batch_size=4, keep_alive='30m',
-                 relevance_compact=True, relevance_num_ctx=0, relevance_num_batch=None):
+                 relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1, keep_alive='30m',
+                 relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None):
         if not isinstance(base_url, str) or urlsplit(base_url).scheme not in ('http', 'https') or not urlsplit(base_url).hostname:
             raise ValueError('Set a valid HTTP(S) Ollama base_url.')
         if not isinstance(model, str) or not model.strip() or model == 'PLACEHOLDER':
@@ -26,8 +26,8 @@ class OllamaClient:
             raise ValueError('main_gpu must be a nonnegative integer or omitted.')
         if type(relevance_num_predict) is not int or not 128 <= relevance_num_predict < num_ctx:
             raise ValueError('relevance_num_predict must be at least 128 and less than num_ctx.')
-        if relevance_think is not None and not isinstance(relevance_think, bool):
-            raise ValueError('relevance_think must be true, false, or omitted.')
+        if relevance_think is not None and not isinstance(relevance_think, bool) and relevance_think != 'auto':
+            raise ValueError('relevance_think must be auto, true, false, or null.')
         if not isinstance(keep_alive, (str, int)) or isinstance(keep_alive, bool):
             raise ValueError('keep_alive must be an Ollama duration string or integer.')
         if type(relevance_batch_size) is not int or not 1 <= relevance_batch_size <= 16:
@@ -35,11 +35,12 @@ class OllamaClient:
         if type(relevance_compact) is not bool:
             raise ValueError('relevance_compact must be true or false.')
         if type(relevance_num_ctx) is not int or (relevance_num_ctx != 0 and not 1024 <= relevance_num_ctx <= num_ctx):
-            raise ValueError('relevance_num_ctx must be 0 (automatic), or between 1024 and num_ctx.')
+            raise ValueError('relevance_num_ctx must be 0 (run context), or between 1024 and num_ctx.')
         if relevance_num_batch is not None and (type(relevance_num_batch) is not int or relevance_num_batch < 1):
             raise ValueError('relevance_num_batch must be a positive integer or omitted.')
         self.relevance_batch_size = relevance_batch_size
         self.relevance_num_predict, self.relevance_think = relevance_num_predict, relevance_think
+        self.auto_relevance_think = None
         self.relevance_compact = relevance_compact
         self.relevance_num_ctx, self.relevance_num_batch = relevance_num_ctx, relevance_num_batch
         self.keep_alive = keep_alive
@@ -55,14 +56,22 @@ class OllamaClient:
             self.stats = dict(responses=0, request_seconds=0.0, load_seconds=0.0,
                               prompt_seconds=0.0, generation_seconds=0.0, prompt_tokens=0,
                               output_tokens=0, context_requests={})
+            self.active_request = None
+            self.last_request = None
 
     def metadata(self):
         result = {key: getattr(self, key, None) for key in
                   ('url', 'model', 'model_digest', 'timeout', 'num_ctx', 'num_predict', 'think',
                    'main_gpu', 'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
-                   'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch')}
+                   'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch', 'auto_relevance_think')}
         with self._stats_lock:
             result['performance'] = dict(self.stats, context_requests=dict(self.stats['context_requests']))
+            result['active_request'] = None
+            if self.active_request:
+                active = dict(self.active_request)
+                active['elapsed_seconds'] = round(perf_counter() - active.pop('started'), 1)
+                result['active_request'] = active
+            result['last_request'] = dict(self.last_request) if self.last_request else None
         return result
 
     def preflight(self):
@@ -72,6 +81,24 @@ class OllamaClient:
         if not model or not model.get('digest'):
             raise ValueError(f'{self.model!r} is not installed at {self.url}.')
         self.model_digest = model['digest']
+        self.auto_relevance_think = None
+        if self.relevance_think == 'auto' and 'thinking' in model.get('capabilities', []):
+            request = Request(self.url.removesuffix('/api/chat') + '/api/show',
+                              data=json.dumps(dict(model=self.model)).encode(),
+                              headers={'Content-Type': 'application/json'})
+            with urlopen(request, timeout=10) as response:
+                details = json.load(response)
+            if not isinstance(details, dict):
+                raise ValueError('Ollama model details must be a JSON object.')
+            controls = details.get('thinking') or {}
+            values = controls.get('values') if isinstance(controls, dict) else None
+            family = details.get('details', {}).get('family', model.get('details', {}).get('family', ''))
+            # Older Ollama versions lack thinking.values. Qwen3.5 documents its on/off switch;
+            # retain the model default for other families without explicit capability metadata.
+            if isinstance(values, list):
+                self.auto_relevance_think = False if any(value is False for value in values) else None
+            elif family in ('qwen35', 'qwen35moe'):
+                self.auto_relevance_think = False
         return self.metadata()
 
     def generate(self, system, value, schema, num_predict=None, think=None, num_ctx=None, num_batch=None,
@@ -90,7 +117,7 @@ class OllamaClient:
         effective_think = self.think if think is None else think
         if effective_think is not None and not isinstance(effective_think, bool):
             raise ValueError('think must be true, false, or omitted.')
-        payload = dict(model=self.model, stream=False, format=schema, keep_alive=self.keep_alive,
+        payload = dict(model=self.model, stream=True, format=schema, keep_alive=self.keep_alive,
                        messages=[dict(role='system', content=system),
                                  dict(role='user', content=json.dumps(value, ensure_ascii=False,
                                       **({'separators': (',', ':')} if compact_json else {})))],
@@ -108,9 +135,39 @@ class OllamaClient:
         request = Request(self.url, data=json.dumps(payload).encode('utf-8'),
                           headers={'Content-Type': 'application/json'})
         started = perf_counter()
+        result, content, thinking_chars = {}, [], 0
+        with self._stats_lock:
+            self.active_request = dict(started=started, phase='Waiting for Ollama',
+                                       context_tokens=context_limit, output_limit=output_limit,
+                                       think=effective_think, answer_chars=0, thinking_chars=0)
         try:
             with urlopen(request, timeout=self.timeout) as response:
-                result = json.load(response)
+                for line in response:
+                    if not line.strip():
+                        continue
+                    if perf_counter() - started > self.timeout:
+                        raise TimeoutError(f'Request exceeded {self.timeout} seconds.')
+                    event = json.loads(line)
+                    if not isinstance(event, dict):
+                        raise ValueError('Expected an Ollama response object.')
+                    if event.get('error'):
+                        raise RuntimeError(f'Ollama error for {self.model!r}: {event["error"]}')
+                    message = event.get('message') or {}
+                    answer = message.get('content') or ''
+                    thinking = message.get('thinking') or ''
+                    content.append(answer)
+                    thinking_chars += len(thinking)
+                    with self._stats_lock:
+                        self.active_request['answer_chars'] += len(answer)
+                        self.active_request['thinking_chars'] = thinking_chars
+                        if answer:
+                            self.active_request['phase'] = 'Generating answer'
+                        elif thinking:
+                            self.active_request['phase'] = 'Thinking'
+                    result = event
+                    if event.get('done') is True:
+                        break
+                result['message'] = dict(content=''.join(content))
         except HTTPError as error:
             try:
                 detail = error.read(8192).decode('utf-8', errors='replace').strip()
@@ -130,6 +187,13 @@ class OllamaClient:
             raise RuntimeError(f'Ollama request failed at {self.url}: {error}') from error
         except (ValueError, UnicodeError) as error:
             raise ValueError('Ollama returned an invalid JSON response.') from error
+        finally:
+            with self._stats_lock:
+                self.last_request = dict(duration_seconds=round(perf_counter() - started, 3),
+                                         context_tokens=context_limit, output_limit=output_limit,
+                                         thinking_chars=thinking_chars, answer_chars=sum(map(len, content)),
+                                         output_tokens=result.get('eval_count'), done_reason=result.get('done_reason'))
+                self.active_request = None
         if not isinstance(result, dict):
             raise ValueError('Ollama response incomplete or truncated; increase output tokens before accepting it.')
         with self._stats_lock:
@@ -159,8 +223,10 @@ class OllamaClient:
             if (isinstance(prompt_tokens, int) and isinstance(output_tokens, int)
                     and prompt_tokens + output_tokens >= context_limit):
                 raise ValueError('Ollama context limit reached; reduce input context or increase num_ctx.')
-            raise ValueError(f'Ollama output token limit reached at {output_limit} tokens; '
-                             'increase output tokens before accepting it.')
+            detail = (' Thinking consumed generation time before a complete answer was produced.'
+                      if thinking_chars else '')
+            raise ValueError(f'Ollama output token limit reached at {output_limit} tokens '
+                             f'for {self.model!r}; answer characters: {len(result["message"]["content"])}.' + detail)
         try:
             answer = json.loads(result['message']['content'])
         except (KeyError, TypeError, ValueError) as error:
@@ -172,7 +238,8 @@ class OllamaClient:
 class OllamaPool:
     """Bound concurrent requests and keep each chunk's retries on one worker."""
 
-    def __init__(self, base_urls, model=None, workers_per_endpoint=1, worker_models=None, workers=None, **options):
+    def __init__(self, base_urls, model=None, workers_per_endpoint=1, worker_models=None, workers=None,
+                 worker_gpus=None, **options):
         if (not isinstance(base_urls, list) or not base_urls or
                 any(not isinstance(url, str) for url in base_urls) or
                 len(set(url.rstrip('/') for url in base_urls)) != len(base_urls)):
@@ -190,8 +257,21 @@ class OllamaPool:
             if workers_per_endpoint != 1:
                 raise ValueError('Use one request per model when parallelizing different models.')
         self.parallel_models = worker_models is not None
-        self.clients = [OllamaClient(url, name, **options)
-                        for url in base_urls for name in (worker_models if self.parallel_models else [model])]
+        if worker_gpus is not None:
+            if (not self.parallel_models or not isinstance(worker_gpus, list) or
+                    len(worker_gpus) != len(worker_models) or
+                    any(gpu is not None and (type(gpu) is not int or gpu < 0) for gpu in worker_gpus)):
+                raise ValueError('Choose one nonnegative GPU index or Auto for each parallel model.')
+            explicit_gpus = [gpu for gpu in worker_gpus if gpu is not None]
+            if len(set(explicit_gpus)) != len(explicit_gpus):
+                raise ValueError('Choose different GPU indices for parallel models, or leave placement on Auto.')
+        self.clients = []
+        for url in base_urls:
+            for index, name in enumerate(worker_models if self.parallel_models else [model]):
+                settings = dict(options)
+                if worker_gpus is not None:
+                    settings['main_gpu'] = worker_gpus[index]
+                self.clients.append(OllamaClient(url, name, **settings))
         first = self.clients[0]
         for key in ('model', 'timeout', 'num_ctx', 'num_predict', 'think', 'main_gpu',
                     'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
@@ -232,20 +312,32 @@ class OllamaPool:
         with self._lock:
             self.assignments = {}
             self.completed = [0] * len(self.clients)
+            self.assigned = [0] * len(self.clients)
+            self.failed = [0] * len(self.clients)
+            self.active_chunks = [[] for _ in self.clients]
 
     @contextmanager
     def for_chunk(self, chunk_id):
         client = self._available.get()
         index = self.clients.index(client)
+        chunk_ids = []
         try:
             chunk_ids = [chunk_id] if isinstance(chunk_id, str) else list(chunk_id)
             with self._lock:
                 for identifier in chunk_ids:
                     self.assignments[identifier] = index
+                self.assigned[index] += len(chunk_ids)
+                self.active_chunks[index] = chunk_ids
             yield client
             with self._lock:
                 self.completed[index] += len(chunk_ids)
+        except Exception:
+            with self._lock:
+                self.failed[index] += len(chunk_ids)
+            raise
         finally:
+            with self._lock:
+                self.active_chunks[index] = []
             self._available.put(client)
 
     def metadata(self):
@@ -253,10 +345,13 @@ class OllamaPool:
         result.update(base_urls=list(dict.fromkeys(c.url.removesuffix('/api/chat') for c in self.clients)),
                       model=self.model, model_digest=getattr(self, 'model_digest', None),
                       model_digests=dict(getattr(self, 'model_digests', {})), parallel_models=self.parallel_models,
+                      worker_gpus=[c.main_gpu for c in self.clients],
                       models=[c.metadata() for c in self.clients],
                       workers=self.workers, workers_per_endpoint=self.workers_per_endpoint)
         with self._lock:
-            result.update(assignments=dict(self.assignments), completed=list(self.completed))
+            result.update(assignments=dict(self.assignments), completed=list(self.completed),
+                          assigned=list(self.assigned), failed=list(self.failed),
+                          active_chunks=[list(chunks) for chunks in self.active_chunks])
         return result
 
     def generate(self, *args, **kwargs):
@@ -283,10 +378,10 @@ def load_client(path):
                       timeout=settings.get('timeout', 300), num_ctx=settings.get('num_ctx', 32768),
                       num_predict=settings.get('num_predict', 512), think=settings.get('think'),
                       main_gpu=settings.get('main_gpu'),
-                      relevance_num_predict=settings.get('relevance_num_predict', 128),
-                      relevance_think=settings.get('relevance_think'),
-                      relevance_batch_size=settings.get('relevance_batch_size', 4),
-                      relevance_compact=settings.get('relevance_compact', True),
+                      relevance_num_predict=settings.get('relevance_num_predict', 4096),
+                      relevance_think=settings.get('relevance_think', 'auto'),
+                      relevance_batch_size=settings.get('relevance_batch_size', 1),
+                      relevance_compact=settings.get('relevance_compact', False),
                       relevance_num_ctx=settings.get('relevance_num_ctx', 0),
                       relevance_num_batch=settings.get('relevance_num_batch'),
                       keep_alive=settings.get('keep_alive', '30m'))

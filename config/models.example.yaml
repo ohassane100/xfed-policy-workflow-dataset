@@ -1,20 +1,16 @@
 # Copy to config/models.yaml and fill in the endpoint/model available to you.
-# Add execution.base_urls for separately exposed GPU replicas.
-execution:
-  # The shared API currently queues same-model requests; batch clauses instead.
-  workers_per_endpoint: 1
 relevance_classifier:
   provider: ollama
   base_url: http://localhost:11434
   model: llama3.1:70b
   timeout: 300
-  num_ctx: 32768
+  num_ctx: 16384
   num_predict: 4096
-  relevance_num_predict: 128
-  relevance_batch_size: 4
-  relevance_compact: true
-  relevance_num_ctx: 0  # Automatic allocation; full context is retained on overflow.
+  relevance_num_predict: 4096
+  relevance_batch_size: 1
+  relevance_compact: false
+  relevance_num_ctx: 0  # Use the run's context allocation; preserve all supporting evidence.
   # Optional relevance_num_batch: 1024 controls prompt-processing tokens, not clause count.
   keep_alive: 30m
-  # Optional relevance_think: false affects 1.3 only, if the selected model supports it.
+  relevance_think: auto  # Disable thinking for classification only when supported.
   # Omit think to preserve the policy model's default; some models cannot disable thinking.

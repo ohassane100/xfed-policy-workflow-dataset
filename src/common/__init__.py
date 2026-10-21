@@ -103,7 +103,7 @@ def map_chunks(items, operation, client, progress=None):
                 return operation(item, worker)
         return operation(item, client)
     if progress:
-        progress(0, len(items), 'Starting')
+        progress(0, len(items), 'Waiting for model responses')
     if workers == 1:
         results = []
         for item in items:

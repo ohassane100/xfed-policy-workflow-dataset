@@ -9,7 +9,7 @@ def classification_request(items, client, root=Path('.')):
     """Build the actual prompt, evidence and response schema for a group of clauses."""
     decision = schema(3, root)['properties']['chunks']['items']['properties']['classification']
     prompt = (Path(root) / 'prompts/relevance_classifier.md').read_text(encoding='utf-8')
-    if getattr(client, 'relevance_compact', True):
+    if getattr(client, 'relevance_compact', False):
         # Source pages and block IDs remain in the output; inference needs the contractual text.
         fields = ('clause_id', 'parent_clause_id', 'heading', 'text')
         context_pool, context_ids, clauses = [], {}, []
@@ -67,14 +67,13 @@ def classification_request(items, client, root=Path('.')):
 def request_bytes(items, client, root=Path('.')):
     prompt, value, response_schema = classification_request(items, client, root)
     options = dict(ensure_ascii=False)
-    if getattr(client, 'relevance_compact', True):
+    if getattr(client, 'relevance_compact', False):
         options['separators'] = (',', ':')
     return len((prompt + json.dumps(value, **options) + json.dumps(response_schema)).encode('utf-8'))
 
 
 def output_limit(items, client):
-    return min(getattr(client, 'num_predict', 4096),
-               len(items) * getattr(client, 'relevance_num_predict', 128))
+    return getattr(client, 'relevance_num_predict', getattr(client, 'num_predict', 4096))
 
 
 def fits(items, client, root, num_ctx, limit=None):
@@ -99,16 +98,19 @@ def classify_batch(items, client, root=Path('.'), num_ctx=None):
         raise ValueError('Batch input chunk IDs must be unique.')
     prompt, value, response_schema = classification_request(items, client, root)
     maximum_context = getattr(client, 'num_ctx', 32768)
-    num_ctx = num_ctx or getattr(client, 'relevance_num_ctx', 0) or min(8192, maximum_context)
+    num_ctx = num_ctx or getattr(client, 'relevance_num_ctx', 0) or maximum_context
     limit = output_limit(items, client)
-    options = dict(truncate=False, compact_json=getattr(client, 'relevance_compact', True))
+    options = dict(truncate=False, compact_json=getattr(client, 'relevance_compact', False))
     if getattr(client, 'relevance_num_batch', None) is not None:
         options['num_batch'] = client.relevance_num_batch
-    if getattr(client, 'relevance_think', None) is not None:
-        options['think'] = client.relevance_think
+    thinking = getattr(client, 'relevance_think', None)
+    if thinking == 'auto':
+        thinking = getattr(client, 'auto_relevance_think', None)
+    if thinking is not None:
+        options['think'] = thinking
     try:
-        # Context or output overflow may each need one retry, never an unbounded loop.
-        for _ in range(3):
+        # Only retry when a larger context can fit the same complete evidence.
+        for _ in range(2):
             if not fits(items, client, root, num_ctx, limit):
                 num_ctx = maximum_context
                 if not fits(items, client, root, num_ctx, limit):
@@ -121,14 +123,11 @@ def classify_batch(items, client, root=Path('.'), num_ctx=None):
                 if 'context limit reached' in message and num_ctx < maximum_context:
                     num_ctx = maximum_context
                     continue
-                if 'output token limit reached' in message and limit < getattr(client, 'num_predict', 4096):
-                    limit = client.num_predict
-                    continue
                 raise
         else:
             raise ValueError('Classification could not complete within the context and output limits.')
         Draft202012Validator(response_schema).validate(answer)
-        if getattr(client, 'relevance_compact', True):
+        if getattr(client, 'relevance_compact', False):
             return [dict(label=answer['labels'][str(position)]) for position in range(len(items))]
         if len(items) == 1:
             return [answer]
@@ -137,6 +136,10 @@ def classify_batch(items, client, root=Path('.'), num_ctx=None):
             raise ValueError('Batch response must classify each supplied chunk exactly once.')
         return [decisions[identifier] for identifier in identifiers]
     except (ValueError, ValidationError) as error:
+        if 'output token limit reached' in str(error).lower():
+            raise ValueError(f'Classification failed: {error} '
+                             'Adjust Classification thinking or Classification output tokens (1.3). '
+                             'The request was not repeated or split after reaching the token limit.') from error
         if len(items) == 1:
             if any(text in str(error).lower() for text in ('context limit reached', 'safe input budget')):
                 return [dict(label='NEEDS_CONTEXT', reason=str(error))]
@@ -164,11 +167,8 @@ def classification_batches(document, client, root=Path('.'), chunk_ids=None):
         item = dict(clause=source, context=list(context), unresolved_references=list(missing))
         items.append(item)
     maximum_context = getattr(client, 'num_ctx', 32768)
-    num_ctx = getattr(client, 'relevance_num_ctx', 0) or min(8192, maximum_context)
-    if not getattr(client, 'relevance_num_ctx', 0):
-        # One context allocation for the stage avoids reloading the model for differently sized clauses.
-        while num_ctx < maximum_context and any(not fits([item], client, root, num_ctx) for item in items):
-            num_ctx = min(maximum_context, num_ctx * 2)
+    # Match the run allocation by default, as in the original one-clause pipeline.
+    num_ctx = getattr(client, 'relevance_num_ctx', 0) or maximum_context
     groups, current = [], []
     for item in items:
         if current and (len(current) >= batch_size or not fits([*current, item], client, root, num_ctx)):
@@ -184,6 +184,8 @@ def classification_batches(document, client, root=Path('.'), chunk_ids=None):
 
 def classify(document, client, root=Path('.'), progress=None):
     output = deepcopy(document)
+    if progress:
+        progress(0, len(output['chunks']), 'Preparing classification requests')
     work = classification_batches(output, client, root)
     lengths = {group['chunk_id']: len(group['items']) for group in work}
     completed = 0

@@ -342,11 +342,8 @@ def run_evaluation(data, client, root=Path('.'), task='both', split='dev', sourc
         report['predictions'][name] = {}
         started = perf_counter()
         if name == 'classification':
-            num_ctx = client.relevance_num_ctx or min(8192, client.num_ctx)
+            num_ctx = client.relevance_num_ctx or client.num_ctx
             prepared = [(case, input_for(data, case)) for case in cases]
-            if not client.relevance_num_ctx:
-                while num_ctx < client.num_ctx and any(not fits([item],client,root,num_ctx) for _,item in prepared):
-                    num_ctx = min(client.num_ctx, num_ctx*2)
             groups, current, last = [], [], None
             for case, item in prepared:
                 boundary = (data['inputs'][case['input_id']]['contract_id'],case['cohort'],case.get('variant'))

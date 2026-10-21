@@ -22,7 +22,7 @@ def settings_for(name, num_ctx):
     if name not in ('baseline', 'batch4'):
         settings['relevance_compact'] = True
     if name not in ('baseline', 'batch4', 'compact'):
-        settings['relevance_num_ctx'] = 0
+        settings['relevance_num_ctx'] = min(8192, num_ctx)
     if name not in ('baseline', 'batch4', 'compact', 'context'):
         settings['relevance_num_predict'] = 128
     if name in ('batch8', 'thinking_off') or name.startswith('prefill'):
@@ -33,6 +33,8 @@ def settings_for(name, num_ctx):
         settings['relevance_num_batch'] = int(name.removeprefix('prefill'))
     if name == 'thinking_off':
         settings['relevance_think'] = False
+    # Classification output limits now apply to the whole request, independently of policy output.
+    settings['relevance_num_predict'] *= settings['relevance_batch_size']
     return settings
 
 

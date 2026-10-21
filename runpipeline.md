@@ -10,7 +10,7 @@ https://gitlab.ux.uis.no/unix/gpu
 cd ~/git/xfed-policy-workflow-dataset
 git pull --ff-only
 "$HOME/.conda/envs/xfed/bin/python" -m pip install -e .
-"$HOME/.conda/envs/xfed/bin/python" -m xfed.ui --workers-per-endpoint 1
+"$HOME/.conda/envs/xfed/bin/python" -m xfed.ui
 ```
 
 ## 2. Tunnel - ssh1
@@ -43,33 +43,45 @@ set **Number of models**, and choose the additional models in the dropdowns.
 Each selected model gets one concurrent request worker through the existing API;
 workers share clauses in steps 1.3 and 2. Saved run metadata records the model and
 digest used for each clause. Ollama controls concurrent model loading and GPU placement.
+For separate cards on the reported Ollama 0.32.6 server, set **GPU index for model 1**
+to `0` and **GPU index for model 2** to `1` for the Qwen3.5 9B/35B pair.
+These indices are sent as each model's `options.main_gpu`; they refer to GPUs visible
+to Ollama. Leave the field blank (**Auto**) for a large model such as DeepSeek 671B
+that needs several GPUs. Each explicitly selected card must have enough free VRAM
+for its model and context. Placement still depends on the server version and backend;
+check actual activity with `nvidia-smi`. Do not infer placement from the worker count.
+Disable **Reuse completed model requests** when checking GPU activity so cached
+answers do not bypass inference. Restart the updated UI process after syncing files;
+GPU selection stays disabled when the running backend does not advertise support.
+The worker status distinguishes assigned, active, completed, and failed items,
+as well as returned API responses. Zero completed items does not mean no request was sent.
 
-With the checkbox off, **Concurrent requests** controls requests to the primary
-model. Use 1 worker on the current shared API: the measured Ollama 0.32.6 endpoint queues same-model requests.
-For ablation, compare concurrency 1 versus 2 with batch size fixed at 1, then
-batch size 1 versus 4 with concurrency fixed. Pass `--workers-per-endpoint 3`
-to expose a third slot for a further concurrency comparison.
-The shared Ollama service decides whether requests actually run concurrently;
+With the checkbox off, the UI sends one request at a time to the primary model.
+The shared Ollama service decides whether different models actually run concurrently;
 a client worker is not a separate GPU replica.
 
-Step 1.3 groups up to 4 clauses per request, with each clause's own context.
-The default **Labels only** format deduplicates supporting text inside a request
-and emits short labels keyed by local IDs. Source text and original IDs remain in
-the saved output. Select **Labels and optional reasons** for the previous format.
-Groups are reduced when the input budget requires it; invalid batches split into
-smaller batches before individual fallback.
-Set **Clauses per classification request** to 1 for the unbatched ablation.
-Single-clause requests start with 128 output tokens and retry at the configured
-policy limit if the response reaches the output cap. Batch requests scale that
-initial budget by group size, up to the configured policy limit. Step 2 retains
-its 4096-token default and existing policy logic. **Classification thinking (1.3)** can be
-turned off only for models that support this; it leaves the policy thinking
-setting unchanged. Classification context **0 (auto)** chooses one allocation for
-the stage, starting at 8192 and growing to fit complete clause evidence up to the
-maximum context setting (32768 by default). Requests explicitly forbid server
-truncation and context shifting, and retry with the maximum context on overflow. Policy context and
-generation logic retain their existing settings. **Prompt batch tokens** maps to
-Ollama's `num_batch` for classification only; 0 preserves server automatic selection.
+Step 1.3 defaults to one clause per request with **Labels and optional reasons**,
+matching the 14 October request format. Batching and **Labels only** remain optional;
+the latter deduplicates supporting text and returns short labels keyed by local IDs.
+Source text and original IDs remain in the saved output. Invalid batch responses
+can split into smaller groups, but output-token exhaustion stops immediately
+instead of repeatedly regenerating and splitting the same request.
+**Classification output tokens (1.3)** is a per-request limit, independent of
+**Policy output tokens (2)**; both default to 4096. Increasing this limit does not
+force a short answer to use the entire allowance.
+**Classification thinking (1.3)** defaults to **Auto (off when supported)**.
+It uses the server's thinking-control metadata when available and Qwen3.5's documented
+on/off control on older Ollama versions; other models retain their default.
+Choose **Use model/run default** or **On** to evaluate reasoning explicitly.
+Policy-generation thinking is unchanged. The default run context is 16384 tokens,
+as in the earlier UI. Classification context **0 (run setting)** uses that same
+allocation; smaller allocations are optional. Complete evidence is retained:
+requests forbid truncation and context shifting, and can retry with the run's
+maximum context on overflow. **Prompt batch tokens** maps to Ollama's `num_batch`
+for classification only; 0 preserves server automatic selection.
+While a request runs, its worker displays **Waiting for Ollama**, **Thinking**, or
+**Generating answer**, with elapsed time. Character counts describe received text,
+not tokens. Completed request timings and token totals remain available in run metadata.
 
 After restarting the updated UI, open **Generation settings → Compare 1.3 settings**
 at the existing browser URL. It uses the primary model and existing Ollama API, displays a comparison
@@ -94,21 +106,13 @@ settings. Optional variants include `batch16`, `prefill512`, `prefill2048`, and
 `thinking_off`; unsupported settings are reported
 as failures rather than silently ignored.
 
-The cache reuses schema-validated results across identical model replicas, but
-keeps model digest, prompt, context/output limits, and thinking settings in the
-key. Each saved stage's `output/.runs.json` entry records wall time, model
+The cache reuses schema-validated results for matching model digest, prompt,
+context/output limits, and thinking settings. Each saved stage's `output/.runs.json` entry records wall time, model
 digest, per-clause worker assignments, and each worker's API timing/token totals.
 For an uncached timing comparison, turn off **Reuse completed model requests**
 and run step 1.3 from the same 1.2 input. Download the classification JSON
 and save its run metadata before the next run, which replaces those outputs.
 Compare classification labels as well as elapsed time. Request-time totals can exceed stage wall time when concurrent.
-
-If separate same-model endpoints are already available, pass their URLs with
-`--replica-urls http://127.0.0.1:11435,http://127.0.0.1:11436`
-and `--workers-per-endpoint 1`, or set `execution.base_urls` in the model YAML.
-The same selected model and digest must exist on every endpoint. With access
-only to the shared API, the client cannot create replicas or change the
-server's `OLLAMA_NUM_PARALLEL` setting.
 
 For ground-truth comparisons of classification and policy generation, use
 **Evaluation against reference set**. Start with Development; independent review

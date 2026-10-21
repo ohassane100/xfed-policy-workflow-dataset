@@ -50,7 +50,7 @@ class CachedClient:
         self.client, self.path, self.cancel = client, path, cancel
         self.settings = {key: getattr(client, key, None) for key in
                          ('model', 'num_ctx', 'num_predict', 'think', 'model_digest')}
-        # Verified replicas share cached answers; endpoint/GPU placement is not semantic.
+        # Cache identity follows the model digest, not endpoint/GPU placement.
         if not self.settings['model_digest']:
             self.settings['url'] = getattr(client, 'url', None)
         self.cache = cache if cache is not None else (read_json(path, {}) if reuse else {})
@@ -107,27 +107,19 @@ class CachedClient:
 
 
 class Pipeline:
-    def __init__(self, root, ollama_url, config=None, replica_urls=None, workers_per_endpoint=None):
+    def __init__(self, root, ollama_url, config=None):
         self.root = Path(root).resolve()
         self.active_client = None
         self.ollama_url = ollama_url.rstrip('/')
         self.worker_config = load_client(config) if config else None
-        self.defaults = dict(model=None, timeout=600, num_ctx=32768, num_predict=4096, think=None,
-                             relevance_num_predict=128, relevance_think=None, relevance_batch_size=4,
-                             relevance_compact=True, relevance_num_ctx=0, relevance_num_batch=None, keep_alive='30m')
+        self.defaults = dict(model=None, timeout=600, num_ctx=16384, num_predict=4096, think=None,
+                             relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1,
+                             relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None, keep_alive='30m')
         if self.worker_config:
             self.ollama_url = self.worker_config.clients[0].url.removesuffix('/api/chat')
             self.defaults.update({key: getattr(self.worker_config, key) for key in self.defaults})
-        self.replica_urls = replica_urls if replica_urls is not None else (
-            [c.url.removesuffix('/api/chat') for c in self.worker_config.clients]
-            if self.worker_config else [self.ollama_url])
-        self.workers_per_endpoint = workers_per_endpoint if workers_per_endpoint is not None else (
-            self.worker_config.workers_per_endpoint if self.worker_config else 1)
-        # Validate endpoint/concurrency settings at startup, before any output changes.
-        validated = OllamaPool(self.replica_urls, 'configuration-check',
-                               workers_per_endpoint=self.workers_per_endpoint)
-        self.worker_capacity = validated.workers
-        self.ollama_url = self.replica_urls[0].rstrip('/')
+        # The dashboard uses one API endpoint and one request per selected model.
+        OllamaPool([self.ollama_url], 'configuration-check')
         self.lock, self.cancel = threading.Lock(), threading.Event()
         self.job = dict(status='idle', stage=None, completed=0, total=0, message='Ready', log=[])
         self.benchmark_report = None
@@ -156,7 +148,11 @@ class Pipeline:
         if client:
             metadata = client.metadata()
             job['workers'] = [dict(model=member['model'], url=member['url'], main_gpu=member['main_gpu'],
-                                   completed=metadata['completed'][index])
+                                   completed=metadata['completed'][index],
+                                   assigned=metadata['assigned'][index], failed=metadata['failed'][index],
+                                   active_chunks=metadata['active_chunks'][index],
+                                   active_request=member['active_request'], last_request=member['last_request'],
+                                   performance=member['performance'])
                               for index, member in enumerate(metadata['models'])]
         return job
 
@@ -170,17 +166,8 @@ class Pipeline:
         self.update(completed=completed, total=total, message=message)
 
     def models(self):
-        urls = self.replica_urls
-        common = None
-        for url in urls:
-            with urlopen(url + '/api/tags', timeout=10) as response:
-                models = {m['name']: m for m in json.load(response)['models']}
-            common = models if common is None else {
-                name: model for name, model in common.items()
-                if name in models and model.get('digest') == models[name].get('digest')}
-        if not common and len(urls) > 1:
-            raise ValueError('GPU workers do not share an installed model with the same digest.')
-        return list(common.values())
+        with urlopen(self.ollama_url + '/api/tags', timeout=10) as response:
+            return json.load(response)['models']
 
     def state(self, contract):
         meta = read_json(self.output(contract) / '.runs.json', {})
@@ -218,24 +205,18 @@ class Pipeline:
         if type(parallel) is not bool:
             raise ValueError('parallel must be true or false.')
         worker_models = request.get('worker_models')
+        worker_gpus = request.get('worker_gpus')
         if parallel:
             if (not isinstance(worker_models, list) or not 2 <= len(worker_models) <= 32 or
                     any(not isinstance(name, str) or name not in available for name in worker_models) or
                     len(set(worker_models)) != len(worker_models) or worker_models[0] != model):
                 raise ValueError('Choose 2 to 32 distinct installed models, starting with the primary model.')
-            workers = len(worker_models)
-            endpoints, workers_per_endpoint = [self.ollama_url], 1
         else:
             if worker_models is not None:
                 raise ValueError('Enable parallelization to use multiple models.')
-            workers = request.get('workers', self.worker_capacity)
-            if type(workers) is not int or not 1 <= workers <= self.worker_capacity:
-                raise ValueError(f'workers must be between 1 and {self.worker_capacity}.')
-            # Use all configured replicas before adding requests to an endpoint.
-            endpoints = self.replica_urls[:min(workers, len(self.replica_urls))]
-            workers_per_endpoint = self.workers_per_endpoint
-        client = OllamaPool(endpoints, model, workers_per_endpoint=workers_per_endpoint,
-                            workers=workers, worker_models=worker_models,
+            if worker_gpus is not None:
+                raise ValueError('Per-model GPU selection is available in parallel mode.')
+        client = OllamaPool([self.ollama_url], model, worker_models=worker_models, worker_gpus=worker_gpus,
                             timeout=request.get('timeout', self.defaults['timeout']),
                             num_ctx=request.get('num_ctx', self.defaults['num_ctx']),
                             num_predict=request.get('num_predict', self.defaults['num_predict']),
@@ -270,7 +251,7 @@ class Pipeline:
             self.cancel.clear()
             self.active_client = client
             self.job = dict(status='running', contract=contract, stage=selected[0], completed=0,
-                            total=0, message='Starting', log=[])
+                            total=0, message='Preparing pipeline inputs', log=[])
         fresh_run = mode == 'through' and stage == '2'
         reuse = request.get('reuse', True) and not fresh_run
         threading.Thread(target=self.run, args=(contract, selected, client, reuse, fresh_run),
@@ -311,7 +292,7 @@ class Pipeline:
         options = dict(num_ctx=request.get('num_ctx', self.defaults['num_ctx']),
                        timeout=request.get('timeout', self.defaults['timeout']),
                        think=request.get('think', self.defaults['think']))
-        OllamaPool([self.replica_urls[0]], model, num_predict=128, **options)
+        OllamaPool([self.ollama_url], model, num_predict=128, **options)
         options['variants'] = variants
         with self.lock:
             if self.job['status'] in ('running', 'cancelling'):
@@ -335,7 +316,7 @@ class Pipeline:
                 self.job['log'].append(message)
                 self.benchmark_report = deepcopy(report)
         try:
-            report = compare_settings(document, self.replica_urls[0], model, self.root, limit=limit,
+            report = compare_settings(document, self.ollama_url, model, self.root, limit=limit,
                                       progress=self.progress, completed=completed, cancel=self.cancel, **options)
             failed = any(result['status'] == 'failed' for result in report['runs'])
             self.update(status='failed' if failed else 'complete',
@@ -509,13 +490,10 @@ def handler(pipeline):
                 elif route.path == '/api/config':
                     self.send(dict(contracts=pipeline.contracts(), ollama_url=pipeline.ollama_url,
                                    model_defaults=pipeline.defaults,
-                                   workers=pipeline.worker_capacity,
-                                   replica_urls=pipeline.replica_urls,
-                                   workers_per_endpoint=pipeline.workers_per_endpoint,
+                                   worker_gpu_selection=True,
                                    preferred_models=PREFERRED_MODELS))
                 elif route.path == '/api/models':
-                    self.send(dict(models=pipeline.models(),
-                                   workers=pipeline.worker_capacity))
+                    self.send(dict(models=pipeline.models()))
                 elif route.path == '/api/state':
                     self.send(pipeline.state(query['contract'][0]))
                 elif route.path == '/api/overview':
@@ -575,21 +553,16 @@ def main():
     parser = argparse.ArgumentParser(description='XFed private pipeline UI')
     parser.add_argument('--root', type=Path, default=Path.cwd())
     parser.add_argument('--port', type=int, default=8765)
-    parser.add_argument('--ollama-url', help='Override automatic worker configuration with one server')
-    parser.add_argument('--config', type=Path, help='Model YAML supplying worker endpoints and concurrency')
-    parser.add_argument('--replica-urls', help='Comma-separated Ollama endpoints serving the same model')
-    parser.add_argument('--workers-per-endpoint', type=int, help='Concurrent requests per endpoint; match OLLAMA_NUM_PARALLEL')
+    parser.add_argument('--ollama-url', help='Ollama API endpoint')
+    parser.add_argument('--config', type=Path, help='Model YAML supplying the endpoint and generation defaults')
     args = parser.parse_args()
-    replica_urls = [url.strip() for url in args.replica_urls.split(',')] if args.replica_urls else None
     config = args.config
     if config is None and args.ollama_url is None and (args.root / 'config/models.yaml').is_file():
         config = args.root / 'config/models.yaml'
-    pipeline = Pipeline(args.root, args.ollama_url or 'http://localhost:11434', config,
-                        replica_urls, args.workers_per_endpoint)
+    pipeline = Pipeline(args.root, args.ollama_url or 'http://localhost:11434', config)
     server = ThreadingHTTPServer(('127.0.0.1', args.port), handler(pipeline))
     print(f'XFed UI: http://127.0.0.1:{server.server_port}', flush=True)
-    print(f'Single-model request slots: {pipeline.worker_capacity}; endpoints: ' +
-          ', '.join(pipeline.replica_urls), flush=True)
+    print(f'Ollama API: {pipeline.ollama_url}', flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
