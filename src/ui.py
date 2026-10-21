@@ -217,6 +217,7 @@ class Pipeline:
             if worker_gpus is not None:
                 raise ValueError('Per-model GPU selection is available in parallel mode.')
         client = OllamaPool([self.ollama_url], model, worker_models=worker_models, worker_gpus=worker_gpus,
+                            cancel=self.cancel,
                             timeout=request.get('timeout', self.defaults['timeout']),
                             num_ctx=request.get('num_ctx', self.defaults['num_ctx']),
                             num_predict=request.get('num_predict', self.defaults['num_predict']),
@@ -306,6 +307,9 @@ class Pipeline:
         return self.snapshot()
 
     def run_benchmark(self, document, model, limit, options):
+        def client_ready(client):
+            with self.lock:
+                self.active_client = client
         def completed(result, report):
             if result['status'] == 'complete':
                 message = (f"{result['name']}: {result['duration_seconds']:.2f}s, "
@@ -317,14 +321,15 @@ class Pipeline:
                 self.benchmark_report = deepcopy(report)
         try:
             report = compare_settings(document, self.ollama_url, model, self.root, limit=limit,
-                                      progress=self.progress, completed=completed, cancel=self.cancel, **options)
+                                      progress=self.progress, completed=completed, cancel=self.cancel,
+                                      client_ready=client_ready, **options)
             failed = any(result['status'] == 'failed' for result in report['runs'])
-            self.update(status='failed' if failed else 'complete',
-                        message='Comparison finished; inspect timings and changed labels before choosing settings')
+            self.finish('failed' if failed else 'complete',
+                        'Comparison finished; inspect timings and changed labels before choosing settings')
         except (Cancelled, InterruptedError):
-            self.update(status='cancelled', message='Comparison cancelled; completed measurements are available')
+            self.finish('cancelled', 'Comparison cancelled; completed measurements are available.')
         except Exception as error:
-            self.update(status='failed', message=str(error))
+            self.finish('failed', str(error))
 
     def benchmark_result(self):
         with self.lock:
@@ -363,11 +368,11 @@ class Pipeline:
             with self.lock:
                 self.evaluation_report = report
             errors = sum(value.get('errors', value.get('failures', 0)) for task in report['metrics'].values() for value in task.values() if not value.get('aggregate'))
-            self.update(status='complete', message=f"Evaluation complete; {errors} failed cases; references: {report['reference_status']}")
+            self.finish('complete', f"Evaluation complete; {errors} failed cases; references: {report['reference_status']}")
         except (Cancelled, InterruptedError):
-            self.update(status='cancelled', message='Evaluation cancelled; completed task predictions are available')
+            self.finish('cancelled', 'Evaluation cancelled; completed task predictions are available.')
         except Exception as error:
-            self.update(status='failed', message=str(error))
+            self.finish('failed', str(error))
 
     def evaluation_result(self):
         with self.lock:
@@ -440,19 +445,81 @@ class Pipeline:
                     self.job['log'].append(f'{stage}: ' + (report['status'] if stage == '2' else 'saved')
                                            + f" ({meta[stage]['duration_seconds']:.3f}s)")
                 if stage == '2' and report['status'] == 'generation_rejected':
-                    self.update(status='failed', message='No policy generated. Inspect the rejected clauses in the generation report.')
+                    self.finish('failed', 'No policy generated. Inspect the rejected clauses in the generation report.')
                     return
-            self.update(status='complete', message='Finished')
-        except Cancelled:
-            self.update(status='cancelled', message='Cancelled. Completed model requests are saved for retry.')
+            self.finish('complete', 'Finished')
+        except (Cancelled, InterruptedError):
+            self.finish('cancelled', 'Cancelled. Completed model requests are saved for retry.')
         except Exception as exc:
-            self.update(status='failed', message=str(exc))
+            self.finish('failed', str(exc))
+
+    def unload_models(self, client):
+        result = client.unload()
+        messages = []
+        if result['unloaded']:
+            messages.append('Unloaded: ' + ', '.join(result['unloaded']) + '.')
+        for error in result['errors']:
+            messages.append(f"Unload failed for {error['model']}: {error['error']}")
+        with self.lock:
+            self.job['unload'] = result
+            self.job['log'].extend(messages)
+        return result, ' '.join(messages)
+
+    def finish(self, status, message):
+        with self.lock:
+            cancelled = self.cancel.is_set() or status == 'cancelled'
+            if not cancelled:
+                self.job.update(status=status, message=message)
+                return
+            client = self.active_client
+            self.job.update(status='cancelling', message='Stopping requests and unloading run models')
+        detail = ''
+        if client:
+            try:
+                client.cancel_requests()
+                _, detail = self.unload_models(client)
+            except Exception as error:
+                detail = 'Could not finish unloading models: ' + str(error)
+                with self.lock:
+                    self.job['log'].append(detail)
+        message = message if status == 'cancelled' else 'Cancelled. Completed requests are saved.'
+        self.update(status='cancelled', message=(message + ' ' + detail).strip())
+
+    def start_unload(self, request):
+        names = request.get('models')
+        available = {model['name'] for model in self.models()}
+        if (not isinstance(names, list) or not 1 <= len(names) <= 32 or
+                any(not isinstance(name, str) or name not in available for name in names) or
+                len(set(names)) != len(names)):
+            raise ValueError('Choose 1 to 32 distinct installed models to unload.')
+        client = OllamaPool([self.ollama_url], names[0], worker_models=names if len(names) > 1 else None)
+        with self.lock:
+            if self.job['status'] in ('running', 'cancelling'):
+                raise ValueError('Wait for the current job to stop before unloading models.')
+            self.cancel.clear()
+            self.active_client = client
+            self.job = dict(status='running', mode='unload', contract=None, stage=None,
+                            completed=0, total=len(names), message='Unloading selected models', log=[])
+        threading.Thread(target=self.run_unload, args=(client,), daemon=True).start()
+        return self.snapshot()
+
+    def run_unload(self, client):
+        try:
+            result, message = self.unload_models(client)
+            self.update(status='failed' if result['errors'] else 'complete',
+                        completed=len(result['unloaded']), message=message)
+        except Exception as error:
+            self.update(status='failed', message='Unloading failed: ' + str(error))
 
     def stop(self):
+        client = None
         with self.lock:
-            if self.job['status'] == 'running':
+            if self.job['status'] == 'running' and self.job.get('mode') != 'unload':
                 self.cancel.set()
-                self.job.update(status='cancelling', message='Waiting for the current operation to finish')
+                client = self.active_client
+                self.job.update(status='cancelling', message='Stopping requests and unloading run models')
+        if client:
+            client.cancel_requests()
         return self.snapshot()
 
 
@@ -491,6 +558,7 @@ def handler(pipeline):
                     self.send(dict(contracts=pipeline.contracts(), ollama_url=pipeline.ollama_url,
                                    model_defaults=pipeline.defaults,
                                    worker_gpu_selection=True,
+                                   model_unloading=True,
                                    preferred_models=PREFERRED_MODELS))
                 elif route.path == '/api/models':
                     self.send(dict(models=pipeline.models()))
@@ -539,6 +607,8 @@ def handler(pipeline):
                     self.send(pipeline.start_evaluation(request), 202)
                 elif self.path == '/api/cancel':
                     self.send(pipeline.stop())
+                elif self.path == '/api/unload':
+                    self.send(pipeline.start_unload(request), 202)
                 else:
                     self.send(dict(error='Not found'), 404)
             except Exception as exc:

@@ -1,8 +1,11 @@
 import json
 from contextlib import contextmanager
+from concurrent.futures import ThreadPoolExecutor
+from http.client import HTTPConnection, HTTPSConnection, HTTPException
 from queue import Queue
-from threading import Lock
-from time import perf_counter
+import socket
+from threading import Event, Lock
+from time import perf_counter, sleep
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
@@ -11,7 +14,7 @@ from urllib.request import Request, urlopen
 class OllamaClient:
     def __init__(self, base_url, model, timeout=300, num_ctx=32768, num_predict=512, think=None, main_gpu=None,
                  relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1, keep_alive='30m',
-                 relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None):
+                 relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None, cancel=None):
         if not isinstance(base_url, str) or urlsplit(base_url).scheme not in ('http', 'https') or not urlsplit(base_url).hostname:
             raise ValueError('Set a valid HTTP(S) Ollama base_url.')
         if not isinstance(model, str) or not model.strip() or model == 'PLACEHOLDER':
@@ -50,6 +53,42 @@ class OllamaClient:
         self.model, self.timeout, self.num_ctx = model, timeout, num_ctx
         self.num_predict, self.think = num_predict, think
         self.main_gpu = main_gpu
+        self.cancel = cancel if cancel is not None else Event()
+        self._connections, self._connections_lock = {}, Lock()
+
+    def cancel_requests(self):
+        self.cancel.set()
+        with self._connections_lock:
+            connections = list(self._connections.items())
+        for connection, transport in connections:
+            transport = transport or connection.sock
+            if transport is not None:
+                try:
+                    transport.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
+            connection.close()
+
+    def unload(self):
+        base = self.url.removesuffix('/api/chat')
+        request = Request(base + '/api/generate',
+                          data=json.dumps(dict(model=self.model, keep_alive=0, stream=False)).encode(),
+                          headers={'Content-Type': 'application/json'})
+        with urlopen(request, timeout=10) as response:
+            result = json.load(response)
+        if not isinstance(result, dict) or result.get('done') is not True:
+            raise RuntimeError(f'Ollama did not confirm unloading {self.model!r}.')
+        deadline = perf_counter() + 5
+        while True:
+            with urlopen(base + '/api/ps', timeout=5) as response:
+                loaded = json.load(response)['models']
+            if not any(model.get('name') == self.model or
+                       (getattr(self, 'model_digest', None) and model.get('digest') == self.model_digest)
+                       for model in loaded):
+                return self.model
+            if perf_counter() >= deadline:
+                raise RuntimeError(f'{self.model!r} is still loaded; another request may be using it. Try unloading again.')
+            sleep(0.2)
 
     def reset_stats(self):
         with self._stats_lock:
@@ -104,6 +143,8 @@ class OllamaClient:
     def generate(self, system, value, schema, num_predict=None, think=None, num_ctx=None, num_batch=None,
                  truncate=None, compact_json=False):
         from jsonschema import Draft202012Validator
+        if self.cancel.is_set():
+            raise InterruptedError('Model request cancelled.')
         output_limit = self.num_predict if num_predict is None else num_predict
         context_limit = self.num_ctx if num_ctx is None else num_ctx
         if type(context_limit) is not int or context_limit <= 512:
@@ -132,17 +173,36 @@ class OllamaClient:
             payload['think'] = effective_think
         if self.main_gpu is not None:
             payload['options']['main_gpu'] = self.main_gpu
-        request = Request(self.url, data=json.dumps(payload).encode('utf-8'),
-                          headers={'Content-Type': 'application/json'})
+        endpoint = urlsplit(self.url)
+        connection_type = HTTPSConnection if endpoint.scheme == 'https' else HTTPConnection
+        connection = connection_type(endpoint.hostname, endpoint.port, timeout=self.timeout)
+        path = endpoint.path + ('?' + endpoint.query if endpoint.query else '')
         started = perf_counter()
         result, content, thinking_chars = {}, [], 0
+        response = None
+        activity = dict(started=started, phase='Waiting for Ollama',
+                        context_tokens=context_limit, output_limit=output_limit,
+                        think=effective_think, answer_chars=0, thinking_chars=0)
         with self._stats_lock:
-            self.active_request = dict(started=started, phase='Waiting for Ollama',
-                                       context_tokens=context_limit, output_limit=output_limit,
-                                       think=effective_think, answer_chars=0, thinking_chars=0)
+            self.active_request = activity
+        with self._connections_lock:
+            self._connections[connection] = None
         try:
-            with urlopen(request, timeout=self.timeout) as response:
+            if self.cancel.is_set():
+                raise InterruptedError('Model request cancelled.')
+            connection.request('POST', path, json.dumps(payload).encode('utf-8'),
+                               {'Content-Type': 'application/json'})
+            with self._connections_lock:
+                self._connections[connection] = connection.sock
+            if self.cancel.is_set():
+                raise InterruptedError('Model request cancelled.')
+            response = connection.getresponse()
+            if response.status >= 400:
+                raise HTTPError(self.url, response.status, response.reason, response.headers, response)
+            with response:
                 for line in response:
+                    if self.cancel.is_set():
+                        raise InterruptedError('Model request cancelled.')
                     if not line.strip():
                         continue
                     if perf_counter() - started > self.timeout:
@@ -158,17 +218,19 @@ class OllamaClient:
                     content.append(answer)
                     thinking_chars += len(thinking)
                     with self._stats_lock:
-                        self.active_request['answer_chars'] += len(answer)
-                        self.active_request['thinking_chars'] = thinking_chars
+                        activity['answer_chars'] += len(answer)
+                        activity['thinking_chars'] = thinking_chars
                         if answer:
-                            self.active_request['phase'] = 'Generating answer'
+                            activity['phase'] = 'Generating answer'
                         elif thinking:
-                            self.active_request['phase'] = 'Thinking'
+                            activity['phase'] = 'Thinking'
                     result = event
                     if event.get('done') is True:
                         break
                 result['message'] = dict(content=''.join(content))
         except HTTPError as error:
+            if self.cancel.is_set():
+                raise InterruptedError('Model request cancelled.') from error
             try:
                 detail = error.read(8192).decode('utf-8', errors='replace').strip()
                 try:
@@ -183,17 +245,29 @@ class OllamaClient:
                 raise ValueError(f'Ollama context limit reached: {detail[:1000]}') from error
             raise RuntimeError(f'Ollama HTTP {error.code} for {self.model!r}: '
                                f'{detail[:2000] or "No error details returned."}') from error
-        except (URLError, TimeoutError, OSError) as error:
+        except (URLError, TimeoutError, OSError, HTTPException) as error:
+            if self.cancel.is_set():
+                raise InterruptedError('Model request cancelled.') from error
             raise RuntimeError(f'Ollama request failed at {self.url}: {error}') from error
         except (ValueError, UnicodeError) as error:
+            if self.cancel.is_set():
+                raise InterruptedError('Model request cancelled.') from error
             raise ValueError('Ollama returned an invalid JSON response.') from error
         finally:
+            with self._connections_lock:
+                self._connections.pop(connection, None)
+            if response is not None:
+                response.close()
+            connection.close()
             with self._stats_lock:
                 self.last_request = dict(duration_seconds=round(perf_counter() - started, 3),
                                          context_tokens=context_limit, output_limit=output_limit,
                                          thinking_chars=thinking_chars, answer_chars=sum(map(len, content)),
                                          output_tokens=result.get('eval_count'), done_reason=result.get('done_reason'))
-                self.active_request = None
+                if self.active_request is activity:
+                    self.active_request = None
+        if self.cancel.is_set():
+            raise InterruptedError('Model request cancelled.')
         if not isinstance(result, dict):
             raise ValueError('Ollama response incomplete or truncated; increase output tokens before accepting it.')
         with self._stats_lock:
@@ -360,6 +434,22 @@ class OllamaPool:
             return client.generate(*args, **kwargs)
         finally:
             self._available.put(client)
+
+    def cancel_requests(self):
+        for client in self.clients:
+            client.cancel_requests()
+
+    def unload(self):
+        targets = {(client.url, client.model): client for client in self.clients}
+        result = dict(unloaded=[], errors=[])
+        with ThreadPoolExecutor(max_workers=min(32, len(targets))) as executor:
+            pending = [(client, executor.submit(client.unload)) for client in targets.values()]
+            for client, future in pending:
+                try:
+                    result['unloaded'].append(future.result())
+                except Exception as error:
+                    result['errors'].append(dict(model=client.model, error=str(error)))
+        return result
 
 
 def load_client(path):

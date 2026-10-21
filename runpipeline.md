@@ -8,10 +8,14 @@ https://gitlab.ux.uis.no/unix/gpu
 
 ```bash
 cd ~/git/xfed-policy-workflow-dataset
-git pull --ff-only
+git fetch origin
+git checkout dev
+git pull --ff-only origin dev
 "$HOME/.conda/envs/xfed/bin/python" -m pip install -e .
 "$HOME/.conda/envs/xfed/bin/python" -m xfed.ui
 ```
+
+Use `dev` for development runs. Update `main` through pull requests from `dev`.
 
 ## 2. Tunnel - ssh1
 
@@ -105,6 +109,14 @@ accuracy. Use `--limit 0` for all clauses; repeat comparisons before selecting
 settings. Optional variants include `batch16`, `prefill512`, `prefill2048`, and
 `thinking_off`; unsupported settings are reported
 as failures rather than silently ignored.
+
+**Cancel & unload** closes active inference connections, then requests unloading of
+the models selected for that run with Ollama's `keep_alive: 0`. The job remains
+**Cancelling** until cleanup finishes; unloading failures are reported in the log.
+Use **Unload selected models** while idle to release a model left in memory,
+including DeepSeek after switching models. Downloaded model files are retained.
+Unloading affects the shared server's model; another client's request can keep it
+loaded or load it again. Sync the updated files and restart the UI to enable this.
 
 The cache reuses schema-validated results for matching model digest, prompt,
 context/output limits, and thinking settings. Each saved stage's `output/.runs.json` entry records wall time, model
