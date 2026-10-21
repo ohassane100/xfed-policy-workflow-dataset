@@ -97,12 +97,17 @@ def map_chunks(items, operation, client, progress=None):
     workers = getattr(client, 'workers', 1)
     if not isinstance(workers, int) or isinstance(workers, bool) or workers < 1:
         raise ValueError('workers must be a positive integer.')
+    def apply(item):
+        if hasattr(client, 'for_chunk'):
+            with client.for_chunk(item.get('chunk_ids', item['chunk_id'])) as worker:
+                return operation(item, worker)
+        return operation(item, client)
     if progress:
         progress(0, len(items), 'Starting')
     if workers == 1:
         results = []
         for item in items:
-            results.append(operation(item))
+            results.append(apply(item))
             if progress:
                 progress(len(results), len(items), item['chunk_id'])
         return results
@@ -112,7 +117,7 @@ def map_chunks(items, operation, client, progress=None):
     try:
         while next_index < len(items) or pending:
             while next_index < len(items) and len(pending) < workers:
-                pending[pool.submit(operation, items[next_index])] = next_index
+                pending[pool.submit(apply, items[next_index])] = next_index
                 next_index += 1
             done, _ = wait(pending, return_when=FIRST_COMPLETED)
             for future in done:

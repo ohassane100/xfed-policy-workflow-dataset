@@ -1,16 +1,15 @@
 """Private, loopback-only pipeline dashboard; run with python -m xfed.ui."""
 
 import argparse
-from contextlib import ExitStack
 from copy import deepcopy
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
 import threading
-import sys
-import subprocess
+from time import perf_counter
 from urllib.parse import urlsplit, parse_qs
 from urllib.request import urlopen
 
@@ -19,7 +18,7 @@ from xfed.extraction import extract_document
 from xfed.segmentation import segment
 from xfed.relevance import classify
 from xfed.enrichment import enrich
-from xfed.llm import OllamaClient, OllamaPool, gpu_workers, load_client
+from xfed.llm import OllamaPool, load_client
 from xfed.policy_generation import generate
 
 
@@ -30,7 +29,7 @@ STAGES = {
     '1.4': ('1 preprocessing/1.4 enrichment/enriched_relevance.json', 4, 'items'),
     '2': ('2 policy_generation/policy.json', 5, 'traceability'),
 }
-PREFERRED_MODELS = ['gemma3:27b', 'llama3.1:70b', 'deepseek-r1:70b']
+PREFERRED_MODELS = ['llama3.1:70b', 'deepseek-r1:70b', 'gemma3:27b']
 
 
 def read_json(path, default=None):
@@ -45,28 +44,45 @@ class Cancelled(Exception):
 
 
 class CachedClient:
-    def __init__(self, client, path, cancel, reuse):
+    def __init__(self, client, path, cancel, reuse, cache=None, lock=None):
         self.client, self.path, self.cancel = client, path, cancel
         self.settings = {key: getattr(client, key, None) for key in
-                         ('url', 'model', 'num_ctx', 'num_predict', 'think', 'model_digest')}
-        self.cache = read_json(path, {}) if reuse else {}
-        self.lock = threading.Lock()
+                         ('model', 'num_ctx', 'num_predict', 'think', 'model_digest')}
+        # Verified replicas share cached answers; endpoint/GPU placement is not semantic.
+        if not self.settings['model_digest']:
+            self.settings['url'] = getattr(client, 'url', None)
+        self.cache = cache if cache is not None else (read_json(path, {}) if reuse else {})
+        self.lock = lock if lock is not None else threading.Lock()
 
     def __getattr__(self, name):
         return getattr(self.client, name)
 
-    def generate(self, prompt, value, schema, num_predict=None):
+    @contextmanager
+    def for_chunk(self, chunk_id):
+        if self.cancel.is_set():
+            raise Cancelled()
+        if hasattr(self.client, 'for_chunk'):
+            with self.client.for_chunk(chunk_id) as worker:
+                yield CachedClient(worker, self.path, self.cancel, False, self.cache, self.lock)
+        else:
+            yield self
+
+    def generate(self, prompt, value, schema, num_predict=None, think=None):
         if self.cancel.is_set():
             raise Cancelled()
         output_limit = self.settings['num_predict'] if num_predict is None else num_predict
-        settings = dict(self.settings, num_predict=output_limit)
+        effective_think = self.settings['think'] if think is None else think
+        settings = dict(self.settings, num_predict=output_limit, think=effective_think)
         key = hashlib.sha256(json.dumps([settings, prompt, value, schema],
                                        sort_keys=True).encode()).hexdigest()
         with self.lock:
             cached = key in self.cache
             result = deepcopy(self.cache[key]) if cached else None
         if not cached:
-            result = self.client.generate(prompt, value, schema, num_predict=output_limit)
+            options = dict(num_predict=output_limit)
+            if effective_think is not None:
+                options['think'] = effective_think
+            result = self.client.generate(prompt, value, schema, **options)
             with self.lock:
                 self.cache[key] = deepcopy(result)
                 write_json(self.path, self.cache)
@@ -76,14 +92,26 @@ class CachedClient:
 
 
 class Pipeline:
-    def __init__(self, root, ollama_url, config=None):
+    def __init__(self, root, ollama_url, config=None, replica_urls=None, workers_per_endpoint=None):
         self.root = Path(root).resolve()
+        self.active_client = None
         self.ollama_url = ollama_url.rstrip('/')
         self.worker_config = load_client(config) if config else None
-        self.defaults = dict(model=None, timeout=600, num_ctx=32768, num_predict=4096, think=None)
+        self.defaults = dict(model=None, timeout=600, num_ctx=32768, num_predict=4096, think=None,
+                             relevance_num_predict=512, relevance_think=None, relevance_batch_size=4, keep_alive='30m')
         if self.worker_config:
             self.ollama_url = self.worker_config.clients[0].url.removesuffix('/api/chat')
             self.defaults.update({key: getattr(self.worker_config, key) for key in self.defaults})
+        self.replica_urls = replica_urls if replica_urls is not None else (
+            [c.url.removesuffix('/api/chat') for c in self.worker_config.clients]
+            if self.worker_config else [self.ollama_url])
+        self.workers_per_endpoint = workers_per_endpoint if workers_per_endpoint is not None else (
+            self.worker_config.workers_per_endpoint if self.worker_config else 1)
+        # Validate endpoint/concurrency settings at startup, before any output changes.
+        validated = OllamaPool(self.replica_urls, 'configuration-check',
+                               workers_per_endpoint=self.workers_per_endpoint)
+        self.worker_capacity = validated.workers
+        self.ollama_url = self.replica_urls[0].rstrip('/')
         self.lock, self.cancel = threading.Lock(), threading.Event()
         self.job = dict(status='idle', stage=None, completed=0, total=0, message='Ready', log=[])
 
@@ -99,11 +127,20 @@ class Pipeline:
     def path(self, contract, stage):
         if stage not in STAGES:
             raise ValueError('Unknown stage.')
-        return self.base(contract) / 'output' / STAGES[stage][0]
+        return self.output(contract) / STAGES[stage][0]
+
+    def output(self, contract):
+        return self.base(contract) / 'output'
 
     def snapshot(self):
         with self.lock:
-            return deepcopy(self.job)
+            job, client = deepcopy(self.job), self.active_client
+        if client:
+            metadata = client.metadata()
+            job['workers'] = [dict(model=member['model'], url=member['url'], main_gpu=member['main_gpu'],
+                                   completed=metadata['completed'][index])
+                              for index, member in enumerate(metadata['models'])]
+        return job
 
     def update(self, **values):
         with self.lock:
@@ -115,8 +152,7 @@ class Pipeline:
         self.update(completed=completed, total=total, message=message)
 
     def models(self):
-        urls = ([c.url.removesuffix('/api/chat') for c in self.worker_config.clients]
-                if self.worker_config else [self.ollama_url])
+        urls = self.replica_urls
         common = None
         for url in urls:
             with urlopen(url + '/api/tags', timeout=10) as response:
@@ -129,7 +165,7 @@ class Pipeline:
         return list(common.values())
 
     def state(self, contract):
-        meta = read_json(self.base(contract) / 'output/.runs.json', {})
+        meta = read_json(self.output(contract) / '.runs.json', {})
         stages = {}
         locations = {}
         for stage, (_, version, records) in STAGES.items():
@@ -151,7 +187,7 @@ class Pipeline:
             label = chunk.get('classification', {}).get('label')
             if label in labels:
                 labels[label] += 1
-        report = self.base(contract) / 'output/2 policy_generation/generation_report.json'
+        report = self.output(contract) / '2 policy_generation/generation_report.json'
         return dict(contract=contract, stages=stages, labels=labels, source_locations=locations,
                     report=read_json(report), job=self.snapshot())
 
@@ -169,26 +205,30 @@ class Pipeline:
         client = None
         if any(s in ('1.3', '2') for s in selected):
             available = {m['name']: m for m in self.models()}
-            if request.get('model') not in available:
-                raise ValueError('Select a model installed on this Ollama server.')
-            client = OllamaClient(self.ollama_url, request['model'],
-                                  timeout=request.get('timeout', self.defaults['timeout']),
-                                  num_ctx=request.get('num_ctx', self.defaults['num_ctx']),
-                                  num_predict=request.get('num_predict', self.defaults['num_predict']),
-                                  think=request.get('think', self.defaults['think']))
-            client.model_digest = available[request['model']].get('digest')
-            if self.worker_config:
-                client = OllamaPool(
-                    [c.url.removesuffix('/api/chat') for c in self.worker_config.clients], request['model'],
-                    workers_per_endpoint=self.worker_config.workers_per_endpoint,
-                    timeout=client.timeout, num_ctx=client.num_ctx, num_predict=client.num_predict, think=client.think)
-                client.model_digest = available[request['model']].get('digest')
-                for member in client.clients:
-                    member.model_digest = client.model_digest
+            model = request.get('model')
+            if not isinstance(model, str) or model not in available:
+                raise ValueError('Choose one model installed with the same digest on every replica.')
+            workers = request.get('workers', self.worker_capacity)
+            if type(workers) is not int or not 1 <= workers <= self.worker_capacity:
+                raise ValueError(f'workers must be between 1 and {self.worker_capacity}.')
+            # Use all configured replicas before adding parallel requests to an endpoint.
+            endpoints = self.replica_urls[:min(workers, len(self.replica_urls))]
+            client = OllamaPool(endpoints, model, workers_per_endpoint=self.workers_per_endpoint,
+                                workers=workers,
+                                timeout=request.get('timeout', self.defaults['timeout']),
+                                num_ctx=request.get('num_ctx', self.defaults['num_ctx']),
+                                num_predict=request.get('num_predict', self.defaults['num_predict']),
+                                think=request.get('think', self.defaults['think']),
+                                relevance_num_predict=request.get('relevance_num_predict', self.defaults['relevance_num_predict']),
+                                relevance_think=request.get('relevance_think', self.defaults['relevance_think']),
+                                relevance_batch_size=request.get('relevance_batch_size', self.defaults['relevance_batch_size']),
+                                keep_alive=self.defaults['keep_alive'])
+            client.preflight()
         with self.lock:
             if self.job['status'] in ('running', 'cancelling'):
                 raise ValueError('A job is already running. Wait or cancel it first.')
             self.cancel.clear()
+            self.active_client = client
             self.job = dict(status='running', contract=contract, stage=selected[0], completed=0,
                             total=0, message='Starting', log=[])
         fresh_run = mode == 'through' and stage == '2'
@@ -218,8 +258,8 @@ class Pipeline:
         stages = list(STAGES)
         for downstream in stages[stages.index(stage):]:
             self.path(contract, downstream).unlink(missing_ok=True)
-        (self.base(contract) / 'output/2 policy_generation/generation_report.json').unlink(missing_ok=True)
-        metadata = self.base(contract) / 'output/.runs.json'
+        (self.output(contract) / '2 policy_generation/generation_report.json').unlink(missing_ok=True)
+        metadata = self.output(contract) / '.runs.json'
         runs = read_json(metadata, {})
         for downstream in stages[stages.index(stage):]:
             runs.pop(downstream, None)
@@ -230,15 +270,18 @@ class Pipeline:
 
     def reset_generated(self, contract):
         self.invalidate(contract, '1.1')
-        (self.base(contract) / 'output/.llm_cache.json').unlink(missing_ok=True)
+        (self.output(contract) / '.llm_cache.json').unlink(missing_ok=True)
 
     def run(self, contract, selected, raw_client, reuse, fresh_run=False):
         base = self.base(contract)
         try:
             if fresh_run:
                 self.reset_generated(contract)
-            client = CachedClient(raw_client, base / 'output/.llm_cache.json', self.cancel, reuse) if raw_client else None
+            client = CachedClient(raw_client, self.output(contract) / '.llm_cache.json', self.cancel, reuse) if raw_client else None
             for stage in selected:
+                stage_started = perf_counter()
+                if raw_client and stage in ('1.3', '2'):
+                    raw_client.reset_assignments()
                 self.progress(0, 0, 'Starting stage ' + stage)
                 self.update(stage=stage)
                 # Keep the required upstream input in memory before invalidation.
@@ -261,19 +304,21 @@ class Pipeline:
                     result, report = generate(source, client, self.root, self.progress)
                     report['unresolved_chunks'] = self.state(contract)['labels']['NEEDS_CONTEXT']
                     self.progress(len(source['items']), len(source['items']), 'Saving policy draft')
-                    write_json(base / 'output/2 policy_generation/generation_report.json', report)
+                    write_json(self.output(contract) / '2 policy_generation/generation_report.json', report)
                 self.progress(self.snapshot()['completed'], self.snapshot()['total'], 'Saving stage ' + stage)
                 if result is not None:
                     write_output(self.path(contract, stage), result, STAGES[stage][1], self.root)
-                meta_path = base / 'output/.runs.json'
+                meta_path = self.output(contract) / '.runs.json'
                 meta = read_json(meta_path, {})
                 meta[stage] = dict(time=datetime.now(timezone.utc).isoformat(),
+                                   duration_seconds=round(perf_counter() - stage_started, 3),
                                    model=raw_client.model if stage in ('1.3', '2') else None,
                                    options=raw_client.metadata() if raw_client and stage in ('1.3', '2') else None,
                                    status=report['status'] if stage == '2' else 'complete')
                 write_json(meta_path, meta)
                 with self.lock:
-                    self.job['log'].append(f'{stage}: ' + (report['status'] if stage == '2' else 'saved'))
+                    self.job['log'].append(f'{stage}: ' + (report['status'] if stage == '2' else 'saved')
+                                           + f" ({meta[stage]['duration_seconds']:.3f}s)")
                 if stage == '2' and report['status'] == 'generation_rejected':
                     self.update(status='failed', message='No policy generated. Inspect the rejected clauses in the generation report.')
                     return
@@ -325,11 +370,13 @@ def handler(pipeline):
                 elif route.path == '/api/config':
                     self.send(dict(contracts=pipeline.contracts(), ollama_url=pipeline.ollama_url,
                                    model_defaults=pipeline.defaults,
-                                   workers=pipeline.worker_config.workers if pipeline.worker_config else 1,
+                                   workers=pipeline.worker_capacity,
+                                   replica_urls=pipeline.replica_urls,
+                                   workers_per_endpoint=pipeline.workers_per_endpoint,
                                    preferred_models=PREFERRED_MODELS))
                 elif route.path == '/api/models':
                     self.send(dict(models=pipeline.models(),
-                                   workers=pipeline.worker_config.workers if pipeline.worker_config else 1))
+                                   workers=pipeline.worker_capacity))
                 elif route.path == '/api/state':
                     self.send(pipeline.state(query['contract'][0]))
                 elif route.path == '/api/overview':
@@ -383,36 +430,25 @@ def main():
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--ollama-url', help='Override automatic worker configuration with one server')
     parser.add_argument('--config', type=Path, help='Model YAML supplying worker endpoints and concurrency')
-    parser.add_argument('--gpus', help='Gorina5 GPU indices for separate API workers, e.g. 0,1')
+    parser.add_argument('--replica-urls', help='Comma-separated Ollama endpoints serving the same model')
+    parser.add_argument('--workers-per-endpoint', type=int, help='Concurrent requests per endpoint; match OLLAMA_NUM_PARALLEL')
     args = parser.parse_args()
-    if args.gpus is not None and sys.platform != 'linux':
-        parser.error('--gpus must be run on the Gorina5 Linux host.')
+    replica_urls = [url.strip() for url in args.replica_urls.split(',')] if args.replica_urls else None
     config = args.config
     if config is None and args.ollama_url is None and (args.root / 'config/models.yaml').is_file():
         config = args.root / 'config/models.yaml'
-    pipeline = Pipeline(args.root, args.ollama_url or 'http://localhost:11434', config)
+    pipeline = Pipeline(args.root, args.ollama_url or 'http://localhost:11434', config,
+                        replica_urls, args.workers_per_endpoint)
+    server = ThreadingHTTPServer(('127.0.0.1', args.port), handler(pipeline))
+    print(f'XFed UI: http://127.0.0.1:{server.server_port}', flush=True)
+    print(f'Same-model workers: {pipeline.worker_capacity}; endpoints: ' +
+          ', '.join(pipeline.replica_urls), flush=True)
     try:
-        with ExitStack() as stack:
-            server = ThreadingHTTPServer(('127.0.0.1', args.port), handler(pipeline))
-            stack.callback(server.server_close)
-            if args.gpus is not None:
-                model = pipeline.defaults['model'] or 'llama3.1:70b'
-                urls = stack.enter_context(gpu_workers(
-                    args.gpus, pipeline.ollama_url, model,
-                    pipeline.root / 'tmp/ollama-workers', pipeline.defaults['num_ctx'],
-                    pipeline.defaults['timeout']))
-                options = {key: pipeline.defaults[key] for key in ('timeout', 'num_ctx', 'num_predict', 'think')}
-                pipeline.worker_config = OllamaPool(urls, model, **options)
-                pipeline.worker_config.preflight()
-                pipeline.ollama_url = urls[0]
-                pipeline.defaults['model'] = model
-            stack.callback(pipeline.stop)
-            print(f'XFed UI: http://127.0.0.1:{server.server_port}', flush=True)
-            server.serve_forever()
+        server.serve_forever()
     except KeyboardInterrupt:
         pipeline.stop()
-    except (OSError, ValueError, subprocess.SubprocessError) as error:
-        parser.exit(1, f'XFed: {error}\n')
+    finally:
+        server.server_close()
 
 
 if __name__ == '__main__':

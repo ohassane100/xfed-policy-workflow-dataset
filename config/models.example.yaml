@@ -1,7 +1,8 @@
 # Copy to config/models.yaml and fill in the endpoint/model available to you.
 # Add execution.base_urls for separately exposed GPU replicas.
 execution:
-  workers_per_endpoint: 1
+  # Start with 2 concurrent clauses on the shared API; measure whether it queues.
+  workers_per_endpoint: 2
 relevance_classifier:
   provider: ollama
   base_url: http://localhost:11434
@@ -9,4 +10,8 @@ relevance_classifier:
   timeout: 300
   num_ctx: 32768
   num_predict: 4096
-  # Omit think to use the model's default; some models cannot disable thinking.
+  relevance_num_predict: 512
+  relevance_batch_size: 4
+  keep_alive: 30m
+  # Optional relevance_think: false affects 1.3 only, if the selected model supports it.
+  # Omit think to preserve the policy model's default; some models cannot disable thinking.

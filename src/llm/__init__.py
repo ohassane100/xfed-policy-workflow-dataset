@@ -1,119 +1,16 @@
 import json
 from contextlib import contextmanager
-import os
-from pathlib import Path
 from queue import Queue
-import shlex
-import shutil
-import signal
-import socket
-import subprocess
-from time import monotonic, sleep
+from threading import Lock
+from time import perf_counter
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 
-@contextmanager
-def gpu_workers(gpu_ids, base_url, model, log_dir, num_ctx=32768, timeout=300):
-    """Serve the installed model through an isolated API process on each GPU."""
-    devices = [int(value) for value in gpu_ids.split(',')]
-    if any(gpu < 0 for gpu in devices) or len(set(devices)) != len(devices):
-        raise ValueError('--gpus must contain distinct nonnegative GPU indices.')
-    binary = os.environ.get('OLLAMA_BIN') or shutil.which('ollama') or '/local/ollama/bin/ollama'
-    if not os.access(binary, os.X_OK):
-        raise ValueError('GPU startup needs the Ollama server executable on Gorina5; '
-                         'set OLLAMA_BIN to its path. API access alone cannot assign GPUs.')
-    cache = os.environ.get('OLLAMA_MODELS')
-    if not cache:
-        request = Request(base_url.rstrip('/') + '/api/show',
-                          data=json.dumps(dict(model=model)).encode(),
-                          headers={'Content-Type': 'application/json'})
-        with urlopen(request, timeout=10) as response:
-            modelfile = json.load(response).get('modelfile', '')
-        for line in modelfile.splitlines():
-            if line.startswith('FROM '):
-                blob = Path(shlex.split(line)[1])
-                if blob.parent.name == 'blobs':
-                    cache = str(blob.parent.parent)
-                break
-    if not cache or not all(os.access(Path(cache) / name, os.R_OK | os.X_OK)
-                            for name in ('manifests', 'blobs')):
-        raise ValueError('The existing model cache is not readable from this login. '
-                         'Set OLLAMA_MODELS to a readable cache, or have the Ollama '
-                         'service operator expose a separate API worker per GPU.')
-    urls, identifiers = [], []
-    for index, gpu in enumerate(devices):
-        result = subprocess.run(['nvidia-smi', f'--id={gpu}', '--query-gpu=uuid,memory.used',
-                                 '--format=csv,noheader,nounits'],
-                                check=True, capture_output=True, text=True, timeout=10)
-        uuid, used = result.stdout.strip().split(',')
-        if int(used.strip()) > 1024:
-            raise ValueError(f'GPU {gpu} is already in use ({used.strip()} MiB). Select free GPUs.')
-        port = 11435 + index
-        with socket.socket() as probe:
-            probe.bind(('127.0.0.1', port))
-        urls.append(f'http://127.0.0.1:{port}')
-        identifiers.append(uuid.strip())
-    processes = []
-    log_dir = Path(log_dir)
-    log_dir.mkdir(parents=True, exist_ok=True)
-    try:
-        for gpu, uuid, url in zip(devices, identifiers, urls):
-            log = log_dir / f'gpu-{gpu}.log'
-            env = dict(os.environ, CUDA_VISIBLE_DEVICES=uuid, OLLAMA_HOST=url,
-                       OLLAMA_MODELS=str(cache), OLLAMA_NUM_PARALLEL='1',
-                       OLLAMA_MAX_LOADED_MODELS='1', OLLAMA_NOPRUNE='1',
-                       OLLAMA_NO_CLOUD='1', OLLAMA_VULKAN='0', GGML_VK_VISIBLE_DEVICES='-1')
-            with log.open('w', encoding='utf-8') as stream:
-                process = subprocess.Popen([binary, 'serve'], env=env, stdout=stream,
-                                           stderr=subprocess.STDOUT, start_new_session=True)
-            processes.append(process)
-            print(f'Starting GPU {gpu}: {url} (log: {log})', flush=True)
-            deadline = monotonic() + 30
-            while True:
-                if process.poll() is not None:
-                    raise ValueError(f'GPU {gpu} worker exited. Inspect {log}.')
-                try:
-                    with urlopen(url + '/api/tags', timeout=1):
-                        break
-                except (URLError, OSError):
-                    if monotonic() >= deadline:
-                        raise ValueError(f'GPU {gpu} worker did not start. Inspect {log}.')
-                    sleep(0.25)
-            # Load now so CPU fallback or an unavailable model fails before the UI opens.
-            request = Request(url + '/api/generate', data=json.dumps(dict(
-                model=model, stream=False, keep_alive='10m', options=dict(num_ctx=num_ctx))).encode(),
-                headers={'Content-Type': 'application/json'})
-            with urlopen(request, timeout=timeout) as response:
-                answer = json.load(response)
-            if answer.get('error') or answer.get('done') is not True:
-                raise ValueError(f'GPU {gpu} model load failed: {answer.get("error", "incomplete response")}')
-            with urlopen(url + '/api/ps', timeout=10) as response:
-                loaded = json.load(response).get('models', [])
-            if not any(m.get('name') == model and m.get('size_vram', 0) > 0 for m in loaded):
-                raise ValueError(f'GPU {gpu} worker did not load {model} onto the GPU. Inspect {log}.')
-            print(f'GPU {gpu} ready: {model}', flush=True)
-        yield urls
-    finally:
-        for process in processes:
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-        for process in processes:
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                process.wait(timeout=5)
-
-
 class OllamaClient:
-    def __init__(self, base_url, model, timeout=300, num_ctx=32768, num_predict=512, think=None):
+    def __init__(self, base_url, model, timeout=300, num_ctx=32768, num_predict=512, think=None, main_gpu=None,
+                 relevance_num_predict=512, relevance_think=None, relevance_batch_size=4, keep_alive='30m'):
         if not isinstance(base_url, str) or urlsplit(base_url).scheme not in ('http', 'https') or not urlsplit(base_url).hostname:
             raise ValueError('Set a valid HTTP(S) Ollama base_url.')
         if not isinstance(model, str) or not model.strip() or model == 'PLACEHOLDER':
@@ -124,13 +21,39 @@ class OllamaClient:
             raise ValueError('num_predict must be at least 128 and less than num_ctx.')
         if think is not None and not isinstance(think, bool):
             raise ValueError('think must be true, false, or omitted.')
+        if main_gpu is not None and (type(main_gpu) is not int or main_gpu < 0):
+            raise ValueError('main_gpu must be a nonnegative integer or omitted.')
+        if type(relevance_num_predict) is not int or not 128 <= relevance_num_predict < num_ctx:
+            raise ValueError('relevance_num_predict must be at least 128 and less than num_ctx.')
+        if relevance_think is not None and not isinstance(relevance_think, bool):
+            raise ValueError('relevance_think must be true, false, or omitted.')
+        if not isinstance(keep_alive, (str, int)) or isinstance(keep_alive, bool):
+            raise ValueError('keep_alive must be an Ollama duration string or integer.')
+        if type(relevance_batch_size) is not int or not 1 <= relevance_batch_size <= 16:
+            raise ValueError('relevance_batch_size must be between 1 and 16.')
+        self.relevance_batch_size = relevance_batch_size
+        self.relevance_num_predict, self.relevance_think = relevance_num_predict, relevance_think
+        self.keep_alive = keep_alive
+        self._stats_lock = Lock()
+        self.reset_stats()
         self.url = base_url.rstrip('/') + '/api/chat'
         self.model, self.timeout, self.num_ctx = model, timeout, num_ctx
         self.num_predict, self.think = num_predict, think
+        self.main_gpu = main_gpu
+
+    def reset_stats(self):
+        with self._stats_lock:
+            self.stats = dict(responses=0, request_seconds=0.0, load_seconds=0.0,
+                              prompt_seconds=0.0, generation_seconds=0.0, prompt_tokens=0,
+                              output_tokens=0)
 
     def metadata(self):
-        return {key: getattr(self, key, None) for key in
-                ('url', 'model', 'model_digest', 'timeout', 'num_ctx', 'num_predict', 'think')}
+        result = {key: getattr(self, key, None) for key in
+                  ('url', 'model', 'model_digest', 'timeout', 'num_ctx', 'num_predict', 'think',
+                   'main_gpu', 'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive')}
+        with self._stats_lock:
+            result['performance'] = dict(self.stats)
+        return result
 
     def preflight(self):
         with urlopen(self.url.removesuffix('/api/chat') + '/api/tags', timeout=10) as response:
@@ -141,19 +64,25 @@ class OllamaClient:
         self.model_digest = model['digest']
         return self.metadata()
 
-    def generate(self, system, value, schema, num_predict=None):
+    def generate(self, system, value, schema, num_predict=None, think=None):
         from jsonschema import Draft202012Validator
         output_limit = self.num_predict if num_predict is None else num_predict
         if not isinstance(output_limit, int) or not 128 <= output_limit < self.num_ctx:
             raise ValueError('num_predict must be at least 128 and less than num_ctx.')
-        payload = dict(model=self.model, stream=False, format=schema,
+        effective_think = self.think if think is None else think
+        if effective_think is not None and not isinstance(effective_think, bool):
+            raise ValueError('think must be true, false, or omitted.')
+        payload = dict(model=self.model, stream=False, format=schema, keep_alive=self.keep_alive,
                        messages=[dict(role='system', content=system),
                                  dict(role='user', content=json.dumps(value, ensure_ascii=False))],
                        options=dict(temperature=0, num_ctx=self.num_ctx, num_predict=output_limit))
-        if self.think is not None:
-            payload['think'] = self.think
+        if effective_think is not None:
+            payload['think'] = effective_think
+        if self.main_gpu is not None:
+            payload['options']['main_gpu'] = self.main_gpu
         request = Request(self.url, data=json.dumps(payload).encode('utf-8'),
                           headers={'Content-Type': 'application/json'})
+        started = perf_counter()
         try:
             with urlopen(request, timeout=self.timeout) as response:
                 result = json.load(response)
@@ -178,6 +107,19 @@ class OllamaClient:
             raise ValueError('Ollama returned an invalid JSON response.') from error
         if not isinstance(result, dict):
             raise ValueError('Ollama response incomplete or truncated; increase output tokens before accepting it.')
+        with self._stats_lock:
+            self.stats['responses'] += 1
+            self.stats['request_seconds'] += perf_counter() - started
+            for key, source, divisor in (
+                ('load_seconds', 'load_duration', 1e9),
+                ('prompt_seconds', 'prompt_eval_duration', 1e9),
+                ('generation_seconds', 'eval_duration', 1e9),
+                ('prompt_tokens', 'prompt_eval_count', 1),
+                ('output_tokens', 'eval_count', 1),
+            ):
+                value = result.get(source)
+                if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+                    self.stats[key] += value / divisor
         if result.get('done') is not True:
             output_tokens = result.get('eval_count')
             if isinstance(output_tokens, int) and output_tokens >= output_limit:
@@ -201,9 +143,9 @@ class OllamaClient:
 
 
 class OllamaPool:
-    """One bounded request slot per endpoint, or explicitly configured slots."""
+    """Bound concurrent requests and keep each chunk's retries on one worker."""
 
-    def __init__(self, base_urls, model, workers_per_endpoint=1, **options):
+    def __init__(self, base_urls, model=None, workers_per_endpoint=1, worker_models=None, workers=None, **options):
         if (not isinstance(base_urls, list) or not base_urls or
                 any(not isinstance(url, str) for url in base_urls) or
                 len(set(url.rstrip('/') for url in base_urls)) != len(base_urls)):
@@ -211,14 +153,23 @@ class OllamaPool:
         if (not isinstance(workers_per_endpoint, int) or isinstance(workers_per_endpoint, bool)
                 or not 1 <= workers_per_endpoint <= 32):
             raise ValueError('workers_per_endpoint must be between 1 and 32.')
+        if worker_models is not None:
+            raise ValueError('Choose one model per run. Use separate base_urls for identical GPU replicas.')
         self.clients = [OllamaClient(url, model, **options) for url in base_urls]
         first = self.clients[0]
-        for key in ('model', 'timeout', 'num_ctx', 'num_predict', 'think'):
+        for key in ('model', 'timeout', 'num_ctx', 'num_predict', 'think', 'main_gpu',
+                    'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive'):
             setattr(self, key, getattr(first, key))
         self.url = first.url
+        self.model = ' + '.join(dict.fromkeys(c.model for c in self.clients))
         self.workers_per_endpoint = workers_per_endpoint
-        self.workers = len(self.clients) * workers_per_endpoint
+        capacity = len(self.clients) * workers_per_endpoint
+        if workers is not None and (type(workers) is not int or not 1 <= workers <= capacity):
+            raise ValueError(f'workers must be between 1 and {capacity}.')
+        self.workers = capacity if workers is None else workers
         self._available = Queue()
+        self._lock = Lock()
+        self.reset_assignments()
         for _ in range(workers_per_endpoint):
             for client in self.clients:
                 self._available.put(client)
@@ -232,10 +183,36 @@ class OllamaPool:
         self.model_digest = digests.pop()
         return self.metadata()
 
+    def reset_assignments(self):
+        for client in self.clients:
+            client.reset_stats()
+        with self._lock:
+            self.assignments = {}
+            self.completed = [0] * len(self.clients)
+
+    @contextmanager
+    def for_chunk(self, chunk_id):
+        client = self._available.get()
+        index = self.clients.index(client)
+        try:
+            chunk_ids = [chunk_id] if isinstance(chunk_id, str) else list(chunk_id)
+            with self._lock:
+                for identifier in chunk_ids:
+                    self.assignments[identifier] = index
+            yield client
+            with self._lock:
+                self.completed[index] += len(chunk_ids)
+        finally:
+            self._available.put(client)
+
     def metadata(self):
         result = self.clients[0].metadata()
         result.update(base_urls=[c.url.removesuffix('/api/chat') for c in self.clients],
+                      model=self.model, model_digest=getattr(self, 'model_digest', None),
+                      models=[c.metadata() for c in self.clients],
                       workers=self.workers, workers_per_endpoint=self.workers_per_endpoint)
+        with self._lock:
+            result.update(assignments=dict(self.assignments), completed=list(self.completed))
         return result
 
     def generate(self, *args, **kwargs):
@@ -260,4 +237,9 @@ def load_client(path):
     return OllamaPool(urls, settings.get('model'),
                       workers_per_endpoint=execution.get('workers_per_endpoint', 1),
                       timeout=settings.get('timeout', 300), num_ctx=settings.get('num_ctx', 32768),
-                      num_predict=settings.get('num_predict', 512), think=settings.get('think'))
+                      num_predict=settings.get('num_predict', 512), think=settings.get('think'),
+                      main_gpu=settings.get('main_gpu'),
+                      relevance_num_predict=settings.get('relevance_num_predict', 512),
+                      relevance_think=settings.get('relevance_think'),
+                      relevance_batch_size=settings.get('relevance_batch_size', 4),
+                      keep_alive=settings.get('keep_alive', '30m'))

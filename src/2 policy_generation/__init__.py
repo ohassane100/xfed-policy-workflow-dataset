@@ -302,8 +302,8 @@ def generate(document, client, root=Path('.'), progress=None):
     }, traceability=[])
     report = dict(contract_id=contract, status='draft', clauses=[])
     rejected = False
-    results = map_chunks(document['items'], lambda item: generate_item(
-        item, client, prompt, contract, request_schema, root), client, progress)
+    results = map_chunks(document['items'], lambda item, worker: generate_item(
+        item, worker, prompt, contract, request_schema, root), client, progress)
     for item, (fragment, entry, failed) in zip(document['items'], results):
         report['clauses'].append(entry)
         rejected = rejected or failed
