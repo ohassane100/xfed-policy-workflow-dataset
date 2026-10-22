@@ -396,22 +396,87 @@ class QualityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Duplicate obligation'):
             validate_fragment(policy, 'contract', self.item, ROOT)
 
-    def test_real_benchmark_manifest_counts_and_missing_predictions(self):
-        from xfed.evaluation import load_reference, run_evaluation, score_report
+    def test_split_manifest_counts_and_missing_predictions(self):
+        from xfed.evaluation import digest, load_reference, score_report
         data = load_reference(ROOT)
-        self.assertEqual(len(data['classification']), 300)
-        self.assertEqual(len(data['policy']), 60)
-        for task in ('classification', 'policy'):
-            self.assertTrue(all(c['source_type'] == 'real' and 'split' not in c for c in data[task]))
-        report = dict(reference_version=data['version'], task='classification', source='real',
-                      selected_cases=dict(classification=[c['case_id'] for c in data['classification']]),
-                      predictions={}, execution={})
-        scored = score_report(data, report, ROOT)
-        self.assertEqual(scored['metrics']['classification']['real/coverage']['errors'], 300)
-        self.assertEqual(scored['metrics']['classification']['real/coverage']['accuracy'], 0)
-        report['selected_cases']['classification'].pop()
-        with self.assertRaises(ValueError):
+        for split, size in [('dev', 100), ('test', 200)]:
+            selected = [c['case_id'] for c in data['classification'] if c['split'] == split]
+            self.assertEqual(len(selected), size)
+            report = dict(reference_version=data['version'], reference_sha256=digest(data),
+                          split=split, task='classification', source='real',
+                          selected_cases=dict(classification=selected), predictions={}, execution={})
+            scored = score_report(data, report, ROOT)
+            self.assertEqual(scored['metrics']['classification']['real/coverage']['errors'], size)
+            self.assertEqual(scored['metrics']['classification']['real/coverage']['accuracy'], 0)
+            report['selected_cases']['classification'].pop()
+            with self.assertRaises(ValueError):
+                score_report(data, report, ROOT)
+
+    def test_reference_hash_detects_changed_gold_without_version_change(self):
+        from xfed.evaluation import digest, load_reference, score_report
+        data = load_reference(ROOT)
+        report = dict(reference_version=data['version'], reference_sha256=digest(data), split='dev')
+        data['classification'][0]['gold']['label'] = 'NEEDS_CONTEXT'
+        with self.assertRaisesRegex(ValueError, 'content or annotations changed'):
             score_report(data, report, ROOT)
+
+    def test_cases_cannot_cross_their_contract_split(self):
+        from unittest.mock import patch
+        from xfed.evaluation import load_reference
+        data = load_reference(ROOT)
+        data['classification'][0]['split'] = 'test'
+        with patch.object(Path, 'read_text', return_value=json.dumps(data)):
+            with self.assertRaisesRegex(ValueError, 'source contract split'):
+                load_reference(ROOT)
+
+    def test_both_split_runners_and_changed_inference_detection(self):
+        from unittest.mock import patch
+        from xfed.evaluation import load_reference, run_evaluation
+        class Runner(Client):
+            num_ctx = 131072
+            def preflight(self): pass
+            def reset_assignments(self): pass
+            def metadata(self): return dict(model=self.model)
+        def answer(value):
+            return dict(policy=None, reason='Simulated abstention.') if 'contract_id' in value else dict(label='RELEVANT')
+        data = load_reference(ROOT)
+        for split, count in [('dev', 100), ('test', 200)]:
+            report = run_evaluation(data, Runner(answer), ROOT, split=split)
+            self.assertEqual(len(report['predictions']['classification']), count)
+            self.assertEqual(len(report['predictions']['policy']), count // 5)
+            self.assertEqual(report['status'], 'complete')
+            self.assertTrue(report['run_id'])
+            self.assertTrue(report['inference_sha256'])
+            self.assertEqual(set(report['case_manifest']['classification']), set(report['selected_cases']['classification']))
+            self.assertTrue(all(row['input']['clause']['chunk_id'] for row in report['case_manifest']['classification'].values()))
+            self.assertTrue(report['test_exposure'] if split == 'test' else report['test_exposure'] is None)
+        with patch('xfed.evaluation.inference_files', side_effect=[{}, {'changed': '1'}]):
+            with self.assertRaisesRegex(ValueError, 'changed during evaluation'):
+                run_evaluation(data, Runner(answer), ROOT, task='classification')
+
+    def test_dashboard_test_only_and_reports_survive_restart(self):
+        from unittest.mock import patch
+        from xfed.evaluation import load_reference, reference_summary
+        summary = reference_summary(load_reference(ROOT), split='test')
+        self.assertEqual(summary['counts']['classification']['total'], 200)
+        self.assertEqual(summary['counts']['policy']['total'], 40)
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            pipeline = Pipeline(root, 'http://127.0.0.1:11434')
+            with self.assertRaisesRegex(ValueError, 'test set only'):
+                pipeline.start_evaluation(dict(split='dev'))
+            report = dict(run_id='simulated-test-run', split='test', status='complete',
+                          metrics={}, reference_status='provisional')
+            with patch('xfed.ui.run_evaluation', return_value=report):
+                pipeline.run_evaluation({}, object(), dict(split='test'))
+            saved = root / 'evaluation/runs/simulated-test-run.json'
+            self.assertTrue(saved.exists())
+            restarted = Pipeline(root, 'http://127.0.0.1:11434')
+            self.assertEqual(restarted.evaluation_report, report)
+            restarted.mark_evaluation_stopped('cancelled', 'Simulated cancellation')
+            restored = Pipeline(root, 'http://127.0.0.1:11434')
+            self.assertEqual(restored.evaluation_report['status'], 'cancelled')
+            self.assertEqual(restored.evaluation_report['error'], 'Simulated cancellation')
 
 
 if __name__ == '__main__':

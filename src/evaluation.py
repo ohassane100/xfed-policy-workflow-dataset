@@ -3,6 +3,8 @@
 import argparse
 from collections import Counter, defaultdict
 from copy import deepcopy
+from datetime import datetime, timezone
+from uuid import uuid4
 import hashlib
 import json
 import math
@@ -24,10 +26,16 @@ def digest(value):
 
 def load_reference(root=Path('.')):
     data = json.loads((Path(root) / 'evaluation/reference.json').read_text(encoding='utf-8'))
+    source_splits = defaultdict(set)
     for source in data['sources'].values():
+        if source.get('split') not in ('dev', 'test'):
+            raise ValueError('Source contracts require a dev or test split.')
+        source_splits[source['sha256']].add(source['split'])
         path = Path(root) / source['pdf']
         if source['source_type'] != 'real' or hashlib.sha256(path.read_bytes()).hexdigest() != source['sha256']:
             raise ValueError('Benchmark source is not real or its PDF hash changed.')
+    if any(len(splits) != 1 for splits in source_splits.values()):
+        raise ValueError('The same source PDF cannot appear in both splits.')
     for task in ('classification', 'policy'):
         identifiers = set()
         for case in data[task]:
@@ -37,6 +45,8 @@ def load_reference(root=Path('.')):
             value = data['inputs'][case['input_id']]
             if case.get('source_type') != 'real' or data['sources'][value['contract_id']]['source_type'] != 'real':
                 raise ValueError('The benchmark accepts real source documents only.')
+            if case.get('split') != data['sources'][value['contract_id']]['split']:
+                raise ValueError('Every case must follow its source contract split.')
             for key in ('context', 'policy_context'):
                 if any(identifier not in data['contexts'] for identifier in value[key]):
                     raise ValueError('Reference context is missing.')
@@ -59,12 +69,27 @@ def load_reference(root=Path('.')):
     return data
 
 
-def reference_summary(data):
-    return dict(version=data['version'], status=data['status'],
-                counts={task: dict(total=len(data[task])) for task in ('classification', 'policy')},
-                classification_labels=dict(Counter(case['gold']['label'] for case in data['classification'])),
-                reviewed={task: sum(case['gold']['review_status'] == 'reviewed' for case in data[task]) for task in ('classification', 'policy')},
+def reference_summary(data, split='dev'):
+    if split not in ('dev', 'test'):
+        raise ValueError('Choose dev or test.')
+    selected = {task: [case for case in data[task] if case['split'] == split]
+                for task in ('classification', 'policy')}
+    return dict(version=data['version'], status=data['status'], split=split,
+                counts={task: dict(total=len(cases)) for task, cases in selected.items()},
+                classification_labels=dict(Counter(case['gold']['label'] for case in selected['classification'])),
+                reviewed={task: sum(case['gold']['review_status'] == 'reviewed' for case in cases)
+                          for task, cases in selected.items()},
+                reference_sha256=digest(data), test_exposure=data['test_exposure'] if split == 'test' else None,
                 limitations=data['limitations'])
+
+
+def inference_files(root):
+    root = Path(root)
+    paths = [root / file for file in ('src/evaluation.py', 'src/llm/__init__.py',
+             'src/common/__init__.py', 'src/1 preprocessing/1.3 relevance/__init__.py',
+             'src/2 policy_generation/__init__.py')]
+    paths += sorted((root / 'prompts').glob('*.md')) + sorted((root / 'schemas').glob('*.json'))
+    return {path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths}
 
 
 def input_for(data, case, policy=False):
@@ -252,13 +277,17 @@ def cluster_interval(rows, operation, key, repetitions=500):
 def score_report(data, report, root=Path('.'), require_reviewed=False):
     if report.get('reference_version') != data['version']:
         raise ValueError('Reference version changed; rerun the benchmark instead of rescoring an older selection.')
+    if report.get('reference_sha256') != digest(data):
+        raise ValueError('Reference content or annotations changed; rerun against the frozen reference.')
+    if report.get('split') not in ('dev', 'test'):
+        raise ValueError('Reports must declare dev or test.')
     output = deepcopy(report)
     metrics, mismatches = {}, []
     for task, operation in [('classification', classification_metrics), ('policy', policy_metrics)]:
         predictions = report.get('predictions', {}).get(task, {})
         selected = report.get('selected_cases', {}).get(task, [])
         expected = {case['case_id'] for case in data[task] if report['task'] in (task, 'both')
-                    and case['source_type'] == 'real'}
+                    and case['split'] == report['split']}
         if set(selected) != expected:
             raise ValueError('The manifest must cover the entire declared reference selection; missing predictions are counted as errors.')
         if not selected:
@@ -308,18 +337,23 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
     if not metrics:
         raise ValueError('No evaluation cases were selected in the prediction manifest.')
     output.update(metrics=metrics, mismatches=mismatches, reference_sha256=digest(data),
+                  test_exposure=data['test_exposure'] if report['split'] == 'test' else None,
+                  scorer_sha256=hashlib.sha256((Path(root) / 'src/evaluation.py').read_bytes()).hexdigest(),
                   incomplete_tasks=[task for task in report['selected_cases'] if task not in report.get('execution', {})],
                   reference_status='reviewed' if all(value['reviewed'] == value['n'] for task in metrics.values() for value in task.values()) else 'provisional',
                   metric_notes=data['limitations'], interval_note='Wilson intervals assume independent cases. Page-cluster bootstrap intervals resample pages within each fixed source contract (500 replicates); neither interval establishes generalisation to new contracts.')
     return output
 
 
-def run_evaluation(data, client, root=Path('.'), task='both', progress=None, cancel=None, completed=None):
+def run_evaluation(data, client, root=Path('.'), task='both', split='dev', progress=None, cancel=None, completed=None):
     from xfed.relevance import classify_batch, fits
     from xfed.policy_generation import generate_item, response_schema
     if task not in ('classification', 'policy', 'both'):
         raise ValueError('Choose classification, policy or both.')
-    selected = {name: list(data[name]) for name in ('classification', 'policy') if task in (name, 'both')}
+    if split not in ('dev', 'test'):
+        raise ValueError('Choose dev or test.')
+    selected = {name: [case for case in data[name] if case['split'] == split]
+                for name in ('classification', 'policy') if task in (name, 'both')}
     if not any(selected.values()):
         raise ValueError('No reference cases match this selection.')
     def checkpoint(done=0, total=0, message=''):
@@ -327,9 +361,16 @@ def run_evaluation(data, client, root=Path('.'), task='both', progress=None, can
             raise InterruptedError('Evaluation cancelled.')
         if progress and message:
             progress(done, total, message)
-    report = dict(reference_version=data['version'], benchmark='real-contracts', source='real', task=task, predictions={}, execution={},
+    report = dict(status='running', run_id=str(uuid4()), started_at=datetime.now(timezone.utc).isoformat(),
+                  reference_sha256=digest(data), split=split,
+                  source_documents={cid: deepcopy(value) for cid, value in data['sources'].items() if value['split'] == split},
+                  inference_sha256=inference_files(root),
+                  reference_version=data['version'], benchmark='real-contracts', source='real', task=task, predictions={}, execution={},
                   evaluation_scope='Stage classification and isolated policy extraction with frozen source context; policy scores do not include upstream classification errors.',
                   selected_cases={name:[case['case_id'] for case in cases] for name,cases in selected.items() if cases},
+                  case_manifest={name: {case['case_id']: dict(gold=deepcopy(case['gold']),
+                                    input=input_for(data, case, name == 'policy')) for case in cases}
+                                 for name, cases in selected.items() if cases},
                   code_sha256={str(path):hashlib.sha256((Path(root)/path).read_bytes()).hexdigest() for path in
                                ['src/evaluation.py','src/llm/__init__.py','src/1 preprocessing/1.3 relevance/__init__.py','src/2 policy_generation/__init__.py']},
                   prompts={name: hashlib.sha256((Path(root)/'prompts'/file).read_bytes()).hexdigest()
@@ -389,9 +430,13 @@ def run_evaluation(data, client, root=Path('.'), task='both', progress=None, can
             work=[dict(case,chunk_id=case['case_id']) for case in cases]
             values=map_chunks(work,policy,client,lambda done,total,message:checkpoint(done,total,'Policy cases'))
             report['predictions'][name]=dict(zip([case['case_id'] for case in cases],values))
+        if inference_files(root) != report['inference_sha256'] or digest(load_reference(root)) != report['reference_sha256']:
+            raise ValueError('Code, prompts, schemas or references changed during evaluation; restart with frozen inputs.')
         report['execution'][name]=dict(duration_seconds=perf_counter()-started,options=client.metadata())
         if completed:
             completed(report)
+    report['status'] = 'complete'
+    report['finished_at'] = datetime.now(timezone.utc).isoformat()
     checkpoint(message='Scoring frozen references')
     return score_report(data,report,root)
 
@@ -400,6 +445,7 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command',choices=['describe','run','score'])
     parser.add_argument('--root',type=Path,default=Path.cwd())
+    parser.add_argument('--split',choices=['dev','test'],default='dev',help='Local development by default; use test only after fixing settings.')
     parser.add_argument('--task',choices=['classification','policy','both'],default='both')
     parser.add_argument('--model')
     parser.add_argument('--worker-models',nargs='+')
@@ -414,7 +460,7 @@ def main(argv=None):
     if args.output and (args.output.resolve().is_relative_to(root/'contracts') or args.output.resolve().is_relative_to(root/'evaluation')):
         parser.error('Save run reports outside contracts/ and evaluation/ to preserve source outputs and references.')
     if args.command=='describe':
-        print(json.dumps(reference_summary(data),indent=2))
+        print(json.dumps(reference_summary(data,args.split),indent=2))
         return
     if args.command=='score':
         if not args.predictions:
@@ -434,10 +480,10 @@ def main(argv=None):
             client=OllamaPool([args.base_url],model,worker_models=names,num_predict=4096,timeout=600)
         if args.require_reviewed:
             chosen=[case for name in ('classification','policy') if args.task in (name,'both') for case in data[name]
-                    if case['source_type']=='real']
+                    if case['split']==args.split]
             if any(case['gold']['review_status']!='reviewed' for case in chosen):
                 parser.error('Selected references still need independent review.')
-        report=run_evaluation(data,client,root,args.task,
+        report=run_evaluation(data,client,root,args.task,split=args.split,
                               progress=lambda done,total,message:print(f'{message}: {done}/{total}',flush=True),
                               completed=(lambda result:write_json(args.output,result)) if args.output else None)
     report=score_report(data,report,root,args.require_reviewed)

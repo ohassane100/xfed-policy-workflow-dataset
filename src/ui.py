@@ -134,7 +134,9 @@ class Pipeline:
         self.lock, self.cancel = threading.Lock(), threading.Event()
         self.job = dict(status='idle', stage=None, completed=0, total=0, message='Ready', log=[])
         self.benchmark_report = None
-        self.evaluation_report = None
+        saved = sorted((self.root / 'evaluation/runs').glob('*.json'), key=lambda path: path.stat().st_mtime, reverse=True)
+        self.evaluation_report = next((value for path in saved
+                                       if isinstance(value := read_json(path), dict) and value.get('split') == 'test'), None)
 
     def contracts(self):
         return sorted(p.name for p in (self.root / 'contracts').iterdir()
@@ -348,7 +350,9 @@ class Pipeline:
             return deepcopy(self.benchmark_report)
 
     def start_evaluation(self, request):
-        options = dict(task=request.get('task', 'both'))
+        if request.get('split', 'test') != 'test':
+            raise ValueError('The UI evaluates the test set only. Use the local CLI for development.')
+        options = dict(task=request.get('task', 'both'), split='test')
         if options['task'] not in ('classification', 'policy', 'both'):
             raise ValueError('Choose a supported evaluation task.')
         data = load_reference(self.root)
@@ -373,25 +377,37 @@ class Pipeline:
             self.progress(done, total, message)
 
         def completed(report):
+            write_json(self.root / 'evaluation/runs' / (report['run_id'] + '.json'), report)
             with self.lock:
                 self.evaluation_report = deepcopy(report)
                 self.job['log'].append('Saved ' + ', '.join(report['execution']) + ' evaluation predictions')
         try:
             report = run_evaluation(data, client, self.root, progress=progress,
                                     cancel=self.cancel, completed=completed, **options)
+            write_json(self.root / 'evaluation/runs' / (report['run_id'] + '.json'), report)
             with self.lock:
                 self.evaluation_report = report
             errors = sum(value.get('errors', value.get('failures', 0)) for task in report['metrics'].values() for value in task.values() if not value.get('aggregate'))
             self.finish('complete', f"Evaluation complete; {errors} failed cases; references: {report['reference_status']}")
         except (Cancelled, InterruptedError):
-            self.finish('cancelled', 'Evaluation cancelled; completed task predictions are available.')
+            self.mark_evaluation_stopped('cancelled', 'Evaluation cancelled; completed task predictions are available.')
         except Exception as error:
-            self.finish('failed', str(error))
+            self.mark_evaluation_stopped('failed', str(error))
+
+    def mark_evaluation_stopped(self, status, message):
+        with self.lock:
+            report = deepcopy(self.evaluation_report)
+        if report:
+            report.update(status=status, error=message, finished_at=datetime.now(timezone.utc).isoformat())
+            write_json(self.root / 'evaluation/runs' / (report['run_id'] + '.json'), report)
+            with self.lock:
+                self.evaluation_report = report
+        self.finish(status, message)
 
     def evaluation_result(self):
         with self.lock:
             report = deepcopy(self.evaluation_report)
-        return dict(reference=reference_summary(load_reference(self.root)), report=report)
+        return dict(reference=reference_summary(load_reference(self.root), split='test'), report=report)
 
     def invalidate(self, contract, stage):
         stages = list(STAGES)

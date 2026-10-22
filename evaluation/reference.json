@@ -1,5 +1,5 @@
 {
-  "version": "xfed-real-reference-v2-draft",
+  "version": "xfed-real-reference-v3-draft",
   "created": "2026-10-21",
   "status": "draft",
   "annotation_provenance": "Reference labels and rule slots drafted by the assistant from supplied contract text. No pipeline predictions were copied as gold. No independent human review has been completed.",
@@ -10,8 +10,9 @@
     "Policy rule matching is conservative canonical slot matching, not a proof of logical or legal equivalence. Unmatched paraphrases need blinded adjudication.",
     "Policy issuer/assigner and OSDU correctness are not automatically graded. Core slots, constraints, schema and source traceability are graded separately.",
     "All cases use real source documents with their supplied context; synthetic contracts and context-removal challenges are excluded.",
-    "This benchmark is used during prompt tuning, so scores are subject to selection bias and do not estimate unseen-contract performance.",
-    "The European Commission source contains model clauses and commentary; these are real source text but not proof of an executed agreement."
+    "The European Commission source contains model clauses and commentary; these are real source text but not proof of an executed agreement.",
+    "Test results and some test examples have already been inspected during earlier development. Report comparisons as provisional; obtain a fresh independent real contract for an untouched final validation.",
+    "Natural NEEDS_CONTEXT support is only one case in each split; rare-class performance is not established."
   ],
   "sources": {
     "contract_01": {
@@ -21,7 +22,8 @@
       "source_type": "real",
       "segmentation_content_sha256": "b079973ed702a1c145a2e2a2399406f372ae34754084166c57bd24039f44da61",
       "sampling_seed": "xfed-eval-v1:contract_01",
-      "title": "European Commission model data-access and cloud terms"
+      "title": "European Commission model data-access and cloud terms",
+      "split": "dev"
     },
     "contract_02": {
       "pdf": "contracts/contract_02/input/contract.pdf",
@@ -30,7 +32,8 @@
       "source_type": "real",
       "segmentation_content_sha256": "628961cad168a060295ceec11032bc0100edabd510101cb4cb50c073e647aa92",
       "sampling_seed": "xfed-eval-v1:contract_02",
-      "title": "Well-services master agreement"
+      "title": "Well-services master agreement",
+      "split": "test"
     },
     "contract_03": {
       "pdf": "contracts/contract_03/input/contract.pdf",
@@ -39,7 +42,8 @@
       "source_type": "real",
       "segmentation_content_sha256": "9df89978fd05ac37b8c30d025eeccb7cbad20a8fbe5bc398ef0d17309c0521ef",
       "sampling_seed": "xfed-eval-v1:contract_03",
-      "title": "NCS2030 research collaboration agreement"
+      "title": "NCS2030 research collaboration agreement",
+      "split": "test"
     }
   },
   "action_aliases": {
@@ -25533,7 +25537,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:2"
+      "group_id": "contract_01:page:2",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000043",
@@ -25547,7 +25552,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:10"
+      "group_id": "contract_01:page:10",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000143",
@@ -25561,7 +25567,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:13"
+      "group_id": "contract_01:page:13",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000150",
@@ -25575,7 +25582,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:13"
+      "group_id": "contract_01:page:13",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000159",
@@ -25589,7 +25597,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:13"
+      "group_id": "contract_01:page:13",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000191",
@@ -25603,7 +25612,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:14"
+      "group_id": "contract_01:page:14",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000215",
@@ -25617,7 +25627,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:18"
+      "group_id": "contract_01:page:18",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000236",
@@ -25631,7 +25642,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:20"
+      "group_id": "contract_01:page:20",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000241",
@@ -25645,7 +25657,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:21"
+      "group_id": "contract_01:page:21",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000245",
@@ -25659,7 +25672,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:22"
+      "group_id": "contract_01:page:22",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000254",
@@ -25673,7 +25687,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:24"
+      "group_id": "contract_01:page:24",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000255",
@@ -25687,7 +25702,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:24"
+      "group_id": "contract_01:page:24",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000256",
@@ -25701,7 +25717,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:24"
+      "group_id": "contract_01:page:24",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000258",
@@ -25715,7 +25732,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:24"
+      "group_id": "contract_01:page:24",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000261",
@@ -25729,7 +25747,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:25"
+      "group_id": "contract_01:page:25",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000274",
@@ -25743,7 +25762,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:28"
+      "group_id": "contract_01:page:28",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000285",
@@ -25757,7 +25777,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:29"
+      "group_id": "contract_01:page:29",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000286",
@@ -25771,7 +25792,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:29"
+      "group_id": "contract_01:page:29",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000289",
@@ -25785,7 +25807,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:30"
+      "group_id": "contract_01:page:30",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000291",
@@ -25799,7 +25822,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:30"
+      "group_id": "contract_01:page:30",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000323",
@@ -25813,7 +25837,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:33"
+      "group_id": "contract_01:page:33",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000328",
@@ -25827,7 +25852,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:35"
+      "group_id": "contract_01:page:35",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000336",
@@ -25841,7 +25867,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:37"
+      "group_id": "contract_01:page:37",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000347",
@@ -25855,7 +25882,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:38"
+      "group_id": "contract_01:page:38",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000354",
@@ -25870,7 +25898,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:38"
+      "group_id": "contract_01:page:38",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000365",
@@ -25884,7 +25913,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:39"
+      "group_id": "contract_01:page:39",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000371",
@@ -25898,7 +25928,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:40"
+      "group_id": "contract_01:page:40",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000379",
@@ -25912,7 +25943,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:40"
+      "group_id": "contract_01:page:40",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000394",
@@ -25926,7 +25958,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:42"
+      "group_id": "contract_01:page:42",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000408",
@@ -25940,7 +25973,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:44"
+      "group_id": "contract_01:page:44",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000439",
@@ -25954,7 +25988,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:46"
+      "group_id": "contract_01:page:46",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000465",
@@ -25968,7 +26003,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:48"
+      "group_id": "contract_01:page:48",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000473",
@@ -25982,7 +26018,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:49"
+      "group_id": "contract_01:page:49",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000499",
@@ -25996,7 +26033,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:53"
+      "group_id": "contract_01:page:53",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000526",
@@ -26010,7 +26048,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:56"
+      "group_id": "contract_01:page:56",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000558",
@@ -26024,7 +26063,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:59"
+      "group_id": "contract_01:page:59",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000566",
@@ -26038,7 +26078,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:59"
+      "group_id": "contract_01:page:59",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000586",
@@ -26052,7 +26093,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:63"
+      "group_id": "contract_01:page:63",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000614",
@@ -26066,7 +26108,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:68"
+      "group_id": "contract_01:page:68",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000616",
@@ -26080,7 +26123,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:68"
+      "group_id": "contract_01:page:68",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000617",
@@ -26094,7 +26138,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:68"
+      "group_id": "contract_01:page:68",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000629",
@@ -26108,7 +26153,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:71"
+      "group_id": "contract_01:page:71",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000657",
@@ -26122,7 +26168,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:75"
+      "group_id": "contract_01:page:75",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000658",
@@ -26136,7 +26183,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:75"
+      "group_id": "contract_01:page:75",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000666",
@@ -26150,7 +26198,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:76"
+      "group_id": "contract_01:page:76",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000679",
@@ -26164,7 +26213,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:77"
+      "group_id": "contract_01:page:77",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000683",
@@ -26178,7 +26228,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:78"
+      "group_id": "contract_01:page:78",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000684",
@@ -26192,7 +26243,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:78"
+      "group_id": "contract_01:page:78",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000686",
@@ -26206,7 +26258,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:78"
+      "group_id": "contract_01:page:78",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000691",
@@ -26220,7 +26273,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:78"
+      "group_id": "contract_01:page:78",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000710",
@@ -26234,7 +26288,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:80"
+      "group_id": "contract_01:page:80",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000715",
@@ -26248,7 +26303,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:81"
+      "group_id": "contract_01:page:81",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000722",
@@ -26262,7 +26318,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:82"
+      "group_id": "contract_01:page:82",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000737",
@@ -26277,7 +26334,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:83"
+      "group_id": "contract_01:page:83",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000760",
@@ -26291,7 +26349,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:85"
+      "group_id": "contract_01:page:85",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000787",
@@ -26305,7 +26364,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:89"
+      "group_id": "contract_01:page:89",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000789",
@@ -26319,7 +26379,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:89"
+      "group_id": "contract_01:page:89",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000791",
@@ -26333,7 +26394,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:90"
+      "group_id": "contract_01:page:90",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000833",
@@ -26347,7 +26409,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:100"
+      "group_id": "contract_01:page:100",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000855",
@@ -26361,7 +26424,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:102"
+      "group_id": "contract_01:page:102",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000856",
@@ -26375,7 +26439,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:102"
+      "group_id": "contract_01:page:102",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000857",
@@ -26389,7 +26454,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:102"
+      "group_id": "contract_01:page:102",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000885",
@@ -26403,7 +26469,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:105"
+      "group_id": "contract_01:page:105",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000891",
@@ -26417,7 +26484,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:106"
+      "group_id": "contract_01:page:106",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000893",
@@ -26431,7 +26499,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:106"
+      "group_id": "contract_01:page:106",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000899",
@@ -26445,7 +26514,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:107"
+      "group_id": "contract_01:page:107",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000934",
@@ -26459,7 +26529,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:111"
+      "group_id": "contract_01:page:111",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000944",
@@ -26474,7 +26545,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:112"
+      "group_id": "contract_01:page:112",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000953",
@@ -26488,7 +26560,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:113"
+      "group_id": "contract_01:page:113",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000977",
@@ -26503,7 +26576,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:115"
+      "group_id": "contract_01:page:115",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000979",
@@ -26518,7 +26592,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:115"
+      "group_id": "contract_01:page:115",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000980",
@@ -26533,7 +26608,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:115"
+      "group_id": "contract_01:page:115",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000996",
@@ -26547,7 +26623,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:117"
+      "group_id": "contract_01:page:117",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001043",
@@ -26561,7 +26638,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:118"
+      "group_id": "contract_01:page:118",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001080",
@@ -26575,7 +26653,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:127"
+      "group_id": "contract_01:page:127",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001081",
@@ -26589,7 +26668,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:127"
+      "group_id": "contract_01:page:127",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001107",
@@ -26603,7 +26683,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:128"
+      "group_id": "contract_01:page:128",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001108",
@@ -26617,7 +26698,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:128"
+      "group_id": "contract_01:page:128",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001110",
@@ -26631,7 +26713,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:128"
+      "group_id": "contract_01:page:128",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001121",
@@ -26645,7 +26728,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:130"
+      "group_id": "contract_01:page:130",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001122",
@@ -26659,7 +26743,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:130"
+      "group_id": "contract_01:page:130",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001153",
@@ -26673,7 +26758,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:133"
+      "group_id": "contract_01:page:133",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001164",
@@ -26687,7 +26773,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:134"
+      "group_id": "contract_01:page:134",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001168",
@@ -26701,7 +26788,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:134"
+      "group_id": "contract_01:page:134",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001190",
@@ -26715,7 +26803,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:137"
+      "group_id": "contract_01:page:137",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001207",
@@ -26729,7 +26818,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:138"
+      "group_id": "contract_01:page:138",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001229",
@@ -26743,7 +26833,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:144"
+      "group_id": "contract_01:page:144",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001234",
@@ -26757,7 +26848,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:145"
+      "group_id": "contract_01:page:145",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001251",
@@ -26771,7 +26863,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:146"
+      "group_id": "contract_01:page:146",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001252",
@@ -26785,7 +26878,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:146"
+      "group_id": "contract_01:page:146",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001287",
@@ -26799,7 +26893,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:151"
+      "group_id": "contract_01:page:151",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001294",
@@ -26813,7 +26908,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:152"
+      "group_id": "contract_01:page:152",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001310",
@@ -26827,7 +26923,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:154"
+      "group_id": "contract_01:page:154",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001324",
@@ -26841,7 +26938,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:157"
+      "group_id": "contract_01:page:157",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001328",
@@ -26855,7 +26953,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:157"
+      "group_id": "contract_01:page:157",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001329",
@@ -26870,7 +26969,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:158"
+      "group_id": "contract_01:page:158",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001331",
@@ -26885,7 +26985,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:158"
+      "group_id": "contract_01:page:158",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001341",
@@ -26899,7 +27000,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:161"
+      "group_id": "contract_01:page:161",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001368",
@@ -26913,7 +27015,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:163"
+      "group_id": "contract_01:page:163",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001383",
@@ -26927,7 +27030,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:165"
+      "group_id": "contract_01:page:165",
+      "split": "dev"
     },
     {
       "case_id": "contract_02:c000007",
@@ -26941,7 +27045,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:1"
+      "group_id": "contract_02:page:1",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000020",
@@ -26955,7 +27060,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:2"
+      "group_id": "contract_02:page:2",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000025",
@@ -26969,7 +27075,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:2"
+      "group_id": "contract_02:page:2",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000054",
@@ -26983,7 +27090,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:3"
+      "group_id": "contract_02:page:3",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000063",
@@ -26997,7 +27105,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:4"
+      "group_id": "contract_02:page:4",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000065",
@@ -27011,7 +27120,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:4"
+      "group_id": "contract_02:page:4",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000066",
@@ -27025,7 +27135,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:4"
+      "group_id": "contract_02:page:4",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000075",
@@ -27039,7 +27150,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:5"
+      "group_id": "contract_02:page:5",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000076",
@@ -27053,7 +27165,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:5"
+      "group_id": "contract_02:page:5",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000082",
@@ -27067,7 +27180,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:6"
+      "group_id": "contract_02:page:6",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000089",
@@ -27081,7 +27195,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:6"
+      "group_id": "contract_02:page:6",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000107",
@@ -27095,7 +27210,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:8"
+      "group_id": "contract_02:page:8",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000110",
@@ -27109,7 +27225,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:8"
+      "group_id": "contract_02:page:8",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000115",
@@ -27123,7 +27240,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:9"
+      "group_id": "contract_02:page:9",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000117",
@@ -27137,7 +27255,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:9"
+      "group_id": "contract_02:page:9",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000119",
@@ -27151,7 +27270,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:9"
+      "group_id": "contract_02:page:9",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000129",
@@ -27165,7 +27285,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:10"
+      "group_id": "contract_02:page:10",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000137",
@@ -27179,7 +27300,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:10"
+      "group_id": "contract_02:page:10",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000147",
@@ -27193,7 +27315,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:11"
+      "group_id": "contract_02:page:11",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000156",
@@ -27207,7 +27330,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:11"
+      "group_id": "contract_02:page:11",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000161",
@@ -27221,7 +27345,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:12"
+      "group_id": "contract_02:page:12",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000163",
@@ -27235,7 +27360,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:12"
+      "group_id": "contract_02:page:12",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000168",
@@ -27249,7 +27375,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:12"
+      "group_id": "contract_02:page:12",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000171",
@@ -27263,7 +27390,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:13"
+      "group_id": "contract_02:page:13",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000187",
@@ -27277,7 +27405,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:14"
+      "group_id": "contract_02:page:14",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000205",
@@ -27291,7 +27420,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:15"
+      "group_id": "contract_02:page:15",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000209",
@@ -27305,7 +27435,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:15"
+      "group_id": "contract_02:page:15",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000214",
@@ -27319,7 +27450,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:16"
+      "group_id": "contract_02:page:16",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000243",
@@ -27333,7 +27465,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:18"
+      "group_id": "contract_02:page:18",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000246",
@@ -27347,7 +27480,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:18"
+      "group_id": "contract_02:page:18",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000256",
@@ -27361,7 +27495,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:19"
+      "group_id": "contract_02:page:19",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000271",
@@ -27375,7 +27510,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:20"
+      "group_id": "contract_02:page:20",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000291",
@@ -27389,7 +27525,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:22"
+      "group_id": "contract_02:page:22",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000292",
@@ -27403,7 +27540,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:22"
+      "group_id": "contract_02:page:22",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000294",
@@ -27417,7 +27555,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:22"
+      "group_id": "contract_02:page:22",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000309",
@@ -27431,7 +27570,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:23"
+      "group_id": "contract_02:page:23",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000320",
@@ -27445,7 +27585,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:24"
+      "group_id": "contract_02:page:24",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000328",
@@ -27459,7 +27600,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:24"
+      "group_id": "contract_02:page:24",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000330",
@@ -27473,7 +27615,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:25"
+      "group_id": "contract_02:page:25",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000331",
@@ -27487,7 +27630,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:25"
+      "group_id": "contract_02:page:25",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000346",
@@ -27501,7 +27645,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:26"
+      "group_id": "contract_02:page:26",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000351",
@@ -27515,7 +27660,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:26"
+      "group_id": "contract_02:page:26",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000358",
@@ -27529,7 +27675,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:27"
+      "group_id": "contract_02:page:27",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000375",
@@ -27543,7 +27690,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:28"
+      "group_id": "contract_02:page:28",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000377",
@@ -27557,7 +27705,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:28"
+      "group_id": "contract_02:page:28",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000385",
@@ -27571,7 +27720,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:29"
+      "group_id": "contract_02:page:29",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000386",
@@ -27585,7 +27735,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:29"
+      "group_id": "contract_02:page:29",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000392",
@@ -27599,7 +27750,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:29"
+      "group_id": "contract_02:page:29",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000419",
@@ -27613,7 +27765,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:31"
+      "group_id": "contract_02:page:31",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000429",
@@ -27627,7 +27780,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:32"
+      "group_id": "contract_02:page:32",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000445",
@@ -27641,7 +27795,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:34"
+      "group_id": "contract_02:page:34",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000453",
@@ -27655,7 +27810,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:34"
+      "group_id": "contract_02:page:34",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000460",
@@ -27669,7 +27825,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:35"
+      "group_id": "contract_02:page:35",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000466",
@@ -27683,7 +27840,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:35"
+      "group_id": "contract_02:page:35",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000482",
@@ -27697,7 +27855,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:37"
+      "group_id": "contract_02:page:37",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000492",
@@ -27711,7 +27870,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:38"
+      "group_id": "contract_02:page:38",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000514",
@@ -27725,7 +27885,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:40"
+      "group_id": "contract_02:page:40",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000520",
@@ -27739,7 +27900,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:40"
+      "group_id": "contract_02:page:40",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000531",
@@ -27753,7 +27915,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:42"
+      "group_id": "contract_02:page:42",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000547",
@@ -27767,7 +27930,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:43"
+      "group_id": "contract_02:page:43",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000567",
@@ -27781,7 +27945,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:46"
+      "group_id": "contract_02:page:46",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000572",
@@ -27795,7 +27960,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:46"
+      "group_id": "contract_02:page:46",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000580",
@@ -27809,7 +27975,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:47"
+      "group_id": "contract_02:page:47",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000606",
@@ -27823,7 +27990,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:49"
+      "group_id": "contract_02:page:49",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000611",
@@ -27837,7 +28005,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:49"
+      "group_id": "contract_02:page:49",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000616",
@@ -27851,7 +28020,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:50"
+      "group_id": "contract_02:page:50",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000626",
@@ -27865,7 +28035,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:50"
+      "group_id": "contract_02:page:50",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000658",
@@ -27879,7 +28050,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:53"
+      "group_id": "contract_02:page:53",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000691",
@@ -27893,7 +28065,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:56"
+      "group_id": "contract_02:page:56",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000696",
@@ -27907,7 +28080,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:56"
+      "group_id": "contract_02:page:56",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000697",
@@ -27921,7 +28095,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:56"
+      "group_id": "contract_02:page:56",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000716",
@@ -27935,7 +28110,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:58"
+      "group_id": "contract_02:page:58",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000720",
@@ -27949,7 +28125,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:58"
+      "group_id": "contract_02:page:58",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000727",
@@ -27963,7 +28140,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:59"
+      "group_id": "contract_02:page:59",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000741",
@@ -27977,7 +28155,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:60"
+      "group_id": "contract_02:page:60",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000755",
@@ -27991,7 +28170,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:61"
+      "group_id": "contract_02:page:61",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000794",
@@ -28005,7 +28185,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:64"
+      "group_id": "contract_02:page:64",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000797",
@@ -28019,7 +28200,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:64"
+      "group_id": "contract_02:page:64",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000800",
@@ -28033,7 +28215,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:64"
+      "group_id": "contract_02:page:64",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000803",
@@ -28047,7 +28230,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:64"
+      "group_id": "contract_02:page:64",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000804",
@@ -28061,7 +28245,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:64"
+      "group_id": "contract_02:page:64",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000825",
@@ -28075,7 +28260,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:66"
+      "group_id": "contract_02:page:66",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000833",
@@ -28089,7 +28275,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:67"
+      "group_id": "contract_02:page:67",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000843",
@@ -28103,7 +28290,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:69"
+      "group_id": "contract_02:page:69",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000844",
@@ -28117,7 +28305,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:69"
+      "group_id": "contract_02:page:69",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000845",
@@ -28131,7 +28320,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:69"
+      "group_id": "contract_02:page:69",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000871",
@@ -28145,7 +28335,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:72"
+      "group_id": "contract_02:page:72",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000904",
@@ -28159,7 +28350,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:77"
+      "group_id": "contract_02:page:77",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000909",
@@ -28173,7 +28365,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:77"
+      "group_id": "contract_02:page:77",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000912",
@@ -28187,7 +28380,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:78"
+      "group_id": "contract_02:page:78",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000914",
@@ -28201,7 +28395,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:78"
+      "group_id": "contract_02:page:78",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000947",
@@ -28215,7 +28410,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:93"
+      "group_id": "contract_02:page:93",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000977",
@@ -28229,7 +28425,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:104"
+      "group_id": "contract_02:page:104",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000978",
@@ -28243,7 +28440,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:104"
+      "group_id": "contract_02:page:104",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c001010",
@@ -28257,7 +28455,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:108"
+      "group_id": "contract_02:page:108",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c001071",
@@ -28271,7 +28470,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:111"
+      "group_id": "contract_02:page:111",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c001074",
@@ -28285,7 +28485,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:111"
+      "group_id": "contract_02:page:111",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c001087",
@@ -28299,7 +28500,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:112"
+      "group_id": "contract_02:page:112",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c001090",
@@ -28313,7 +28515,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:112"
+      "group_id": "contract_02:page:112",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c001104",
@@ -28327,7 +28530,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:113"
+      "group_id": "contract_02:page:113",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000002",
@@ -28341,7 +28545,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:1"
+      "group_id": "contract_03:page:1",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000004",
@@ -28355,7 +28560,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:2"
+      "group_id": "contract_03:page:2",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000011",
@@ -28369,7 +28575,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:3"
+      "group_id": "contract_03:page:3",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000020",
@@ -28383,7 +28590,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:3"
+      "group_id": "contract_03:page:3",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000032",
@@ -28397,7 +28605,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:4"
+      "group_id": "contract_03:page:4",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000038",
@@ -28413,7 +28622,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:4"
+      "group_id": "contract_03:page:4",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000043",
@@ -28427,7 +28637,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:5"
+      "group_id": "contract_03:page:5",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000047",
@@ -28441,7 +28652,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:5"
+      "group_id": "contract_03:page:5",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000057",
@@ -28455,7 +28667,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:6"
+      "group_id": "contract_03:page:6",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000061",
@@ -28469,7 +28682,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:6"
+      "group_id": "contract_03:page:6",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000070",
@@ -28483,7 +28697,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:7"
+      "group_id": "contract_03:page:7",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000078",
@@ -28497,7 +28712,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:8"
+      "group_id": "contract_03:page:8",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000081",
@@ -28511,7 +28727,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:9"
+      "group_id": "contract_03:page:9",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000088",
@@ -28525,7 +28742,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:9"
+      "group_id": "contract_03:page:9",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000105",
@@ -28539,7 +28757,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:10"
+      "group_id": "contract_03:page:10",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000108",
@@ -28553,7 +28772,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:11"
+      "group_id": "contract_03:page:11",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000111",
@@ -28567,7 +28787,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:11"
+      "group_id": "contract_03:page:11",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000116",
@@ -28581,7 +28802,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:11"
+      "group_id": "contract_03:page:11",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000117",
@@ -28595,7 +28817,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:11"
+      "group_id": "contract_03:page:11",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000131",
@@ -28609,7 +28832,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:12"
+      "group_id": "contract_03:page:12",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000134",
@@ -28623,7 +28847,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:12"
+      "group_id": "contract_03:page:12",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000138",
@@ -28637,7 +28862,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:13"
+      "group_id": "contract_03:page:13",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000144",
@@ -28651,7 +28877,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:13"
+      "group_id": "contract_03:page:13",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000147",
@@ -28665,7 +28892,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:13"
+      "group_id": "contract_03:page:13",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000149",
@@ -28679,7 +28907,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:13"
+      "group_id": "contract_03:page:13",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000152",
@@ -28693,7 +28922,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:14"
+      "group_id": "contract_03:page:14",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000157",
@@ -28707,7 +28937,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:14"
+      "group_id": "contract_03:page:14",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000163",
@@ -28721,7 +28952,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:14"
+      "group_id": "contract_03:page:14",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000164",
@@ -28735,7 +28967,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:14"
+      "group_id": "contract_03:page:14",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000172",
@@ -28749,7 +28982,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:15"
+      "group_id": "contract_03:page:15",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000189",
@@ -28763,7 +28997,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:16"
+      "group_id": "contract_03:page:16",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000196",
@@ -28777,7 +29012,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:16"
+      "group_id": "contract_03:page:16",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000201",
@@ -28791,7 +29027,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:17"
+      "group_id": "contract_03:page:17",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000202",
@@ -28805,7 +29042,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:17"
+      "group_id": "contract_03:page:17",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000205",
@@ -28819,7 +29057,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:17"
+      "group_id": "contract_03:page:17",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000207",
@@ -28833,7 +29072,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:17"
+      "group_id": "contract_03:page:17",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000213",
@@ -28847,7 +29087,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:19"
+      "group_id": "contract_03:page:19",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000223",
@@ -28861,7 +29102,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:22"
+      "group_id": "contract_03:page:22",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000225",
@@ -28875,7 +29117,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:22"
+      "group_id": "contract_03:page:22",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000240",
@@ -28889,7 +29132,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:26"
+      "group_id": "contract_03:page:26",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000247",
@@ -28903,7 +29147,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:28"
+      "group_id": "contract_03:page:28",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000249",
@@ -28917,7 +29162,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:28"
+      "group_id": "contract_03:page:28",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000255",
@@ -28931,7 +29177,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:29"
+      "group_id": "contract_03:page:29",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000259",
@@ -28945,7 +29192,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:30"
+      "group_id": "contract_03:page:30",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000260",
@@ -28959,7 +29207,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:30"
+      "group_id": "contract_03:page:30",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000276",
@@ -28973,7 +29222,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:32"
+      "group_id": "contract_03:page:32",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000285",
@@ -28987,7 +29237,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:33"
+      "group_id": "contract_03:page:33",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000291",
@@ -29001,7 +29252,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:33"
+      "group_id": "contract_03:page:33",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000298",
@@ -29015,7 +29267,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:35"
+      "group_id": "contract_03:page:35",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000302",
@@ -29029,7 +29282,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:35"
+      "group_id": "contract_03:page:35",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000313",
@@ -29043,7 +29297,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:37"
+      "group_id": "contract_03:page:37",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000327",
@@ -29057,7 +29312,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:39"
+      "group_id": "contract_03:page:39",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000329",
@@ -29071,7 +29327,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:39"
+      "group_id": "contract_03:page:39",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000331",
@@ -29085,7 +29342,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:39"
+      "group_id": "contract_03:page:39",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000333",
@@ -29099,7 +29357,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:39"
+      "group_id": "contract_03:page:39",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000336",
@@ -29113,7 +29372,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:39"
+      "group_id": "contract_03:page:39",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000344",
@@ -29127,7 +29387,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:41"
+      "group_id": "contract_03:page:41",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000345",
@@ -29141,7 +29402,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:41"
+      "group_id": "contract_03:page:41",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000348",
@@ -29155,7 +29417,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:41"
+      "group_id": "contract_03:page:41",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000363",
@@ -29169,7 +29432,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:44"
+      "group_id": "contract_03:page:44",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000384",
@@ -29183,7 +29447,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:45"
+      "group_id": "contract_03:page:45",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000385",
@@ -29197,7 +29462,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:45"
+      "group_id": "contract_03:page:45",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000387",
@@ -29211,7 +29477,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:46"
+      "group_id": "contract_03:page:46",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000390",
@@ -29225,7 +29492,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:46"
+      "group_id": "contract_03:page:46",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000401",
@@ -29239,7 +29507,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:47"
+      "group_id": "contract_03:page:47",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000402",
@@ -29253,7 +29522,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:47"
+      "group_id": "contract_03:page:47",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000403",
@@ -29267,7 +29537,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:47"
+      "group_id": "contract_03:page:47",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000412",
@@ -29281,7 +29552,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:48"
+      "group_id": "contract_03:page:48",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000413",
@@ -29297,7 +29569,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:48"
+      "group_id": "contract_03:page:48",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000415",
@@ -29311,7 +29584,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:48"
+      "group_id": "contract_03:page:48",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000417",
@@ -29325,7 +29599,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:48"
+      "group_id": "contract_03:page:48",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000418",
@@ -29339,7 +29614,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:48"
+      "group_id": "contract_03:page:48",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000431",
@@ -29353,7 +29629,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:52"
+      "group_id": "contract_03:page:52",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000434",
@@ -29367,7 +29644,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:52"
+      "group_id": "contract_03:page:52",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000447",
@@ -29381,7 +29659,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:53"
+      "group_id": "contract_03:page:53",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000449",
@@ -29395,7 +29674,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:53"
+      "group_id": "contract_03:page:53",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000462",
@@ -29409,7 +29689,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:54"
+      "group_id": "contract_03:page:54",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000463",
@@ -29423,7 +29704,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:54"
+      "group_id": "contract_03:page:54",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000465",
@@ -29437,7 +29719,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:54"
+      "group_id": "contract_03:page:54",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000480",
@@ -29451,7 +29734,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:57"
+      "group_id": "contract_03:page:57",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000481",
@@ -29465,7 +29749,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:57"
+      "group_id": "contract_03:page:57",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000486",
@@ -29479,7 +29764,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:58"
+      "group_id": "contract_03:page:58",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000487",
@@ -29493,7 +29779,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:58"
+      "group_id": "contract_03:page:58",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000491",
@@ -29507,7 +29794,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:59"
+      "group_id": "contract_03:page:59",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000492",
@@ -29521,7 +29809,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:59"
+      "group_id": "contract_03:page:59",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000502",
@@ -29535,7 +29824,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:61"
+      "group_id": "contract_03:page:61",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000506",
@@ -29549,7 +29839,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:62"
+      "group_id": "contract_03:page:62",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000510",
@@ -29563,7 +29854,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:62"
+      "group_id": "contract_03:page:62",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000531",
@@ -29579,7 +29871,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:66"
+      "group_id": "contract_03:page:66",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000537",
@@ -29595,7 +29888,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:67"
+      "group_id": "contract_03:page:67",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000557",
@@ -29609,7 +29903,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:74"
+      "group_id": "contract_03:page:74",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000561",
@@ -29625,7 +29920,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:76"
+      "group_id": "contract_03:page:76",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000572",
@@ -29641,7 +29937,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:79"
+      "group_id": "contract_03:page:79",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000581",
@@ -29657,7 +29954,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:82"
+      "group_id": "contract_03:page:82",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000584",
@@ -29673,7 +29971,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:83"
+      "group_id": "contract_03:page:83",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000586",
@@ -29687,7 +29986,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:83"
+      "group_id": "contract_03:page:83",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000590",
@@ -29703,7 +30003,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:84"
+      "group_id": "contract_03:page:84",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000605",
@@ -29717,7 +30018,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:89"
+      "group_id": "contract_03:page:89",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000615",
@@ -29731,7 +30033,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:89"
+      "group_id": "contract_03:page:89",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000618",
@@ -29745,7 +30048,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:89"
+      "group_id": "contract_03:page:89",
+      "split": "test"
     }
   ],
   "policy": [
@@ -29760,7 +30064,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:2"
+      "group_id": "contract_01:page:2",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000043",
@@ -29773,7 +30078,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:10"
+      "group_id": "contract_01:page:10",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000281",
@@ -29800,7 +30106,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:29"
+      "group_id": "contract_01:page:29",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000307",
@@ -29840,7 +30147,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:31"
+      "group_id": "contract_01:page:31",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000308",
@@ -29867,7 +30175,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:31"
+      "group_id": "contract_01:page:31",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000309",
@@ -29894,7 +30203,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:31"
+      "group_id": "contract_01:page:31",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000310",
@@ -29921,7 +30231,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:31"
+      "group_id": "contract_01:page:31",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000316",
@@ -29963,7 +30274,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:32"
+      "group_id": "contract_01:page:32",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000408",
@@ -29976,7 +30288,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:44"
+      "group_id": "contract_01:page:44",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000465",
@@ -29989,7 +30302,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:48"
+      "group_id": "contract_01:page:48",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000473",
@@ -30002,7 +30316,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:49"
+      "group_id": "contract_01:page:49",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000499",
@@ -30029,7 +30344,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:53"
+      "group_id": "contract_01:page:53",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000536",
@@ -30073,7 +30389,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:57"
+      "group_id": "contract_01:page:57",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000558",
@@ -30086,7 +30403,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:59"
+      "group_id": "contract_01:page:59",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000586",
@@ -30099,7 +30417,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:63"
+      "group_id": "contract_01:page:63",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000616",
@@ -30112,7 +30431,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:68"
+      "group_id": "contract_01:page:68",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c000899",
@@ -30125,7 +30445,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:107"
+      "group_id": "contract_01:page:107",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001097",
@@ -30157,7 +30478,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:128"
+      "group_id": "contract_01:page:128",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001287",
@@ -30199,7 +30521,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:151"
+      "group_id": "contract_01:page:151",
+      "split": "dev"
     },
     {
       "case_id": "contract_01:c001341",
@@ -30212,7 +30535,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_01:page:161"
+      "group_id": "contract_01:page:161",
+      "split": "dev"
     },
     {
       "case_id": "contract_02:c000020",
@@ -30225,7 +30549,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:2"
+      "group_id": "contract_02:page:2",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000063",
@@ -30238,7 +30563,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:4"
+      "group_id": "contract_02:page:4",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000204",
@@ -30275,7 +30601,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:15"
+      "group_id": "contract_02:page:15",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000217",
@@ -30307,7 +30634,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:16"
+      "group_id": "contract_02:page:16",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000243",
@@ -30337,7 +30665,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:18"
+      "group_id": "contract_02:page:18",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000245",
@@ -30379,7 +30708,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:18"
+      "group_id": "contract_02:page:18",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000246",
@@ -30392,7 +30722,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:18"
+      "group_id": "contract_02:page:18",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000256",
@@ -30405,7 +30736,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:19"
+      "group_id": "contract_02:page:19",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000450",
@@ -30437,7 +30769,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:34"
+      "group_id": "contract_02:page:34",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000452",
@@ -30482,7 +30815,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:34"
+      "group_id": "contract_02:page:34",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000460",
@@ -30495,7 +30829,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:35"
+      "group_id": "contract_02:page:35",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000492",
@@ -30508,7 +30843,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:38"
+      "group_id": "contract_02:page:38",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000716",
@@ -30521,7 +30857,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:58"
+      "group_id": "contract_02:page:58",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000797",
@@ -30534,7 +30871,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:64"
+      "group_id": "contract_02:page:64",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000801",
@@ -30586,7 +30924,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:64"
+      "group_id": "contract_02:page:64",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000807",
@@ -30627,7 +30966,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:65"
+      "group_id": "contract_02:page:65",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000833",
@@ -30640,7 +30980,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:67"
+      "group_id": "contract_02:page:67",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000843",
@@ -30653,7 +30994,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:69"
+      "group_id": "contract_02:page:69",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000905",
@@ -30703,7 +31045,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:77"
+      "group_id": "contract_02:page:77",
+      "split": "test"
     },
     {
       "case_id": "contract_02:c000978",
@@ -30738,7 +31081,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_02:page:104"
+      "group_id": "contract_02:page:104",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000004",
@@ -30751,7 +31095,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:2"
+      "group_id": "contract_03:page:2",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000007",
@@ -30764,7 +31109,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:2"
+      "group_id": "contract_03:page:2",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000020",
@@ -30777,7 +31123,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:3"
+      "group_id": "contract_03:page:3",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000028",
@@ -30790,7 +31137,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:4"
+      "group_id": "contract_03:page:4",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000032",
@@ -30803,7 +31151,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:4"
+      "group_id": "contract_03:page:4",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000119",
@@ -30840,7 +31189,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:11"
+      "group_id": "contract_03:page:11",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000130",
@@ -30877,7 +31227,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:12"
+      "group_id": "contract_03:page:12",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000131",
@@ -30909,7 +31260,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:12"
+      "group_id": "contract_03:page:12",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000132",
@@ -30944,7 +31296,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:12"
+      "group_id": "contract_03:page:12",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000133",
@@ -30971,7 +31324,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:12"
+      "group_id": "contract_03:page:12",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000134",
@@ -30984,7 +31338,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:12"
+      "group_id": "contract_03:page:12",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000141",
@@ -31011,7 +31366,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:13"
+      "group_id": "contract_03:page:13",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000148",
@@ -31061,7 +31417,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:13"
+      "group_id": "contract_03:page:13",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000152",
@@ -31116,7 +31473,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:14"
+      "group_id": "contract_03:page:14",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000154",
@@ -31165,7 +31523,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:14"
+      "group_id": "contract_03:page:14",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000155",
@@ -31202,7 +31561,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:14"
+      "group_id": "contract_03:page:14",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000205",
@@ -31215,7 +31575,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:17"
+      "group_id": "contract_03:page:17",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000240",
@@ -31228,7 +31589,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:26"
+      "group_id": "contract_03:page:26",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000249",
@@ -31241,7 +31603,8 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:28"
+      "group_id": "contract_03:page:28",
+      "split": "test"
     },
     {
       "case_id": "contract_03:c000531",
@@ -31254,8 +31617,10 @@
         "reviewer": null
       },
       "source_type": "real",
-      "group_id": "contract_03:page:66"
+      "group_id": "contract_03:page:66",
+      "split": "test"
     }
   ],
-  "benchmark_protocol": "One real-document benchmark, with no development/test split. Used for iterative prompt and system comparisons; results are not held-out generalisation estimates. Freeze references and settings for each comparison."
+  "benchmark_protocol": "Contract-disjoint development and test sets. Contract 01 is development; Contracts 02 and 03 are test. Tune prompts, settings and code on development only. The UI evaluates test only; CLI defaults to development. Test has prior exposure and is not a pristine held-out validation set.",
+  "test_exposure": "Test results and some test examples have already been inspected during earlier development. Report comparisons as provisional; obtain a fresh independent real contract for an untouched final validation."
 }

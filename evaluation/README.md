@@ -14,10 +14,20 @@ publication containing commentary and optional clauses, rather than an executed
 agreement. All original texts and supplied contexts are retained. Synthetic
 contract 04 and artificial context-removal examples are excluded.
 
-There is no development/test split. Prompt selection and debugging use this same
-benchmark, so scores describe these examples and are subject to selection bias.
-They do not measure generalisation to unseen contracts. A future independent
-benchmark would be needed for that claim, even without model training.
+The split follows whole source documents, including all clauses and context:
+
+| Split | Contracts | Classification | Policy |
+|---|---|---:|---:|
+| Local development | 01 | 100 | 20 |
+| UI test | 02–03 | 200 | 40 |
+
+Use development to fix prompts, code and settings, then evaluate the chosen
+configuration on test. The CLI defaults to development; the dashboard always
+runs test and cannot select development. Previous test examples/results have
+already been inspected, so this is **not an untouched held-out test**. Reports
+retain that exposure warning. Add a fresh independent real contract before
+claiming an untouched final validation. Each split has only one natural
+NEEDS_CONTEXT example; neither supports firm rare-class conclusions.
 
 ## Annotation and review
 
@@ -43,12 +53,22 @@ change reference rules or accepted aliases merely to match model outputs.
 
 ## Run
 
-After syncing and restarting the dashboard, open **Evaluation against reference
-set**. Choose the classification, policy or combined task, then
-**Evaluate reference set**. It uses the model selections, parallelization checkbox
+After syncing and restarting the dashboard, open **Test-set evaluation**. Choose the classification, policy or combined task, then
+**Evaluate test set**. It uses the model selections, parallelization checkbox
 and generation settings. Saved pipeline outputs and caches are not changed.
 Policy generation is evaluated independently using frozen source context; its
 scores do not measure errors propagated from relevance classification.
+Dashboard reports are automatically saved under ignored `evaluation/runs/` and
+the latest test report is restored after restart. Download and retain the report
+for each final configuration; existing run files are not overwritten by later runs.
+The saved report includes a unique run ID, UTC start/end times, split, source PDF
+hashes, reference hash, selected evidence and gold annotations, case IDs, input hashes,
+model digests/settings, prompts,
+code/schema hashes, predictions and mismatches. Scoring rejects changed reference
+content even when its version label is unchanged. Runs stop if code, prompts,
+schemas or references change during inference. These checks detect accidental
+changes; the report is not cryptographically signed.
+
 Results include per-cohort tables, per-class metrics, confusion matrices,
 uncertainty, failures, model/digest assignments and a downloadable prediction report.
 
@@ -56,9 +76,9 @@ From the repository root:
 
 ```bash
 python -m xfed.evaluation describe
-python -m xfed.evaluation run --task both --model llama3.1:70b --output /tmp/xfed-run.json
-python -m xfed.evaluation run --task both --model llama3.1:70b --require-reviewed --output /tmp/xfed-reviewed.json
-python -m xfed.evaluation score --predictions /tmp/xfed-reviewed.json --require-reviewed --output /tmp/xfed-rescored.json
+python -m xfed.evaluation run --split dev --task both --model llama3.1:70b --output /tmp/xfed-dev.json
+python -m xfed.evaluation run --split test --task both --model llama3.1:70b --require-reviewed --output /tmp/xfed-test.json
+python -m xfed.evaluation score --predictions /tmp/xfed-test.json --require-reviewed --output /tmp/xfed-rescored.json
 ```
 
 Use `--worker-models llama3.1:70b gemma3:27b` for multiple models, or `--config`

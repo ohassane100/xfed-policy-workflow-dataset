@@ -10,3 +10,5 @@ tmp/
 config/models.yaml
 contracts/*/output/*
 !contracts/*/output/.gitkeep
+
+evaluation/runs/

@@ -135,7 +135,8 @@ and save its run metadata before the next run, which replaces those outputs.
 Compare classification labels as well as elapsed time. Request-time totals can exceed stage wall time when concurrent.
 
 For ground-truth comparisons of classification and policy generation, use
-**Evaluation against reference set**. Independent annotation review
+**Test-set evaluation** (contracts 02–03 only). Use the local CLI development
+split (contract 01) to adjust prompts and settings first. Independent annotation review
 is needed before publication. Dataset, metric definitions and CLI usage
 are in [evaluation/README.md](evaluation/README.md).
 
