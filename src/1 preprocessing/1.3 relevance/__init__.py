@@ -1,6 +1,7 @@
 from copy import deepcopy
 from pathlib import Path
 import json
+import re
 
 from xfed.common import map_chunks, schema, validate
 
@@ -96,6 +97,19 @@ def classify_batch(items, client, root=Path('.'), num_ctx=None):
     identifiers = [item['clause']['chunk_id'] for item in items]
     if len(set(identifiers)) != len(identifiers):
         raise ValueError('Batch input chunk IDs must be unique.')
+    # Only metadata-confirmed short headings qualify; substantive merged text
+    # and sentence fragments still need the model and their source context.
+    headings = [bool(item['clause'].get('heading'))
+                and item['clause']['text'].strip() == item['clause']['heading'].strip()
+                and len(item['clause']['text'].split()) <= 14
+                and not re.search(r'\b(?:shall|must|may|means|is|are)\b|[;:]\s*\S',
+                                  item['clause']['text'], re.I)
+                for item in items]
+    if any(headings):
+        remaining = iter(classify_batch([item for item, heading in zip(items, headings) if not heading],
+                                        client, root, num_ctx))
+        return [dict(label='NOT_RELEVANT', reason='Standalone heading; retained as supporting context.')
+                if heading else next(remaining) for heading in headings]
     prompt, value, response_schema = classification_request(items, client, root)
     maximum_context = getattr(client, 'num_ctx', 32768)
     num_ctx = num_ctx or getattr(client, 'relevance_num_ctx', 0) or maximum_context

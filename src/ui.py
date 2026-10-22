@@ -20,7 +20,7 @@ from xfed.relevance import classify
 from xfed.enrichment import enrich
 from xfed.llm import OllamaPool, load_client
 from xfed.policy_generation import generate
-from xfed.policy_review import review, fingerprint
+# Automated policy review is disabled; implementation retained in xfed.policy_review.
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
 from xfed.evaluation import load_reference, reference_summary, run_evaluation
 
@@ -31,7 +31,7 @@ STAGES = {
     '1.3': ('1 preprocessing/1.3 relevance/classified_chunks.json', 3, 'chunks'),
     '1.4': ('1 preprocessing/1.4 enrichment/enriched_relevance.json', 4, 'items'),
     '2': ('2 policy_generation/policy.json', 5, 'traceability'),
-    '3': ('3 policy_review/policy_review.json', 6, 'clause_reviews'),
+    # '3': ('3 policy_review/policy_review.json', 6, 'clause_reviews'),
 }
 PREFERRED_MODELS = ['qwen3.5:27b', 'qwen3.5:35b', 'qwen3.5:9b', 'gemma3:27b', 'llama3.1:70b']
 
@@ -192,12 +192,6 @@ class Pipeline:
             if value is not None:
                 try:
                     validate(value, version, self.root)
-                    if stage == '3':
-                        current = dict(policy=fingerprint(read_json(self.path(contract, '2'))),
-                                       enriched=fingerprint(read_json(self.path(contract, '1.4'))),
-                                       classified=fingerprint(read_json(self.path(contract, '1.3'))))
-                        if current != value['input_hashes']:
-                            raise ValueError('Review inputs changed; run policy review again.')
                 except Exception as exc:
                     error = str(exc).splitlines()[0]
             stages[stage] = dict(ready=value is not None and error is None,
@@ -210,12 +204,8 @@ class Pipeline:
             if label in labels:
                 labels[label] += 1
         report = self.output(contract) / '2 policy_generation/generation_report.json'
-        reviewed = read_json(self.path(contract, '3'))
-        review_summary = ({key: reviewed.get(key) for key in
-                           ('status', 'summary', 'evidence_errors', 'conflicts', 'requires_human_approval')}
-                          if isinstance(reviewed, dict) else None)
         return dict(contract=contract, stages=stages, labels=labels, source_locations=locations,
-                    report=read_json(report), review=review_summary, job=self.snapshot())
+                    report=read_json(report), review=None, job=self.snapshot())
 
     def make_client(self, request):
         available = {m['name']: m for m in self.models()}
@@ -263,12 +253,10 @@ class Pipeline:
         if mode == 'step' and stage != '1.1':
             previous = list(STAGES)[list(STAGES).index(stage) - 1]
             state = self.state(contract)
-            empty_policy = stage == '3' and state['report'] is not None and state['report']['status'] in (
-                'no_supported_rules', 'generation_rejected')
-            if not state['stages'][previous]['ready'] and not empty_policy:
+            if not state['stages'][previous]['ready']:
                 raise ValueError(f'Run stage {previous} first.')
         client = None
-        if any(s in ('1.3', '2', '3') for s in selected):
+        if any(s in ('1.3', '2') for s in selected):
             client = self.make_client(request)
         with self.lock:
             if self.job['status'] in ('running', 'cancelling'):
@@ -277,7 +265,7 @@ class Pipeline:
             self.active_client = client
             self.job = dict(status='running', contract=contract, stage=selected[0], completed=0,
                             total=0, message='Preparing pipeline inputs', log=[])
-        fresh_run = mode == 'through' and stage in ('2', '3')
+        fresh_run = mode == 'through' and stage == '2'
         reuse = request.get('reuse', True) and not fresh_run
         threading.Thread(target=self.run, args=(contract, selected, client, reuse, fresh_run),
                          daemon=True).start()
@@ -360,15 +348,10 @@ class Pipeline:
             return deepcopy(self.benchmark_report)
 
     def start_evaluation(self, request):
-        options = dict(task=request.get('task', 'both'), split=request.get('split', 'dev'),
-                       source=request.get('source', 'all'))
-        if (options['task'] not in ('classification', 'policy', 'both') or options['split'] not in ('dev', 'test')
-                or options['source'] not in ('all', 'real', 'synthetic')):
-            raise ValueError('Choose a supported evaluation task, split and source type.')
+        options = dict(task=request.get('task', 'both'))
+        if options['task'] not in ('classification', 'policy', 'both'):
+            raise ValueError('Choose a supported evaluation task.')
         data = load_reference(self.root)
-        if not any(case['split'] == options['split'] and (options['source'] == 'all' or case['source_type'] == options['source'])
-                   for name in ('classification', 'policy') if options['task'] in (name, 'both') for case in data[name]):
-            raise ValueError('No reference cases match this evaluation selection.')
         client = self.make_client(request)
         with self.lock:
             if self.job['status'] in ('running', 'cancelling'):
@@ -416,8 +399,10 @@ class Pipeline:
             self.path(contract, downstream).unlink(missing_ok=True)
         if stages.index(stage) <= stages.index('2'):
             (self.output(contract) / '2 policy_generation/generation_report.json').unlink(missing_ok=True)
+        (self.output(contract) / '3 policy_review/policy_review.json').unlink(missing_ok=True)
         metadata = self.output(contract) / '.runs.json'
         runs = read_json(metadata, {})
+        runs.pop('3', None)
         for downstream in stages[stages.index(stage):]:
             runs.pop(downstream, None)
         if runs:
@@ -437,14 +422,14 @@ class Pipeline:
             client = CachedClient(raw_client, self.output(contract) / '.llm_cache.json', self.cancel, reuse) if raw_client else None
             for stage in selected:
                 stage_started = perf_counter()
-                if raw_client and stage in ('1.3', '2', '3'):
+                if raw_client and stage in ('1.3', '2'):
                     raw_client.reset_assignments()
                 self.progress(0, 0, 'Starting stage ' + stage)
                 self.update(stage=stage)
                 # Keep the required upstream input in memory before invalidation.
                 previous = list(STAGES)[list(STAGES).index(stage) - 1] if stage != '1.1' else None
                 source = read_json(self.path(contract, previous)) if previous else None
-                if previous and not (stage == '3' and source is None):
+                if previous:
                     validate(source, STAGES[previous][1], self.root)
                 self.invalidate(contract, stage)
                 if stage == '1.1':
@@ -463,15 +448,7 @@ class Pipeline:
                     self.progress(len(source['items']), len(source['items']), 'Saving policy draft')
                     write_json(self.output(contract) / '2 policy_generation/generation_report.json', report)
                 else:
-                    segmented = read_json(self.path(contract, '1.2'))
-                    classified = read_json(self.path(contract, '1.3'))
-                    original_chunks = [{key: value for key, value in chunk.items() if key != 'classification'}
-                                       for chunk in classified['chunks']]
-                    if original_chunks != segmented['chunks']:
-                        raise ValueError('Classified source text changed since segmentation; rerun preprocessing.')
-                    result = review(source, read_json(self.path(contract, '1.4')),
-                                    classified, client, self.root, self.progress,
-                                    read_json(self.output(contract) / '2 policy_generation/generation_report.json'))
+                    raise ValueError('Automated policy review is disabled.')
                 self.progress(self.snapshot()['completed'], self.snapshot()['total'], 'Saving stage ' + stage)
                 if result is not None:
                     write_output(self.path(contract, stage), result, STAGES[stage][1], self.root)
@@ -479,20 +456,17 @@ class Pipeline:
                 meta = read_json(meta_path, {})
                 meta[stage] = dict(time=datetime.now(timezone.utc).isoformat(),
                                    duration_seconds=round(perf_counter() - stage_started, 3),
-                                   model=raw_client.model if stage in ('1.3', '2', '3') else None,
-                                   options=raw_client.metadata() if raw_client and stage in ('1.3', '2', '3') else None,
-                                   status=result['status'] if stage == '3' else report['status'] if stage == '2' else 'complete')
+                                   model=raw_client.model if stage in ('1.3', '2') else None,
+                                   options=raw_client.metadata() if raw_client and stage in ('1.3', '2') else None,
+                                   status=report['status'] if stage == '2' else 'complete')
                 write_json(meta_path, meta)
                 with self.lock:
                     self.job['log'].append(f'{stage}: ' + meta[stage]['status']
                                            + f" ({meta[stage]['duration_seconds']:.3f}s)")
-                if stage == '2' and report['status'] == 'generation_rejected' and '3' not in selected:
+                if stage == '2' and report['status'] == 'generation_rejected':
                     self.finish('failed', 'No policy generated. Inspect the rejected clauses in the generation report.')
                     return
-            if selected[-1] == '3':
-                self.finish('complete', 'Review finished: ' + result['status'] + '. Human approval required.')
-            else:
-                self.finish('complete', 'Finished')
+            self.finish('complete', 'Finished')
         except (Cancelled, InterruptedError):
             self.finish('cancelled', 'Cancelled. Completed model requests are saved for retry.')
         except Exception as exc:

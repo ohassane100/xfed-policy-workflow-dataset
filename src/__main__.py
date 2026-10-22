@@ -8,19 +8,19 @@ from xfed.relevance import classify
 from xfed.enrichment import enrich
 from xfed.llm import load_client
 from xfed.policy_generation import generate
-from xfed.policy_review import review
+# Automated review retained in xfed.policy_review for future use.
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='XFed preprocessing, policy generation and evidence review')
     parser.add_argument('contract', choices=['contract_01', 'contract_02', 'contract_03', 'contract_04', 'all'])
-    parser.add_argument('--through', choices=['1.1', '1.2', '1.3', '1.4', '2', '3'], default='1.2')
+    parser.add_argument('--through', choices=['1.1', '1.2', '1.3', '1.4', '2'], default='1.2')
     parser.add_argument('--root', type=Path, default=Path.cwd(), help='Repository root (default: current directory)')
     parser.add_argument('--config', type=Path, help='Model YAML (default: ROOT/config/models.yaml)')
     args = parser.parse_args(argv)
     client = None
     try:
-        if args.through in ('1.3', '1.4', '2', '3'):
+        if args.through in ('1.3', '1.4', '2'):
             client = load_client(args.config or args.root / 'config/models.yaml')
             client.preflight()
         contracts = ['contract_01', 'contract_02', 'contract_03', 'contract_04'] if args.contract == 'all' else [args.contract]
@@ -63,18 +63,14 @@ def main(argv=None):
             write_output(paths['enriched_relevance.json'], enriched, 4, args.root)
             pending = sum(c['classification']['label'] == 'NEEDS_CONTEXT' for c in classified['chunks'])
             print(f"{contract}: {len(enriched['items'])} relevant, {pending} still need context", flush=True)
-            if args.through in ('2', '3'):
+            if args.through == '2':
                 policy, report = generate(enriched, client, args.root)
                 report['unresolved_chunks'] = pending
                 write_json(output / '2 policy_generation/generation_report.json', report)
                 if policy is not None:
                     write_output(paths['policy.json'], policy, 5, args.root)
                 print(f"{contract}: {report['status']}", flush=True)
-                if args.through == '3':
-                    result = review(policy, enriched, classified, client, args.root, generation_report=report)
-                    write_output(paths['policy_review.json'], result, 6, args.root)
-                    print(f"{contract}: review {result['status']}; human approval required", flush=True)
-                elif report['status'] == 'generation_rejected':
+                if report['status'] == 'generation_rejected':
                     raise ValueError('No policy generated. Inspect rejected clauses in generation_report.json.')
     except Exception as error:
         parser.exit(1, f'XFed: {error}\n')

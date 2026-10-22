@@ -91,18 +91,9 @@ Detailed request timings and token totals remain available in run metadata.
 Policy validation rejects fragment identifiers and LegalTag names absent from the
 supplied evidence. Schema and evidence checks still do not establish semantic correctness.
 
-**Run step 3 / Policy review** checks every primary clause, including classifier
-negatives and generator abstentions, for missing rules and classification disagreements.
-It reviews rule modality, parties, assets and conditions against source evidence,
-records model/digest provenance, and flags exact duplicate/conflicting rule content.
-Select a different qualified model before running step 3 for stronger review;
-same-model reviews are recorded explicitly. **Run through review** uses the same
-selected pool throughout and does not guarantee a different reviewer per clause.
-Review can take longer because it audits all clauses. Failed/oversized requests
-remain incomplete. No review result constitutes human approval or an accuracy score.
-Use the frozen **Development** split to qualify models separately before combining
-them; keep the held-out test split for final comparisons. Generation reports
-separate generated clauses, abstentions needing review, and rejected responses per model.
+Automated step 3 is disabled; its module, prompt and schema are retained for future
+use. **Run through policy creation** finishes at step 2. Inspect generated clauses,
+abstentions and rejections in the generation report, then review the draft manually.
 
 After restarting the updated UI, open **Generation settings → Compare 1.3 settings**
 at the existing browser URL. It uses the primary model and existing Ollama API, displays a comparison
@@ -144,8 +135,8 @@ and save its run metadata before the next run, which replaces those outputs.
 Compare classification labels as well as elapsed time. Request-time totals can exceed stage wall time when concurrent.
 
 For ground-truth comparisons of classification and policy generation, use
-**Evaluation against reference set**. Start with Development; independent review
-is needed before publication. Dataset, splits, metric definitions and CLI usage
+**Evaluation against reference set**. Independent annotation review
+is needed before publication. Dataset, metric definitions and CLI usage
 are in [evaluation/README.md](evaluation/README.md).
 
 ## 5. GPU Monitor - Another Gorina5 Terminal

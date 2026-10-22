@@ -58,3 +58,21 @@ ODRL rules and optional OSDU metadata are separate. Omit OSDU metadata unless
 explicitly supported by the supplied evidence. Never default unknown countries,
 personal-data classifications, security classifications, or expiry dates.
 This output is a draft for later review and human approval, not a legal verdict.
+
+Before returning the JSON, verify these distinctions:
+- A definition or general statement that permissions are subject to law creates no
+  independent permission. Never derive permissions from a data catalogue alone.
+- The target is the affected asset or information, never an action or "any".
+  Data is an asset, never an assignee. Omit an unsupported assigner on obligations.
+- A requirement to transmit through encrypted channels is an obligation with a
+  channel restriction. A ban on specified channels is a prohibition. A requirement
+  to acknowledge or quarantine is an obligation, not permission to use records.
+- "Shall not waive" prohibits waiver; it does not create a duty to waive.
+- Return OR erase at another party's choice is a conditional alternative: retain
+  that choice on each applicable rule; do not require both unconditionally.
+- Only add notify when the source requires notification. Retention, exclusion of
+  identifiers, project-only training and verification are not notification duties.
+- A citation such as "clause 6" or a definition of Business Day is not itself a
+  constraint. Express the actual purpose, trigger or deadline using its evidence.
+- Do not duplicate rules or drop exceptions to fit the output. Where a primary
+  clause only refers to restrictions, do not extract independent rights from context.

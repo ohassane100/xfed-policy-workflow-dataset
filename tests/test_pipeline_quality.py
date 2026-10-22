@@ -349,49 +349,69 @@ class QualityTests(unittest.TestCase):
             server.server_close()
             thread.join(timeout=5)
 
-    def test_review_invalidation_preserves_generation_report(self):
+    def test_disabled_review_is_unavailable_and_stale_output_is_invalidated(self):
+        from xfed.ui import STAGES
+        self.assertNotIn('3', STAGES)
         with TemporaryDirectory() as directory:
             root = Path(directory)
-            output = root / 'contracts/contract/output'
             (root / 'contracts/contract/input').mkdir(parents=True)
             (root / 'contracts/contract/input/contract.pdf').touch()
-            generation = output / '2 policy_generation/generation_report.json'
-            write_json(generation, dict(status='draft', clauses=[]))
             pipeline = Pipeline(root, 'http://127.0.0.1:11434')
-            write_json(pipeline.path('contract', '3'), {})
-            pipeline.invalidate('contract', '3')
-            self.assertTrue(generation.exists())
-            self.assertFalse(pipeline.path('contract', '3').exists())
+            with self.assertRaises(ValueError):
+                pipeline.start(dict(contract='contract', stage='3'))
+            stale = pipeline.output('contract') / '3 policy_review/policy_review.json'
+            write_json(stale, dict(status='reviewed_no_issues_found'))
+            pipeline.invalidate('contract', '2')
+            self.assertFalse(stale.exists())
+            self.assertNotIn('3', pipeline.state('contract')['stages'])
 
-    def test_dashboard_review_dispatch_and_stale_input_detection(self):
-        class ReviewClient(Client):
-            def reset_assignments(self):
-                pass
-            def metadata(self):
-                return dict(model=self.model)
-        with TemporaryDirectory() as directory:
-            root = Path(directory)
-            shutil.copytree(ROOT / 'schemas', root / 'schemas')
-            (root / 'prompts').mkdir()
-            shutil.copyfile(ROOT / 'prompts/policy_reviewer.md', root / 'prompts/policy_reviewer.md')
-            (root / 'contracts/contract/input').mkdir(parents=True)
-            (root / 'contracts/contract/input/contract.pdf').touch()
-            pipeline = Pipeline(root, 'http://127.0.0.1:11434')
+    def test_heading_bypass_does_not_discard_substantive_merged_terms(self):
+        heading = dict(clause=chunk(text='7. Confidentiality', heading='7. Confidentiality'), context=[], unresolved_references=[])
+        client = Client(dict(label='RELEVANT'))
+        self.assertEqual(classify_batch([heading], client, ROOT)[0]['label'], 'NOT_RELEVANT')
+        self.assertEqual(len(client.calls), 0)
+        heading['clause']['text'] += ' Provider must keep data confidential.'
+        self.assertEqual(classify_batch([heading], client, ROOT)[0]['label'], 'RELEVANT')
+        self.assertEqual(len(client.calls), 1)
+
+    def test_asset_cannot_be_a_party_and_citation_cannot_be_a_condition(self):
+        for field, value in [('assignee', 'Data'), ('target', 'any')]:
             policy = fragment(self.item)
-            for stage, value in [('1.2', dict(contract_id='contract', chunks=[chunk()])),
-                                 ('1.3', self.classified), ('1.4', self.enriched), ('2', policy)]:
-                write_json(pipeline.path('contract', stage), value)
-            generation = pipeline.output('contract') / '2 policy_generation/generation_report.json'
-            write_json(generation, dict(status='draft', clauses=[]))
-            pipeline.run('contract', ['3'], ReviewClient(reviewed), False)
-            self.assertEqual(pipeline.snapshot()['status'], 'complete')
-            self.assertTrue(pipeline.state('contract')['stages']['3']['ready'])
-            self.assertTrue(generation.exists())
-            policy['odrlPolicy']['obligation'][0]['action'] = 'use'
-            write_json(pipeline.path('contract', '2'), policy)
-            stale = pipeline.state('contract')['stages']['3']
-            self.assertFalse(stale['ready'])
-            self.assertIn('inputs changed', stale['error'])
+            policy['odrlPolicy']['obligation'][0][field] = value
+            with self.assertRaises(ValueError):
+                validate_fragment(policy, 'contract', self.item, ROOT)
+        policy = fragment(self.item)
+        policy['odrlPolicy']['obligation'][0]['constraint'] = [dict(leftOperand='clause_id', operator='eq', rightOperand='1.1')]
+        with self.assertRaises(ValueError):
+            validate_fragment(policy, 'contract', self.item, ROOT)
+
+    def test_duplicate_rules_with_different_ids_are_rejected(self):
+        policy = fragment(self.item)
+        duplicate = deepcopy(policy['odrlPolicy']['obligation'][0])
+        duplicate['uid'] = 'r2'
+        policy['odrlPolicy']['obligation'].append(duplicate)
+        trace = deepcopy(policy['traceability'][0])
+        trace['ruleUid'] = 'r2'
+        policy['traceability'].append(trace)
+        with self.assertRaisesRegex(ValueError, 'Duplicate obligation'):
+            validate_fragment(policy, 'contract', self.item, ROOT)
+
+    def test_real_benchmark_manifest_counts_and_missing_predictions(self):
+        from xfed.evaluation import load_reference, run_evaluation, score_report
+        data = load_reference(ROOT)
+        self.assertEqual(len(data['classification']), 300)
+        self.assertEqual(len(data['policy']), 60)
+        for task in ('classification', 'policy'):
+            self.assertTrue(all(c['source_type'] == 'real' and 'split' not in c for c in data[task]))
+        report = dict(reference_version=data['version'], task='classification', source='real',
+                      selected_cases=dict(classification=[c['case_id'] for c in data['classification']]),
+                      predictions={}, execution={})
+        scored = score_report(data, report, ROOT)
+        self.assertEqual(scored['metrics']['classification']['real/coverage']['errors'], 300)
+        self.assertEqual(scored['metrics']['classification']['real/coverage']['accuracy'], 0)
+        report['selected_cases']['classification'].pop()
+        with self.assertRaises(ValueError):
+            score_report(data, report, ROOT)
 
 
 if __name__ == '__main__':

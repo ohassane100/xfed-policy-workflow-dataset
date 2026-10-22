@@ -5,27 +5,19 @@ rule slots, rationales and PDF hashes. Previous pipeline predictions were not us
 as ground truth. All annotations are **assistant-authored drafts**; none has been
 independently reviewed. Initial scores are therefore provisional.
 
-## Contents and split
+## Contents
 
-| Cases | Development: contract 1 | Real test: contracts 2–3 | Synthetic test: contract 4 |
-|---|---:|---:|---:|
-| Classification coverage | 100 | 200 | 100 |
-| Classification context challenge | 14 | 10 | 16 |
-| Policy generation | 20 | 40 | 20 |
+One benchmark contains **300 classification cases and 60 policy cases** from
+contracts 01–03. Each source contributes 100 classification cases, ten operative
+policy cases and ten abstention controls. Contract 01 is a real model-terms
+publication containing commentary and optional clauses, rather than an executed
+agreement. All original texts and supplied contexts are retained. Synthetic
+contract 04 and artificial context-removal examples are excluded.
 
-There are 440 classification cases and 80 policy cases, including 40 operative
-policy cases, 40 abstention controls and 62 draft reference rules. The 40 context
-challenge cases are 20 paired inputs with and without supporting evidence; they
-are not 40 independent clauses. Contract 4 declares itself fictional and adapts
-concepts from the other contracts, so it is not an independent real-world test.
-
-Classification coverage uses a fixed seed and three clause-length strata, with
-duplicate primary texts removed within each contract. Sampling details are in
-the JSON. Categories cover use/purpose, disclosure, security, personal data,
-retention, intellectual property, remedies, reporting, business negatives and
-non-operative text. These are coverage-oriented benchmark scores, not estimates
-of real-world class prevalence. Natural NEEDS_CONTEXT support is small; challenge
-results must be reported separately.
+There is no development/test split. Prompt selection and debugging use this same
+benchmark, so scores describe these examples and are subject to selection bias.
+They do not measure generalisation to unseen contracts. A future independent
+benchmark would be needed for that claim, even without model training.
 
 ## Annotation and review
 
@@ -46,15 +38,17 @@ model predictions**, correct `gold`, record their name in `gold.reviewer`, and
 set that annotation's `gold.review_status` to `reviewed`. Resolve disagreements,
 especially `requires_adjudication` cases. For stronger evidence, obtain two blind
 annotations and adjudicate differences; do not invent inter-annotator agreement.
-Tune on development only, then freeze the reviewed JSON and its reported SHA-256
-before running test. Do not tune references or accepted aliases to test outputs.
+Freeze the reviewed JSON and its reported SHA-256 for each comparison. Do not
+change reference rules or accepted aliases merely to match model outputs.
 
 ## Run
 
 After syncing and restarting the dashboard, open **Evaluation against reference
-set**. Choose task, development/test split and real/synthetic sources, then
+set**. Choose the classification, policy or combined task, then
 **Evaluate reference set**. It uses the model selections, parallelization checkbox
 and generation settings. Saved pipeline outputs and caches are not changed.
+Policy generation is evaluated independently using frozen source context; its
+scores do not measure errors propagated from relevance classification.
 Results include per-cohort tables, per-class metrics, confusion matrices,
 uncertainty, failures, model/digest assignments and a downloadable prediction report.
 
@@ -62,9 +56,9 @@ From the repository root:
 
 ```bash
 python -m xfed.evaluation describe
-python -m xfed.evaluation run --task both --split dev --model llama3.1:70b --output /tmp/xfed-dev.json
-python -m xfed.evaluation run --task both --split test --source real --model llama3.1:70b --require-reviewed --output /tmp/xfed-test.json
-python -m xfed.evaluation score --predictions /tmp/xfed-test.json --require-reviewed --output /tmp/xfed-rescored.json
+python -m xfed.evaluation run --task both --model llama3.1:70b --output /tmp/xfed-run.json
+python -m xfed.evaluation run --task both --model llama3.1:70b --require-reviewed --output /tmp/xfed-reviewed.json
+python -m xfed.evaluation score --predictions /tmp/xfed-reviewed.json --require-reviewed --output /tmp/xfed-rescored.json
 ```
 
 Use `--worker-models llama3.1:70b gemma3:27b` for multiple models, or `--config`
@@ -102,8 +96,8 @@ Accuracy and per-class precision/recall have 95% Wilson intervals. Macro F1
 500-replicate page-cluster bootstrap intervals,
 resampling pages within the fixed source contracts. These intervals describe
 uncertainty within this benchmark and do not establish generalization to new
-contract populations. Roughly, 200 independent test clauses have a worst-case
-95% margin near ±7 percentage points; 40 policy cases near ±15 points. Correlation
+contract populations. Roughly, 300 independent clauses have a worst-case
+95% margin near ±6 percentage points; 60 policy cases near ±13 points. Correlation
 can make uncertainty greater. This compact set supports initial comparisons;
 small improvements and rare-class claims need more independently reviewed cases
 and more real contracts.

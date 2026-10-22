@@ -50,3 +50,10 @@ RELEVANT or NOT_RELEVANT when justified, otherwise keep NEEDS_CONTEXT and explai
 what is missing. Never invent an absent provision or assume the contents of an
 external legal reference. Do not treat missing evidence as NOT_RELEVANT.
 Keep any reason to one or two specific sentences about this primary clause.
+
+Data-access, export and switching fees or fee exemptions are RELEVANT because
+payment can condition the exercise of those rights. Do not discard such clauses
+as generic pricing. Security-maintenance notification and access-availability
+restrictions are RELEVANT when they govern the shared data service. A clear
+retention, deletion or security rule remains RELEVANT despite an unspecified
+external legal exception; extraction must separately preserve that exception.

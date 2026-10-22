@@ -66,6 +66,19 @@ def validate_fragment(fragment, contract, item, root):
         raise ValueError('A standalone obligation must identify the responsible party in assignee.')
     evidence = '\n'.join(clause['text'] for clause in [item, *item['context']])
     check_grounding(fragment, evidence)
+    def content(value):
+        if isinstance(value, dict):
+            return {key: content(child) for key, child in value.items() if key != 'uid'}
+        if isinstance(value, list):
+            return [content(child) for child in value]
+        return value
+    for kind in ('permission', 'prohibition', 'obligation'):
+        seen = set()
+        for rule in fragment['odrlPolicy'].get(kind, []):
+            key = json.dumps(content(rule), sort_keys=True)
+            if key in seen:
+                raise ValueError('Duplicate ' + kind + ' rule; represent each distinct rule once.')
+            seen.add(key)
 
 
 def check_grounding(fragment, evidence):
@@ -93,12 +106,19 @@ def check_grounding(fragment, evidence):
     allowed_operators = {'eq', 'neq', 'lt', 'lteq', 'gt', 'gteq', 'isA', 'hasPart',
                          'isPartOf', 'isAllOf', 'isAnyOf', 'isNoneOf'}
     for _, rule in rules(fragment['odrlPolicy']):
+        for field in ('assigner', 'assignee'):
+            if rule.get(field, '').strip().casefold() in {'data', 'personal data', 'project data', 'use', 'modify', 'any', '*'}:
+                raise ValueError('Rule ' + field + ' must identify a party, not an asset or action.')
+        if rule.get('target', '').strip().casefold() in {'any', '*', 'use', 'modify'}:
+            raise ValueError('Rule target must identify the affected source asset; a wildcard or action is insufficient.')
         for field in ('action', 'target', 'assigner', 'assignee'):
             if field in rule and not rule[field].strip():
                 raise ValueError('Rule ' + field + ' must not be empty.')
         if not rule['action'].startswith(('http://', 'https://')) and re.search(r'\b(?:and|or)\b|[,;]', rule['action'], re.I):
             raise ValueError('Use one atomic action per rule; split compound actions with their conditions preserved.')
         for constraint in rule.get('constraint', []):
+            if constraint['leftOperand'].casefold() in {'clause_id', 'clauseid', 'referenceclause', 'business day'}:
+                raise ValueError('A clause citation or definition is evidence, not an executable condition; represent its actual restriction.')
             operator = constraint['operator'].rsplit('/', 1)[-1].removeprefix('odrl:')
             if operator not in allowed_operators:
                 raise ValueError('Unsupported constraint operator: ' + constraint['operator'])
@@ -412,6 +432,8 @@ def generate(document, client, root=Path('.'), progress=None):
         output['traceability'].extend(fragment['traceability'])
     report['summary'] = {outcome: sum(entry['outcome'] == outcome for entry in report['clauses'])
                          for outcome in ('generated', 'abstained_needs_review', 'rejected')}
+    report['summary']['input_clauses'] = len(document['items'])
+    report['summary']['rules'] = len(output['traceability'])
     report['models'] = {}
     for entry in report['clauses']:
         counts = report['models'].setdefault(entry['model'] or 'unknown', dict(
@@ -431,4 +453,6 @@ def generate(document, client, root=Path('.'), progress=None):
         report['status'] = 'draft_with_issues' if report.get('warnings') else 'draft_with_rejections'
     elif report.get('warnings'):
         report['status'] = 'draft_with_warnings'
+    elif report['summary']['abstained_needs_review']:
+        report['status'] = 'draft_with_abstentions'
     return validate(output, 5, root), report

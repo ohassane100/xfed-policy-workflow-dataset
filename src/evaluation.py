@@ -24,7 +24,10 @@ def digest(value):
 
 def load_reference(root=Path('.')):
     data = json.loads((Path(root) / 'evaluation/reference.json').read_text(encoding='utf-8'))
-    splits = defaultdict(set)
+    for source in data['sources'].values():
+        path = Path(root) / source['pdf']
+        if source['source_type'] != 'real' or hashlib.sha256(path.read_bytes()).hexdigest() != source['sha256']:
+            raise ValueError('Benchmark source is not real or its PDF hash changed.')
     for task in ('classification', 'policy'):
         identifiers = set()
         for case in data[task]:
@@ -32,9 +35,8 @@ def load_reference(root=Path('.')):
                 raise ValueError('Reference cases need unique IDs and existing inputs.')
             identifiers.add(case['case_id'])
             value = data['inputs'][case['input_id']]
-            if case['split'] not in ('dev', 'test'):
-                raise ValueError('References must have a dev or test split.')
-            splits[value['contract_id']].add(case['split'])
+            if case.get('source_type') != 'real' or data['sources'][value['contract_id']]['source_type'] != 'real':
+                raise ValueError('The benchmark accepts real source documents only.')
             for key in ('context', 'policy_context'):
                 if any(identifier not in data['contexts'] for identifier in value[key]):
                     raise ValueError('Reference context is missing.')
@@ -54,14 +56,12 @@ def load_reference(root=Path('.')):
                             raise ValueError('Reference rules need action, target, and assignee strings.')
                         if any(not all(key in value for key in ('leftOperand','operator','rightOperand')) for value in rule.get('constraint', [])):
                             raise ValueError('Reference constraints need leftOperand, operator and rightOperand.')
-    if any(len(values) != 1 for values in splits.values()):
-        raise ValueError('A source contract cannot appear in both development and test.')
     return data
 
 
 def reference_summary(data):
     return dict(version=data['version'], status=data['status'],
-                counts={task: dict(Counter(case['split'] for case in data[task])) for task in ('classification', 'policy')},
+                counts={task: dict(total=len(data[task])) for task in ('classification', 'policy')},
                 classification_labels=dict(Counter(case['gold']['label'] for case in data['classification'])),
                 reviewed={task: sum(case['gold']['review_status'] == 'reviewed' for case in data[task]) for task in ('classification', 'policy')},
                 limitations=data['limitations'])
@@ -71,7 +71,8 @@ def input_for(data, case, policy=False):
     source = data['inputs'][case['input_id']]
     context = [deepcopy(data['contexts'][identifier]) for identifier in source['policy_context' if policy else 'context']]
     if policy:
-        return dict(deepcopy(source['clause']), context=context)
+        return dict(deepcopy(source['clause']), context=context,
+                    unresolved_references=list(source.get('policy_unresolved_references', [])))
     return dict(clause=deepcopy(source['clause']), context=context,
                 unresolved_references=list(source['unresolved_references']))
 
@@ -249,13 +250,15 @@ def cluster_interval(rows, operation, key, repetitions=500):
 
 
 def score_report(data, report, root=Path('.'), require_reviewed=False):
+    if report.get('reference_version') != data['version']:
+        raise ValueError('Reference version changed; rerun the benchmark instead of rescoring an older selection.')
     output = deepcopy(report)
     metrics, mismatches = {}, []
     for task, operation in [('classification', classification_metrics), ('policy', policy_metrics)]:
         predictions = report.get('predictions', {}).get(task, {})
         selected = report.get('selected_cases', {}).get(task, [])
         expected = {case['case_id'] for case in data[task] if report['task'] in (task, 'both')
-                    and case['split'] == report['split'] and (report['source'] == 'all' or case['source_type'] == report['source'])}
+                    and case['source_type'] == 'real'}
         if set(selected) != expected:
             raise ValueError('The manifest must cover the entire declared reference selection; missing predictions are counted as errors.')
         if not selected:
@@ -268,8 +271,6 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
         cohorts = defaultdict(list)
         for identifier in selected:
             case = cases[identifier]
-            if case['split'] != report['split'] or (report['source'] != 'all' and case['source_type'] != report['source']):
-                raise ValueError('The prediction manifest does not match its declared split and source type.')
             expected_hash = digest(input_for(data, case, task == 'policy'))
             prediction = predictions.get(identifier, dict(error='Missing prediction', input_sha256=expected_hash))
             if prediction.get('input_sha256') != expected_hash:
@@ -289,7 +290,7 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
                                        scoring_error=info.get('validation_error')))
             cohorts[case['source_type']+'/'+case['cohort']].append(info)
         if task == 'policy':
-            for source_type in ('real', 'synthetic'):
+            for source_type in ('real',):
                 combined = [row for name, rows in list(cohorts.items()) if name.startswith(source_type+'/') for row in rows]
                 if combined:
                     cohorts[source_type+'/all_curated_cases'] = combined
@@ -313,13 +314,12 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
     return output
 
 
-def run_evaluation(data, client, root=Path('.'), task='both', split='dev', source='all', progress=None, cancel=None, completed=None):
+def run_evaluation(data, client, root=Path('.'), task='both', progress=None, cancel=None, completed=None):
     from xfed.relevance import classify_batch, fits
     from xfed.policy_generation import generate_item, response_schema
-    if task not in ('classification', 'policy', 'both') or split not in ('dev', 'test') or source not in ('all', 'real', 'synthetic'):
-        raise ValueError('Choose a supported task, split, and source type.')
-    selected = {name: [case for case in data[name] if case['split'] == split and (source == 'all' or case['source_type'] == source)]
-                for name in ('classification', 'policy') if task in (name, 'both')}
+    if task not in ('classification', 'policy', 'both'):
+        raise ValueError('Choose classification, policy or both.')
+    selected = {name: list(data[name]) for name in ('classification', 'policy') if task in (name, 'both')}
     if not any(selected.values()):
         raise ValueError('No reference cases match this selection.')
     def checkpoint(done=0, total=0, message=''):
@@ -327,7 +327,8 @@ def run_evaluation(data, client, root=Path('.'), task='both', split='dev', sourc
             raise InterruptedError('Evaluation cancelled.')
         if progress and message:
             progress(done, total, message)
-    report = dict(reference_version=data['version'], split=split, source=source, task=task, predictions={}, execution={},
+    report = dict(reference_version=data['version'], benchmark='real-contracts', source='real', task=task, predictions={}, execution={},
+                  evaluation_scope='Stage classification and isolated policy extraction with frozen source context; policy scores do not include upstream classification errors.',
                   selected_cases={name:[case['case_id'] for case in cases] for name,cases in selected.items() if cases},
                   code_sha256={str(path):hashlib.sha256((Path(root)/path).read_bytes()).hexdigest() for path in
                                ['src/evaluation.py','src/llm/__init__.py','src/1 preprocessing/1.3 relevance/__init__.py','src/2 policy_generation/__init__.py']},
@@ -400,8 +401,6 @@ def main(argv=None):
     parser.add_argument('command',choices=['describe','run','score'])
     parser.add_argument('--root',type=Path,default=Path.cwd())
     parser.add_argument('--task',choices=['classification','policy','both'],default='both')
-    parser.add_argument('--split',choices=['dev','test'],default='dev')
-    parser.add_argument('--source',choices=['all','real','synthetic'],default='all')
     parser.add_argument('--model')
     parser.add_argument('--worker-models',nargs='+')
     parser.add_argument('--base-url',default='http://127.0.0.1:11434')
@@ -435,10 +434,10 @@ def main(argv=None):
             client=OllamaPool([args.base_url],model,worker_models=names,num_predict=4096,timeout=600)
         if args.require_reviewed:
             chosen=[case for name in ('classification','policy') if args.task in (name,'both') for case in data[name]
-                    if case['split']==args.split and (args.source=='all' or case['source_type']==args.source)]
+                    if case['source_type']=='real']
             if any(case['gold']['review_status']!='reviewed' for case in chosen):
                 parser.error('Selected references still need independent review.')
-        report=run_evaluation(data,client,root,args.task,args.split,args.source,
+        report=run_evaluation(data,client,root,args.task,
                               progress=lambda done,total,message:print(f'{message}: {done}/{total}',flush=True),
                               completed=(lambda result:write_json(args.output,result)) if args.output else None)
     report=score_report(data,report,root,args.require_reviewed)
