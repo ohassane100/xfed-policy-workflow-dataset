@@ -9,6 +9,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Barrier, Event, Thread
 from tempfile import TemporaryDirectory
+from io import BytesIO
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+from urllib.error import URLError
 import json
 import shutil
 import unittest
@@ -16,6 +20,7 @@ import unittest
 from xfed.common import map_chunks, write_json
 from xfed.enrichment import ContextIndex, enrich
 from xfed.llm import OllamaPool
+from xfed.llm.service import OllamaServicePool
 from xfed.policy_generation import (complete_fragment, generate, generate_answer, generate_item,
                                     response_schema, summarize_error, validate_fragment)
 from jsonschema import Draft202012Validator, ValidationError
@@ -289,7 +294,7 @@ class QualityTests(unittest.TestCase):
 
     def test_real_http_clients_overlap_in_classification_generation_and_review(self):
         barrier, requests = Barrier(3), []
-        names = ['simulated-a', 'simulated-b', 'simulated-c']
+        names = ['simulated-model']
         class Handler(BaseHTTPRequestHandler):
             def send(self, value):
                 body = json.dumps(value).encode() + b'\n'
@@ -325,8 +330,8 @@ class QualityTests(unittest.TestCase):
         thread = Thread(target=server.serve_forever, daemon=True)
         thread.start()
         try:
-            pool = OllamaPool([f'http://127.0.0.1:{server.server_port}'], names[0], worker_models=names,
-                              worker_gpus=[0, 1, 2], num_ctx=32768, num_predict=4096, timeout=10)
+            pool = OllamaPool([f'http://127.0.0.1:{server.server_port}'], names[0], workers_per_endpoint=3,
+                              num_ctx=32768, num_predict=4096, timeout=10)
             pool.preflight()
             source = dict(contract_id='contract', chunks=[chunk(f'c{i}', f'Provider must delete data c{i}.') for i in range(3)])
             classified = classify(source, pool, ROOT)
@@ -339,7 +344,10 @@ class QualityTests(unittest.TestCase):
             self.assertEqual(len(requests), 9)
             for offset in (0, 3, 6):
                 self.assertEqual({p['model'] for p in requests[offset:offset+3]}, set(names))
-                self.assertEqual({p['options']['main_gpu'] for p in requests[offset:offset+3]}, {0, 1, 2})
+                self.assertTrue(all('main_gpu' not in p['options'] for p in requests[offset:offset+3]))
+            self.assertEqual(len(pool.clients), 3)
+            self.assertEqual(pool.metadata()['completed'], [3, 3, 3])
+            self.assertTrue(all(worker['performance']['responses'] == 3 for worker in pool.metadata()['models']))
             for payload in requests:
                 self.assertIs(payload['think'], False)
                 self.assertIs(payload['truncate'], False)
@@ -348,6 +356,138 @@ class QualityTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
             thread.join(timeout=5)
+
+    def test_managed_workers_isolate_gpus_and_release_owned_servers(self):
+        def preflight(client):
+            client.model_digest = 'same-digest'
+        for gpus, servers, parallel in [(None, 1, '3'), ([0, 2, 4], 3, '1')]:
+            with self.subTest(gpus=gpus):
+                processes = [MagicMock() for _ in range(servers)]
+                for process in processes:
+                    process.poll.return_value = None
+                pending = iter(enumerate(processes))
+                def start(command, **kwargs):
+                    index, process = next(pending)
+                    kwargs['stdout'].write(f'XFED_OLLAMA_PID={10000 + index}\n'.encode())
+                    kwargs['stdout'].flush()
+                    return process
+                with patch('xfed.llm.service.os', SimpleNamespace(name='posix')), \
+                     patch.object(OllamaServicePool, '_environment', return_value={'OLLAMA_MODELS': '/existing/models'}), \
+                     patch('xfed.llm.service.subprocess.Popen', side_effect=start) as launch, \
+                     patch('xfed.llm.service.subprocess.run', return_value=SimpleNamespace(returncode=0)) as stop, \
+                     patch('xfed.llm.service.urlopen', side_effect=lambda *a, **k: BytesIO(b'{}')), \
+                     patch('xfed.llm.OllamaClient.preflight', preflight):
+                    pool = OllamaServicePool(['http://localhost:11434'], 'same-model', worker_count=3, worker_gpus=gpus)
+                    metadata = pool.preflight()
+                    self.assertEqual(metadata['workers'], 3)
+                    self.assertEqual(metadata['model_digest'], 'same-digest')
+                    self.assertEqual([c.model for c in pool.clients], ['same-model'] * 3)
+                    self.assertEqual(metadata['worker_gpus'], gpus or [None] * 3)
+                    for index, call in enumerate(launch.call_args_list):
+                        command = call.args[0]
+                        self.assertEqual(command[:9], ['sudo', '-n', '-H', '-u', 'ollama', '--', 'setsid', '--wait', 'sh'])
+                        self.assertIn('OLLAMA_MODELS=/existing/models', command)
+                        self.assertIn('OLLAMA_NUM_PARALLEL=' + parallel, command)
+                        self.assertEqual(command[-2:], ['/local/ollama/bin/ollama', 'serve'])
+                        if gpus:
+                            self.assertIn('CUDA_VISIBLE_DEVICES=' + str(gpus[index]), command)
+                        else:
+                            self.assertFalse(any(arg.startswith('CUDA_VISIBLE_DEVICES=') for arg in command))
+                    self.assertTrue(all(c.main_gpu is None for c in pool.clients))
+                    pool.close()
+                    pool.close()
+                    self.assertEqual(stop.call_count, servers)
+                    self.assertEqual({call.args[0][-1] for call in stop.call_args_list},
+                                     {'-' + str(10000 + i) for i in range(servers)})
+                    for process in processes:
+                        process.terminate.assert_not_called()
+                        process.wait.assert_called_once()
+
+    def test_failed_worker_startup_cleans_up_earlier_workers(self):
+        processes = [MagicMock(), MagicMock()]
+        processes[0].poll.return_value = None
+        processes[1].poll.return_value = 1
+        pending = iter(processes)
+        def start(command, **kwargs):
+            kwargs['stdout'].write(b'XFED_OLLAMA_PID=10000\n')
+            kwargs['stdout'].flush()
+            return next(pending)
+        with patch('xfed.llm.service.os', SimpleNamespace(name='posix')), \
+             patch.object(OllamaServicePool, '_environment', return_value={}), \
+             patch('xfed.llm.service.subprocess.Popen', side_effect=start), \
+             patch('xfed.llm.service.subprocess.run', return_value=SimpleNamespace(returncode=0)) as stop, \
+             patch('xfed.llm.service.urlopen', side_effect=lambda *a, **k: BytesIO(b'{}')), \
+             patch('xfed.llm.OllamaClient.preflight'):
+            pool = OllamaServicePool(['http://localhost:11434'], 'same-model', worker_count=2, worker_gpus=[0, 1])
+            with self.assertRaisesRegex(RuntimeError, 'Could not start'):
+                pool.preflight()
+            self.assertEqual(stop.call_count, 1)
+            processes[0].wait.assert_called_once()
+            self.assertEqual(pool._servers, [])
+
+    def test_managed_gpu_validation_and_startup_cancellation(self):
+        for gpus in ([0, 0], [0, None], [0], [True, 1]):
+            with self.subTest(gpus=gpus), self.assertRaises(ValueError):
+                OllamaServicePool(['http://localhost:11434'], 'same-model', worker_count=2, worker_gpus=gpus)
+        cancel = Event()
+        cancel.set()
+        with patch('xfed.llm.service.subprocess.Popen') as launch:
+            pool = OllamaServicePool(['http://localhost:11434'], 'same-model', worker_count=2, cancel=cancel)
+            with self.assertRaises(InterruptedError):
+                pool.preflight()
+            launch.assert_not_called()
+
+    def test_cancel_during_worker_startup_stops_the_started_process_group(self):
+        cancel, process = Event(), MagicMock()
+        process.poll.return_value = None
+        def start(command, **kwargs):
+            kwargs['stdout'].write(b'XFED_OLLAMA_PID=10000\n')
+            kwargs['stdout'].flush()
+            return process
+        def waiting(*args, **kwargs):
+            cancel.set()
+            raise URLError('Not ready yet')
+        with patch('xfed.llm.service.os', SimpleNamespace(name='posix')), \
+             patch.object(OllamaServicePool, '_environment', return_value={}), \
+             patch('xfed.llm.service.subprocess.Popen', side_effect=start) as launch, \
+             patch('xfed.llm.service.subprocess.run', return_value=SimpleNamespace(returncode=0)) as stop, \
+             patch('xfed.llm.service.urlopen', side_effect=waiting), \
+             patch('xfed.llm.OllamaClient.preflight'):
+            pool = OllamaServicePool(['http://localhost:11434'], 'same-model', worker_count=2,
+                                     worker_gpus=[0, 1], cancel=cancel)
+            with self.assertRaises(InterruptedError):
+                pool.preflight()
+            launch.assert_called_once()
+            self.assertEqual(stop.call_args.args[0][-3:], ['-TERM', '--', '-10000'])
+            self.assertEqual(pool._servers, [])
+
+    def test_workers_discover_service_model_store_and_allow_an_explicit_override(self):
+        result = SimpleNamespace(returncode=0, stdout='"OLLAMA_MODELS=/existing/model store" "CUDA_VISIBLE_DEVICES=1,3"')
+        with patch.dict('sys.modules', pwd=SimpleNamespace()), \
+             patch('xfed.llm.service.subprocess.run', return_value=result) as read:
+            pool = OllamaServicePool(['http://localhost:11434'], 'same-model', worker_count=2)
+            environment = pool._environment()
+            self.assertEqual(environment['OLLAMA_MODELS'], '/existing/model store')
+            self.assertEqual(environment['CUDA_VISIBLE_DEVICES'], '1,3')
+            self.assertEqual(read.call_args.args[0][0], 'systemctl')  # No root sudo is needed.
+            pool = OllamaServicePool(['http://localhost:11434'], 'same-model', worker_count=2,
+                                     service=dict(models_dir='/override/models'))
+            self.assertEqual(pool._environment()['OLLAMA_MODELS'], '/override/models')
+
+    def test_dashboard_single_installed_model_can_have_parallel_workers(self):
+        pipeline = Pipeline(ROOT, 'http://localhost:11434')
+        with patch.object(pipeline, 'models', return_value=[dict(name='only-model')]), \
+             patch.object(OllamaServicePool, 'preflight') as preflight:
+            pool = pipeline.make_client(dict(model='only-model', parallel=True, worker_count=3))
+            self.assertEqual(pool.workers, 3)
+            self.assertEqual([c.model for c in pool.clients], ['only-model'] * 3)
+            preflight.assert_not_called()  # Startup belongs to the cancellable background job.
+            pipeline.active_client = pool
+            with patch.object(pool, 'close') as close, patch.object(pool, 'unload') as unload:
+                pipeline.finish('complete', 'Finished')
+                close.assert_called_once()
+                unload.assert_not_called()
+                self.assertEqual(pipeline.snapshot()['status'], 'complete')
 
     def test_disabled_review_is_unavailable_and_stale_output_is_invalidated(self):
         from xfed.ui import STAGES

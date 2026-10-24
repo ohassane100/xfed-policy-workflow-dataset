@@ -49,11 +49,11 @@
     <nav id="stage-nav" class="stage-nav" aria-label="Pipeline stages"></nav>
     <div class="pagehead"><div><div class="eyebrow" id="eyebrow">Contract preprocessing</div><h1 id="title">Extraction</h1><p id="subtitle">document_blocks.json</p></div><span id="stage-badge" class="badge">Not run</span></div>
     <section aria-label="Run settings"><div class="pipeline-settings"><div class="field model-field"><label id="model-setting-label" for="model">Model for selected stage</label><div class="modelrow"><select id="model"><option value="">Checking installed models...</option></select><button id="refresh" class="refresh" title="Refresh installed models" aria-label="Refresh installed models"></button></div></div><div class="actions"><button id="run-step" class="primary">Run step 1.1</button><button id="run-through">Run through policy creation</button><button id="unload" title="Unload selected models from memory; keep downloaded files" disabled>Unload selected models</button></div></div>
-    <label class="check"><input type="checkbox" id="parallel" disabled>Parallelize with different models</label>
-    <div id="parallel-options" class="settings hidden"><div class="field"><label for="parallel-model-count">Number of models</label><input id="parallel-model-count" type="number" value="2" min="2" max="2" step="1"></div><div class="field"><label for="primary-gpu">GPU index for model 1</label><input id="primary-gpu" type="number" min="0" step="1" placeholder="Auto"></div></div>
-    <p id="worker-note"></p><p>Choose models for the selected stage. Evaluate candidates against the real-contract benchmark; speed alone is insufficient. Automated policy review is disabled. Policy drafts still require human review.</p>
+    <label class="check"><input type="checkbox" id="parallel" disabled>Parallelize the selected model</label>
+    <div id="parallel-options" class="settings hidden"><div class="field"><label for="worker-count">Number of workers</label><input id="worker-count" type="number" value="2" min="2" max="32" step="1"></div><div class="field"><label for="placement">GPU placement</label><select id="placement"><option value="auto">Auto</option><option value="gpu">Different GPU per worker</option></select></div></div>
+    <p id="worker-note"></p><p>Choose a model for the selected stage. Evaluate candidates against the real-contract benchmark; speed alone is insufficient. Automated policy review is disabled. Policy drafts still require human review.</p>
     <details class="advanced"><summary>Generation settings</summary><div class="settings"><div class="field"><label for="num_ctx">Maximum context tokens</label><input id="num_ctx" type="number" value="16384" min="1024" max="262144" step="1024"></div><div class="field"><label for="num_predict">Policy output tokens (2)</label><input id="num_predict" type="number" value="4096" min="128" max="131072" step="128"></div><div class="field"><label for="relevance_batch_size">Clauses per classification request (1.3)</label><input id="relevance_batch_size" type="number" value="1" min="1" max="16" step="1"></div><div class="field"><label for="relevance_compact">Classification answers (1.3)</label><select id="relevance_compact"><option value="false">Labels and optional reasons</option><option value="true">Labels only</option></select></div><div class="field"><label for="relevance_num_ctx">Classification context tokens (0 = run setting)</label><input id="relevance_num_ctx" type="number" value="0" min="0" max="262144" step="1024"></div><div class="field"><label for="relevance_num_batch">Classification prompt batch tokens (0 = auto)</label><input id="relevance_num_batch" type="number" value="0" min="0" max="65536" step="128"></div><div class="field"><label for="relevance_num_predict">Classification output tokens (1.3)</label><input id="relevance_num_predict" type="number" value="4096" min="128" max="131072" step="128"></div><div class="field"><label for="relevance_think">Classification thinking (1.3)</label><select id="relevance_think"><option value="auto">Auto (off when supported)</option><option value="default">Use model/run default</option><option value="off">Off (if supported)</option><option value="on">On</option></select></div><div class="field"><label for="think">Policy thinking (2)</label><select id="think"><option value="auto">Auto (off when supported)</option><option value="default">Model default</option><option value="off">Off</option><option value="on">On</option></select></div><div class="field"><label for="timeout">Timeout (seconds)</label><input id="timeout" type="number" value="600" min="10" max="3600" step="10"></div></div><label class="check"><input type="checkbox" id="reuse" checked>Reuse completed model requests</label><p><button id="benchmark">Compare 1.3 settings</button> Measures a 24-clause sample using the same model and preserves saved outputs.</p></details></section>
-    <details class="advanced"><summary>Test-set evaluation</summary><p id="evaluation-reference-note">Frozen examples cover classification and policy generation. Pipeline outputs are preserved.</p><div class="settings"><div class="field"><label for="evaluation-task">Task</label><select id="evaluation-task"><option value="both">Classification and policy</option><option value="classification">Classification only</option><option value="policy">Policy generation only</option></select></div></div><p><button id="evaluate">Evaluate test set</button> Uses the selected models and generation settings, without cached answers. Policy cases use frozen context independently of classification. Parallel mode evaluates the selected model pool. Choose prompts and settings on local development first. Run the fixed configurations here and download each report.</p></details>
+    <details class="advanced"><summary>Test-set evaluation</summary><p id="evaluation-reference-note">Frozen examples cover classification and policy generation. Pipeline outputs are preserved.</p><div class="settings"><div class="field"><label for="evaluation-task">Task</label><select id="evaluation-task"><option value="both">Classification and policy</option><option value="classification">Classification only</option><option value="policy">Policy generation only</option></select></div></div><p><button id="evaluate">Evaluate test set</button> Uses the selected model and generation settings, without cached answers. Policy cases use frozen context independently of classification. Parallel mode evaluates concurrent workers of the same model. Choose prompts and settings on local development first. Run the fixed configurations here and download each report.</p></details>
     <div class="summary"><div class="metric"><div><span id="total-label">Blocks</span><strong id="total">0</strong></div></div><div class="metric ready"><div><span>Relevant</span><strong id="relevant">0</strong></div></div><div class="metric"><div><span>Not relevant</span><strong id="not-relevant">0</strong></div></div><div class="metric pending"><div><span>Needs context</span><strong id="pending">0</strong></div></div></div>
     <section class="output" aria-label="Stage output"><div class="outputtop"><div class="tabs" role="tablist"><button class="tab active" data-view="records" role="tab" aria-selected="true">Records</button><button class="tab" data-view="json" role="tab" aria-selected="false">JSON</button><button class="tab" data-view="pdf" role="tab" aria-selected="false">Source PDF</button></div><button id="download" class="download" disabled>Download JSON</button></div>
     <div id="records-view"><div class="filterbar"><input id="search" type="search" placeholder="Search output" aria-label="Search output"><select id="filter" aria-label="Classification filter"><option value="">All classifications</option><option>RELEVANT</option><option>NOT_RELEVANT</option><option>NEEDS_CONTEXT</option></select><span id="record-count" class="recordcount">0 records</span></div><div class="workspace"><div class="list"><div class="listhead"><span>Identifier</span><span>Source text</span><span>Page</span></div><div id="record-list"></div></div><article id="inspector" class="inspector"><div class="empty"><strong>No output yet</strong>Awaiting stage 1.1</div></article></div><div class="pagination"><span id="page-label">0 records</span><div><button id="previous" aria-label="Previous records" title="Previous records"></button> <button id="next" aria-label="Next records" title="Next records"></button></div></div></div>
@@ -104,11 +104,11 @@ async function api(path,body){const res=await fetch(path,body===undefined?{}:{me
 function showError(error){$('error').textContent=String(error.message||error);$('error').classList.remove('hidden');}
 function clearError(){$('error').classList.add('hidden');}
 function contract(){return $('contract').value;}
-function selectedModels(){return [$('model').value,...[...document.querySelectorAll('.parallel-model')].map(select=>select.value)];}
-function selectedGpus(){return [$('primary-gpu'),...document.querySelectorAll('.parallel-gpu')].map(input=>input.value===''?null:Number(input.value));}
+function selectedModels(){return [$('model').value];}
+function selectedGpus(){return $('placement').value==='auto'?null:[...document.querySelectorAll('.parallel-gpu')].map(input=>input.value===''?null:Number(input.value));}
 function modelSettings(){
  const parallel=$('parallel').checked,names=parallel?selectedModels():[$('model').value],thinking=$('think').value;
- return {model:names[0],parallel,worker_models:parallel?names:undefined,worker_gpus:parallel&&gpuSelectionAvailable?selectedGpus():undefined,
+ return {model:names[0],parallel,worker_count:parallel?Number($('worker-count').value):1,worker_gpus:parallel?selectedGpus():undefined,
   num_ctx:Number($('num_ctx').value),num_predict:Number($('num_predict').value),relevance_num_predict:Number($('relevance_num_predict').value),
   relevance_batch_size:Number($('relevance_batch_size').value),relevance_compact:$('relevance_compact').value==='true',
   relevance_num_ctx:Number($('relevance_num_ctx').value),relevance_num_batch:Number($('relevance_num_batch').value)||null,
@@ -116,32 +116,21 @@ function modelSettings(){
   think:thinking==='auto'?'auto':thinking==='default'?null:thinking==='on'};
 }
 function renderWorkers(){
- if(installedModels.length<2)$('parallel').checked=false;
- const parallel=$('parallel').checked,maximum=Math.min(32,installedModels.length);
- const modelCount=Math.min(Math.max(2,maximum),Math.max(2,Math.floor(Number($('parallel-model-count').value)||2)));
- $('parallel-model-count').max=Math.max(2,maximum);$('parallel-model-count').value=modelCount;
- const previous=selectedModels().slice(1),previousGpus=selectedGpus(),chosen=[$('model').value];
- for(let index=1;index<modelCount;index++){
-  const prior=previous[index-1];
-  const name=installedModels.some(model=>model.name===prior)&&!chosen.includes(prior)?prior:installedModels.find(model=>!chosen.includes(model.name))?.name;
-  if(!name)break;chosen.push(name);
- }
- document.querySelectorAll('.parallel-model-field,.parallel-gpu-field').forEach(field=>field.remove());
- chosen.slice(1).forEach((name,index)=>{
-  const field=element('div',undefined,'field parallel-model-field'),label=element('label','Model '+(index+2)+' for selected stage'),select=element('select',undefined,'parallel-model');
-  select.id='parallel-model-'+(index+2);label.htmlFor=select.id;
-  for(const model of installedModels){const option=new Option(model.name+' / '+(model.details?.quantization_level||'unknown quantisation'),model.name);option.disabled=model.name!==name&&chosen.includes(model.name);select.append(option);}
-  select.value=name;select.onchange=renderWorkers;field.append(label,select);$('parallel-options').append(field);
-  const gpuField=element('div',undefined,'field parallel-gpu-field'),gpuLabel=element('label','GPU index for model '+(index+2)),gpu=element('input');
-  gpu.type='number';gpu.min='0';gpu.step='1';gpu.placeholder='Auto';gpu.className='parallel-gpu';gpu.id='parallel-gpu-'+(index+2);gpu.value=previousGpus[index+1]??'';gpu.onchange=controls;gpuLabel.htmlFor=gpu.id;
+ const parallel=$('parallel').checked,pinned=$('placement').value==='gpu';
+ const count=Math.min(32,Math.max(2,Math.floor(Number($('worker-count').value)||2)));
+ $('worker-count').value=count;
+ const previous=[...document.querySelectorAll('.parallel-gpu')].map(input=>input.value);
+ document.querySelectorAll('.parallel-gpu-field').forEach(field=>field.remove());
+ if(pinned)for(let index=0;index<count;index++){
+  const gpuField=element('div',undefined,'field parallel-gpu-field'),gpuLabel=element('label','GPU index for worker '+(index+1)),gpu=element('input');
+  gpu.type='number';gpu.min='0';gpu.step='1';gpu.required=true;gpu.className='parallel-gpu';gpu.id='parallel-gpu-'+(index+1);gpu.value=previous[index]??index;gpu.onchange=controls;gpuLabel.htmlFor=gpu.id;
   gpuField.append(gpuLabel,gpu);$('parallel-options').append(gpuField);
- });
+ }
  $('parallel-options').classList.toggle('hidden',!parallel);
- $('model-setting-label').textContent=parallel?'Model 1 for selected stage':'Model for selected stage';
- $('worker-note').textContent=parallel?chosen.length+' models share the clauses, with one request per model at a time. '+(gpuSelectionAvailable?'Set distinct GPU indices to request separate cards; leave Auto for models that span GPUs. Indices refer to devices visible to Ollama.':'Restart the updated UI server to enable per-model GPU selection.'):'One request at a time using the selected model.';
+ $('worker-note').textContent=parallel?count+' workers share the clauses using '+($('model').value||'the selected model')+'. '+(pinned?'Each worker runs its own copy on its selected GPU. Each copy and its context must fit that card.':'One private service processes concurrent requests; Ollama chooses GPU placement and may span GPUs. Concurrency increases context memory.'):'One request at a time using the selected model on the shared service.';
  controls();
 }
-function workerLabel(worker){return worker.model+' / '+new URL(worker.url).host+' / '+(worker.main_gpu==null?'GPU Auto':'requested GPU '+worker.main_gpu);}
+function workerLabel(worker){const gpu=worker.gpu??worker.main_gpu;return worker.model+' / '+new URL(worker.url).host+' / '+(gpu==null?'GPU Auto':'GPU '+gpu);}
 function nav(){
  const target=$('stage-nav');target.replaceChildren();
  stages.forEach(([id,name])=>{
@@ -163,7 +152,7 @@ function nav(){
 function controls(){
  const index=stages.findIndex(s=>s[0]===stage);
  const parallel=$('parallel').checked,names=parallel?selectedModels():[$('model').value];
- const ready=names.every(name=>installedModels.some(model=>model.name===name))&&(!parallel||(names.length===Number($('parallel-model-count').value)&&new Set(names).size===names.length));
+ const gpus=selectedGpus(),ready=names.every(name=>installedModels.some(model=>model.name===name))&&(!parallel||gpus===null||(gpus.length===Number($('worker-count').value)&&gpus.every(gpu=>Number.isInteger(gpu)&&gpu>=0)&&new Set(gpus).size===gpus.length));
  $('run-step').textContent='Run step '+stage;
  $('run-step').disabled=!contract()||busy||loading||(index>0&&!state?.stages[stages[index-1][0]]?.ready&&!(stage==='3'&&['no_supported_rules','generation_rejected'].includes(state?.report?.status)))||(['1.3','2','3'].includes(stage)&&!ready);
  $('benchmark').disabled=busy||loading||!state?.stages['1.2']?.ready||!$('model').value;
@@ -175,16 +164,15 @@ function controls(){
  $('cancel').classList.toggle('hidden',!busy||currentJob?.mode==='unload');
  $('cancel').disabled=state?.job.status==='cancelling'||overview?.job.status==='cancelling';
  ['model','num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_compact','relevance_num_ctx','relevance_num_batch','relevance_think','think','timeout','reuse','contract'].forEach(id=>$(id).disabled=busy);
- $('parallel').disabled=busy||installedModels.length<2;$('parallel-model-count').disabled=busy||!parallel;
- $('primary-gpu').disabled=busy||!parallel||!gpuSelectionAvailable;
- $('parallel').title=installedModels.length<2?'At least two installed models are needed.':'';
- document.querySelectorAll('.parallel-model').forEach(input=>input.disabled=busy||!parallel);
+ $('parallel').disabled=busy||!installedModels.length||!gpuSelectionAvailable;$('worker-count').disabled=busy||!parallel;
+ $('placement').disabled=busy||!parallel;
+ $('parallel').title=gpuSelectionAvailable?'':'Restart the updated UI server to enable same-model workers.';
  document.querySelectorAll('.parallel-gpu').forEach(input=>input.disabled=busy||!parallel||!gpuSelectionAvailable);
  ['evaluation-task'].forEach(id=>$(id).disabled=busy);
  $('download').disabled=!output;
  document.querySelector('[data-view="pdf"]').disabled=!contract();
  $('open-workspace').disabled=!contract();
- const model=names.filter(Boolean).join(' + ');
+ const model=names.filter(Boolean).join('')+(parallel?' × '+$('worker-count').value:'');
  $('model-label').textContent=model?model:modelsOK?'No installed model':modelsChecked?'Ollama unavailable':'Checking Ollama';
  $('model-chip').classList.toggle('pending',!model);
  $('model-chip').title=model||$('connection').textContent;
@@ -236,15 +224,15 @@ let benchmarkReport=null,benchmarkKey='',evaluationReport=null,evaluationKey='';
 function updateJob(job){
  busy=['running','cancelling'].includes(job.status);
  $('job-panel').classList.toggle('hidden',job.status==='idle');
- $('model-runs').replaceChildren(...(job.mode==='unload'?[]:job.workers||[]).map(w=>{
+ $('model-runs').replaceChildren(...(job.mode==='unload'?[]:job.workers||[]).map((w,index)=>{
   let activity='Idle';
   if(job.status==='cancelling')activity='Stopping';
   else if(w.active_request)activity=({'Waiting for Ollama':'Waiting','Generating answer':'Generating','Thinking':'Thinking'})[w.active_request.phase]||'Processing';
   else if(w.active_chunks?.length)activity='Processing';
   else if(job.status!=='running')activity=job.status==='complete'?'Finished':'Stopped';
-  const gpu=w.main_gpu==null?'GPU Auto':'GPU '+w.main_gpu;
-  const row=element('div',[w.model,gpu,w.completed+' completed',w.failed?w.failed+' failed':null,activity].filter(Boolean).join(' · '));
-  row.title=w.main_gpu==null?'Ollama chooses GPU placement.':'Requested GPU '+w.main_gpu+'.';
+  const assignedGpu=w.gpu??w.main_gpu,gpu=assignedGpu==null?'GPU Auto':'GPU '+assignedGpu;
+  const row=element('div',['Worker '+(index+1),w.model,gpu,w.completed+' completed',w.failed?w.failed+' failed':null,activity].filter(Boolean).join(' · '));
+  row.title=w.url+' / '+(assignedGpu==null?'Ollama chooses GPU placement.':'Server restricted to GPU '+assignedGpu+'.');
   return row;
  }));
  $('job-badge').textContent=job.status==='complete'?'Complete':job.status==='cancelling'?'Cancelling':job.status==='running'?'Running':job.status==='failed'?'Failed':'Cancelled';
@@ -427,11 +415,13 @@ async function refreshState(){
 }
 async function run(mode){
  clearError();const parallel=$('parallel').checked;
- const nums=[...(parallel?['parallel-model-count','primary-gpu',...[...document.querySelectorAll('.parallel-gpu')].map(input=>input.id)]:[]),'num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_num_ctx','relevance_num_batch','timeout'];
+ const nums=[...(parallel?['worker-count',...[...document.querySelectorAll('.parallel-gpu')].map(input=>input.id)]:[]),'num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_num_ctx','relevance_num_batch','timeout'];
  for(const name of nums)if(!$(name).checkValidity()){document.querySelector('.advanced').open=true;$(name).reportValidity();return;}
  if(Math.max(Number($('num_predict').value),Number($('relevance_num_predict').value))>=Number($('num_ctx').value)){showError('Output tokens must be less than context tokens.');return;}
  const names=parallel?selectedModels():[$('model').value];
- if(names.some(name=>!installedModels.some(model=>model.name===name))||(parallel&&(names.length!==Number($('parallel-model-count').value)||new Set(names).size!==names.length))){showError('Choose a different installed model for each worker.');return;}
+ if(names.some(name=>!installedModels.some(model=>model.name===name))){showError('Choose an installed model.');return;}
+ const gpus=parallel?selectedGpus():null;
+ if(gpus&&new Set(gpus).size!==gpus.length){showError('Choose a different GPU index for each worker, or select Auto.');return;}
  const target=mode==='through'?'2':stage;
  if(mode==='through'){if(!confirm('Run through policy creation will delete generated stage outputs, run metadata, and cached model responses for this contract, then regenerate from 1.1. Continue?'))return;}
  else if(state?.stages[target]?.ready){if(!confirm('Replace this stage and its downstream outputs? Completed model requests can be reused.'))return;}
@@ -452,7 +442,7 @@ $('unload').onclick=async()=>{
   if(screen==='pipeline')await refreshState();else await refreshOverview();
  }catch(error){showError(error);controls();}
 };
-$('run-step').onclick=()=>run('step');$('run-through').onclick=()=>run('through');$('cancel').onclick=async()=>{try{await api('/api/cancel',{});if(screen==='pipeline')await refreshState();else await refreshOverview();}catch(error){showError(error);}};$('refresh').onclick=refreshModels;$('model').onchange=renderWorkers;$('parallel').onchange=renderWorkers;$('parallel-model-count').onchange=renderWorkers;$('search').oninput=()=>{page=0;renderRecords();};$('filter').onchange=()=>{page=0;renderRecords();};$('previous').onclick=()=>{page--;renderRecords();};$('next').onclick=()=>{page++;renderRecords();};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('contract').onchange=()=>{clearError();$('pdf').removeAttribute('src');outputKey='';selectStage(stage);if(view==='pdf')setView('pdf');};$('download').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=contract()+'_'+stages.find(s=>s[0]===stage)[2];link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('run-step').onclick=()=>run('step');$('run-through').onclick=()=>run('through');$('cancel').onclick=async()=>{try{await api('/api/cancel',{});if(screen==='pipeline')await refreshState();else await refreshOverview();}catch(error){showError(error);}};$('refresh').onclick=refreshModels;$('model').onchange=renderWorkers;$('parallel').onchange=renderWorkers;$('worker-count').onchange=renderWorkers;$('placement').onchange=renderWorkers;$('search').oninput=()=>{page=0;renderRecords();};$('filter').onchange=()=>{page=0;renderRecords();};$('previous').onclick=()=>{page--;renderRecords();};$('next').onclick=()=>{page++;renderRecords();};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('contract').onchange=()=>{clearError();$('pdf').removeAttribute('src');outputKey='';selectStage(stage);if(view==='pdf')setView('pdf');};$('download').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=contract()+'_'+stages.find(s=>s[0]===stage)[2];link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 $('brand').onclick=()=>showScreen('dashboard');
@@ -463,7 +453,7 @@ $('contract-search').oninput=()=>renderContractTable('contracts-table',$('contra
  try{
   const config=await api('/api/config');
   preferredModel=config.model_defaults?.model||'';
-  gpuSelectionAvailable=config.worker_gpu_selection===true;
+  gpuSelectionAvailable=config.same_model_workers===true;
   modelUnloadingAvailable=config.model_unloading===true;
   preferredModels=config.preferred_models||[];
   for(const field of ['num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_num_ctx','relevance_num_batch','timeout'])if(config.model_defaults?.[field])$(field).value=config.model_defaults[field];

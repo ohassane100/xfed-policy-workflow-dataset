@@ -20,8 +20,11 @@ ssh -J ohassane@ssh1.ux.uis.no -L 8875:127.0.0.1:8765 ohassane@gorina5
 
 Open http://localhost:8875. The UI binds to loopback only; do not expose it
 publicly. For a different Ollama endpoint, pass `--ollama-url URL` on Gorina5.
-The UI lists installed models; downloads and GPU selection remain server-admin
-tasks. It supports stages 1.1-1.4 and 2, independent stage runs, output inspection,
+The UI lists installed models. Enable **Parallelize the selected model** to choose
+concurrent workers with Auto placement or a different GPU for each worker.
+Parallel runs launch private services as `ollama` using `/local/ollama/bin/ollama`;
+see [runpipeline.md](runpipeline.md) for service settings and model-store discovery.
+It supports stages 1.1-1.4 and 2, independent stage runs, output inspection,
 cancellation between operations, and cached model requests for retry.
 Rerunning a stage invalidates its downstream outputs.
 

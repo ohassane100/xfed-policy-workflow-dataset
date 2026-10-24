@@ -101,7 +101,7 @@ class OllamaClient:
     def metadata(self):
         result = {key: getattr(self, key, None) for key in
                   ('url', 'model', 'model_digest', 'timeout', 'num_ctx', 'num_predict', 'think',
-                   'main_gpu', 'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
+                   'main_gpu', 'gpu', 'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
                    'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch', 'auto_think', 'auto_relevance_think')}
         with self._stats_lock:
             result['performance'] = dict(self.stats, context_requests=dict(self.stats['context_requests']))
@@ -346,7 +346,7 @@ class OllamaPool:
                 raise ValueError('Choose different GPU indices for parallel models, or leave placement on Auto.')
         self.clients = []
         for url in base_urls:
-            for index, name in enumerate(worker_models if self.parallel_models else [model]):
+            for index, name in enumerate(worker_models if self.parallel_models else [model] * workers_per_endpoint):
                 settings = dict(options)
                 if worker_gpus is not None:
                     settings['main_gpu'] = worker_gpus[index]
@@ -359,16 +359,15 @@ class OllamaPool:
         self.url = first.url
         self.model = ' + '.join(dict.fromkeys(c.model for c in self.clients))
         self.workers_per_endpoint = workers_per_endpoint
-        capacity = len(self.clients) * workers_per_endpoint
+        capacity = len(self.clients)
         if workers is not None and (type(workers) is not int or not 1 <= workers <= capacity):
             raise ValueError(f'workers must be between 1 and {capacity}.')
         self.workers = capacity if workers is None else workers
         self._available = Queue()
         self._lock = Lock()
         self.reset_assignments()
-        for _ in range(workers_per_endpoint):
-            for client in self.clients:
-                self._available.put(client)
+        for client in self.clients:
+            self._available.put(client)
 
     def preflight(self):
         for client in self.clients:
@@ -444,6 +443,9 @@ class OllamaPool:
         for client in self.clients:
             client.cancel_requests()
 
+    def close(self):
+        """Shared endpoints are owned by their administrator, not this pool."""
+
     def unload(self):
         targets = {(client.url, client.model): client for client in self.clients}
         result = dict(unloaded=[], errors=[])
@@ -468,8 +470,15 @@ def load_client(path):
     if not isinstance(execution, dict):
         raise ValueError('execution must be a mapping.')
     urls = execution.get('base_urls', [settings.get('base_url')])
-    return OllamaPool(urls, settings.get('model'),
-                      workers_per_endpoint=execution.get('workers_per_endpoint', 1),
+    service = execution.get('service')
+    pool_options = dict(workers_per_endpoint=execution.get('workers_per_endpoint', 1))
+    pool_type = OllamaPool
+    if service is not None:
+        from .service import OllamaServicePool
+        pool_type = OllamaServicePool
+        pool_options = dict(service=service, worker_count=execution.get('workers', 1),
+                            worker_gpus=execution.get('worker_gpus'))
+    return pool_type(urls, settings.get('model'), **pool_options,
                       timeout=settings.get('timeout', 300), num_ctx=settings.get('num_ctx', 32768),
                       num_predict=settings.get('num_predict', 512), think=settings.get('think', 'auto'),
                       main_gpu=settings.get('main_gpu'),

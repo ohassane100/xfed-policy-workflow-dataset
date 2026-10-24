@@ -74,6 +74,9 @@ def main(argv=None):
                     raise ValueError('No policy generated. Inspect rejected clauses in generation_report.json.')
     except Exception as error:
         parser.exit(1, f'XFed: {error}\n')
+    finally:
+        if client:
+            client.close()
 
 
 if __name__ == '__main__':

@@ -85,7 +85,7 @@ def reference_summary(data, split='dev'):
 
 def inference_files(root):
     root = Path(root)
-    paths = [root / file for file in ('src/evaluation.py', 'src/llm/__init__.py',
+    paths = [root / file for file in ('src/evaluation.py', 'src/llm/__init__.py', 'src/llm/service.py',
              'src/common/__init__.py', 'src/1 preprocessing/1.3 relevance/__init__.py',
              'src/2 policy_generation/__init__.py')]
     paths += sorted((root / 'prompts').glob('*.md')) + sorted((root / 'schemas').glob('*.json'))
@@ -372,7 +372,7 @@ def run_evaluation(data, client, root=Path('.'), task='both', split='dev', progr
                                     input=input_for(data, case, name == 'policy')) for case in cases}
                                  for name, cases in selected.items() if cases},
                   code_sha256={str(path):hashlib.sha256((Path(root)/path).read_bytes()).hexdigest() for path in
-                               ['src/evaluation.py','src/llm/__init__.py','src/1 preprocessing/1.3 relevance/__init__.py','src/2 policy_generation/__init__.py']},
+                               ['src/evaluation.py','src/llm/__init__.py','src/llm/service.py','src/1 preprocessing/1.3 relevance/__init__.py','src/2 policy_generation/__init__.py']},
                   prompts={name: hashlib.sha256((Path(root)/'prompts'/file).read_bytes()).hexdigest()
                            for name, file in [('classification','relevance_classifier.md'),('policy','policy_generator.md')]})
     client.preflight()
@@ -483,9 +483,12 @@ def main(argv=None):
                     if case['split']==args.split]
             if any(case['gold']['review_status']!='reviewed' for case in chosen):
                 parser.error('Selected references still need independent review.')
-        report=run_evaluation(data,client,root,args.task,split=args.split,
-                              progress=lambda done,total,message:print(f'{message}: {done}/{total}',flush=True),
-                              completed=(lambda result:write_json(args.output,result)) if args.output else None)
+        try:
+            report=run_evaluation(data,client,root,args.task,split=args.split,
+                                  progress=lambda done,total,message:print(f'{message}: {done}/{total}',flush=True),
+                                  completed=(lambda result:write_json(args.output,result)) if args.output else None)
+        finally:
+            client.close()
     report=score_report(data,report,root,args.require_reviewed)
     if args.output:
         write_json(args.output,report)

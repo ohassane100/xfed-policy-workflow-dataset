@@ -19,6 +19,7 @@ from xfed.segmentation import segment
 from xfed.relevance import classify
 from xfed.enrichment import enrich
 from xfed.llm import OllamaPool, load_client
+from xfed.llm.service import OllamaServicePool
 from xfed.policy_generation import generate
 # Automated policy review is disabled; implementation retained in xfed.policy_review.
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
@@ -123,13 +124,15 @@ class Pipeline:
         self.active_client = None
         self.ollama_url = ollama_url.rstrip('/')
         self.worker_config = load_client(config) if config else None
+        self.service_settings = getattr(self.worker_config, 'service', None)
         self.defaults = dict(model=None, timeout=600, num_ctx=16384, num_predict=4096, think='auto',
                              relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1,
                              relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None, keep_alive='30m')
         if self.worker_config:
-            self.ollama_url = self.worker_config.clients[0].url.removesuffix('/api/chat')
+            self.ollama_url = (self.worker_config.source_urls[0] if self.service_settings else
+                               self.worker_config.clients[0].url.removesuffix('/api/chat'))
             self.defaults.update({key: getattr(self.worker_config, key) for key in self.defaults})
-        # The dashboard uses one API endpoint and one request per selected model.
+        # The shared service supplies the model list; parallel runs own private workers.
         OllamaPool([self.ollama_url], 'configuration-check')
         self.lock, self.cancel = threading.Lock(), threading.Event()
         self.job = dict(status='idle', stage=None, completed=0, total=0, message='Ready', log=[])
@@ -161,6 +164,7 @@ class Pipeline:
         if client:
             metadata = client.metadata()
             job['workers'] = [dict(model=member['model'], url=member['url'], main_gpu=member['main_gpu'],
+                                   gpu=member.get('gpu'),
                                    completed=metadata['completed'][index],
                                    assigned=metadata['assigned'][index], failed=metadata['failed'][index],
                                    active_chunks=metadata['active_chunks'][index],
@@ -217,19 +221,20 @@ class Pipeline:
         parallel = request.get('parallel', False)
         if type(parallel) is not bool:
             raise ValueError('parallel must be true or false.')
-        worker_models = request.get('worker_models')
+        if request.get('worker_models') is not None:
+            raise ValueError('Select one model and a worker_count; different worker models are no longer supported in the UI.')
+        worker_count = request.get('worker_count', 2 if parallel else 1)
         worker_gpus = request.get('worker_gpus')
         if parallel:
-            if (not isinstance(worker_models, list) or not 2 <= len(worker_models) <= 32 or
-                    any(not isinstance(name, str) or name not in available for name in worker_models) or
-                    len(set(worker_models)) != len(worker_models) or worker_models[0] != model):
-                raise ValueError('Choose 2 to 32 distinct installed models, starting with the primary model.')
+            if type(worker_count) is not int or not 2 <= worker_count <= 32:
+                raise ValueError('Choose 2 to 32 workers for the selected model.')
         else:
-            if worker_models is not None:
-                raise ValueError('Enable parallelization to use multiple models.')
-            if worker_gpus is not None:
-                raise ValueError('Per-model GPU selection is available in parallel mode.')
-        client = OllamaPool([self.ollama_url], model, worker_models=worker_models, worker_gpus=worker_gpus,
+            if type(worker_count) is not int or worker_count != 1 or worker_gpus is not None:
+                raise ValueError('Enable parallelization to configure workers and GPUs.')
+        pool_type = OllamaServicePool if parallel else OllamaPool
+        execution = dict(worker_count=worker_count, worker_gpus=worker_gpus,
+                         service=self.service_settings) if parallel else {}
+        client = pool_type([self.ollama_url], model, **execution,
                             cancel=self.cancel,
                             timeout=request.get('timeout', self.defaults['timeout']),
                             num_ctx=request.get('num_ctx', self.defaults['num_ctx']),
@@ -242,7 +247,6 @@ class Pipeline:
                             relevance_num_ctx=request.get('relevance_num_ctx', self.defaults['relevance_num_ctx']),
                             relevance_num_batch=request.get('relevance_num_batch', self.defaults['relevance_num_batch']),
                             keep_alive=self.defaults['keep_alive'])
-        client.preflight()
         return client
 
     def start(self, request):
@@ -433,6 +437,9 @@ class Pipeline:
     def run(self, contract, selected, raw_client, reuse, fresh_run=False):
         base = self.base(contract)
         try:
+            if raw_client:
+                self.update(message='Preparing model workers')
+                raw_client.preflight()
             if fresh_run:
                 self.reset_generated(contract)
             client = CachedClient(raw_client, self.output(contract) / '.llm_cache.json', self.cancel, reuse) if raw_client else None
@@ -503,22 +510,28 @@ class Pipeline:
     def finish(self, status, message):
         with self.lock:
             cancelled = self.cancel.is_set() or status == 'cancelled'
-            if not cancelled:
-                self.job.update(status=status, message=message)
-                return
             client = self.active_client
-            self.job.update(status='cancelling', message='Stopping requests and unloading run models')
+            self.job.update(status='cancelling' if cancelled else 'running', message='Cleaning up model workers')
         detail = ''
         if client:
             try:
-                client.cancel_requests()
-                _, detail = self.unload_models(client)
+                if cancelled:
+                    client.cancel_requests()
+                if isinstance(client, OllamaServicePool):
+                    client.close()
+                elif cancelled:
+                    _, detail = self.unload_models(client)
             except Exception as error:
-                detail = 'Could not finish unloading models: ' + str(error)
+                detail = 'Could not finish worker cleanup: ' + str(error)
+                if not cancelled:
+                    status = 'failed'
                 with self.lock:
                     self.job['log'].append(detail)
-        message = message if status == 'cancelled' else 'Cancelled. Completed requests are saved.'
-        self.update(status='cancelled', message=(message + ' ' + detail).strip())
+        with self.lock:
+            cancelled = cancelled or self.cancel.is_set()
+            if cancelled:
+                message = message if status == 'cancelled' else 'Cancelled. Completed requests are saved.'
+            self.job.update(status='cancelled' if cancelled else status, message=(message + ' ' + detail).strip())
 
     def start_unload(self, request):
         names = request.get('models')
@@ -593,6 +606,7 @@ def handler(pipeline):
                     self.send(dict(contracts=pipeline.contracts(), ollama_url=pipeline.ollama_url,
                                    model_defaults=pipeline.defaults,
                                    worker_gpu_selection=True,
+                                   same_model_workers=True,
                                    model_unloading=True,
                                    preferred_models=PREFERRED_MODELS))
                 elif route.path == '/api/models':
@@ -673,6 +687,9 @@ def main():
     except KeyboardInterrupt:
         pipeline.stop()
     finally:
+        pipeline.stop()
+        if pipeline.active_client:
+            pipeline.active_client.close()
         server.server_close()
 
 
