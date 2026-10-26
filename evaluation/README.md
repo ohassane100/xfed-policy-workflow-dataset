@@ -91,10 +91,14 @@ Contracts 02–03 remain identifiable by their source manifest/reference hash.
 
 ## Read the scores
 
-The dashboard shows one whole-document row per task. Detailed metrics retain
-operative-only and no-rule policy cohorts, per-class relevance scores and confusion
-matrices. Always inspect **policy rule recall and operative-clause scores**:
-abstaining on every chunk gets 69/76 cases right while recovering none of the rules.
+The dashboard shows correct relevance labels, expected rules recovered (recall),
+generated rules matching the reference (precision), fully matched operative
+clauses, correct no-rule decisions and failed evaluations. Results include counts
+and plain-language explanations. Zero-denominator scores say why they are not
+applicable rather than displaying an unexplained dash. Detailed scores, mismatches,
+confusion matrices and uncertainty remain available underneath and in the download.
+No-rule success is separate from rule extraction: abstaining on every chunk gets
+69/76 cases right while recovering none of the rules.
 
 Relevance reports accuracy, precision/recall/F1, weighted F1, balanced accuracy
 and a three-label confusion matrix with an ERROR column. Macro scores average
