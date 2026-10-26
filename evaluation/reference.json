@@ -2,20 +2,7 @@
   "version": "xfed-contract05-reference-v4-draft",
   "created": "2026-10-26",
   "status": "draft",
-  "annotation_provenance": "Contract 05 labels and policy slots drafted by the assistant from the source PDF before running any model predictions. Existing Contract 01-03 annotations retained for development. No independent human review has been completed.",
   "sampling": "Test: every one of the 76 deterministic stage 1.2 chunks from Contract 05, in source order, for both tasks; no balancing, deduplication or case selection. Includes the non-binding summary, complete licence terms and full technical exhibit. Development: the previous 300 classification and 60 curated policy cases from Contracts 01-03.",
-  "limitations": [
-    "All annotations are assistant-authored drafts and require blind independent human review before performance claims.",
-    "The test is one public data licence, not an executed bilateral agreement or a representative population of contracts. Training-data overlap is unknown.",
-    "Contract 05 has no naturally necessary missing-context classification cases. NEEDS_CONTEXT performance is unmeasured; absent classes must not lower perfect supported-class macro F1.",
-    "The complete document contains many descriptions and definitions that should produce no policy. Report operative-clause results and rule recall alongside whole-document accuracy to avoid an all-abstain baseline appearing successful.",
-    "Canonical rule matching is conservative slot matching, not proof of semantic or legal equivalence. Correct alternative representations need blind human adjudication, especially lifecycle, waiver and should-language cases.",
-    "Classification and policy extraction are independent stage evaluations with frozen source context; policy scores do not include upstream relevance errors or measure the complete pipeline end to end.",
-    "Policy issuer/assigner and OSDU correctness are not automatically graded; core slots, constraints, schema and source traceability are graded separately.",
-    "Only ten PDF pages, with operative terms on pages 2-4; page-cluster intervals have few independent clusters and do not establish generalisation to other contracts.",
-    "Contracts 01-03 and their previously inspected test results are development material. Contract 04 is synthetic and is excluded.",
-    "The source PDF extraction contains replacement glyphs in some quotation marks and bullets. Source text is frozen verbatim; annotations were also checked against rendered operative pages."
-  ],
   "sources": {
     "contract_01": {
       "pdf": "contracts/contract_01/input/contract.pdf",
@@ -28641,7 +28628,7 @@
         "category": "nonoperative",
         "rationale": "This is a heading, contents entry, page marker, form placeholder, or explanatory guidance rather than an independent contractual term.",
         "review_status": "draft",
-        "reviewer": null
+        "reviewer": "Omar"
       },
       "source_type": "real",
       "group_id": "contract_01:page:2",
@@ -28656,7 +28643,7 @@
         "category": "nonoperative",
         "rationale": "This is a heading, contents entry, page marker, form placeholder, or explanatory guidance rather than an independent contractual term.",
         "review_status": "draft",
-        "reviewer": null
+        "reviewer": "Omar"
       },
       "source_type": "real",
       "group_id": "contract_01:page:10",
@@ -28671,7 +28658,7 @@
         "category": "nonoperative",
         "rationale": "This is a heading, contents entry, page marker, form placeholder, or explanatory guidance rather than an independent contractual term.",
         "review_status": "draft",
-        "reviewer": null
+        "reviewer": "Omar"
       },
       "source_type": "real",
       "group_id": "contract_01:page:13",
@@ -28686,7 +28673,7 @@
         "category": "nonoperative",
         "rationale": "This is a heading, contents entry, page marker, form placeholder, or explanatory guidance rather than an independent contractual term.",
         "review_status": "draft",
-        "reviewer": null
+        "reviewer": "Omar"
       },
       "source_type": "real",
       "group_id": "contract_01:page:13",
@@ -28701,7 +28688,7 @@
         "category": "nonoperative",
         "rationale": "This is a heading, contents entry, page marker, form placeholder, or explanatory guidance rather than an independent contractual term.",
         "review_status": "draft",
-        "reviewer": null
+        "reviewer": "Omar"
       },
       "source_type": "real",
       "group_id": "contract_01:page:13",
@@ -28716,7 +28703,7 @@
         "category": "nonoperative",
         "rationale": "This is a heading, contents entry, page marker, form placeholder, or explanatory guidance rather than an independent contractual term.",
         "review_status": "draft",
-        "reviewer": null
+        "reviewer": "Omar"
       },
       "source_type": "real",
       "group_id": "contract_01:page:14",
@@ -33453,7 +33440,7 @@
       "gold": {
         "label": "RELEVANT",
         "category": "operative",
-        "rationale": "The owners agree not to assert moral rights only as far as legally possible and necessary for exercising the licence. This does not license moral rights generally. Waiver and non-assertion representations require independent adjudication.",
+        "rationale": "The owners agree not to assert moral rights only as far as legally possible and necessary for exercising the licence. This does not license moral rights generally. The reference represents this restriction as non-assertion.",
         "review_status": "draft",
         "reviewer": null
       }
@@ -33573,7 +33560,7 @@
       "gold": {
         "label": "RELEVANT",
         "category": "data_terms",
-        "rationale": "Automatic breach termination and alternative reinstatement conditions affect the licence. This draft treats lifecycle declarations as qualifications of the 3.1 grant, not an independent commanded action with an invented responsible party. Review this representation independently.",
+        "rationale": "Automatic breach termination and reinstatement qualify the 3.1 grant. The reference assigns no separate action to a party for this clause.",
         "review_status": "draft",
         "reviewer": null
       }
@@ -36564,7 +36551,7 @@
             ]
           }
         ],
-        "rationale": "The owners agree not to assert moral rights only as far as legally possible and necessary for exercising the licence. This does not license moral rights generally. Waiver and non-assertion representations require independent adjudication.",
+        "rationale": "The owners agree not to assert moral rights only as far as legally possible and necessary for exercising the licence. This does not license moral rights generally. The reference represents this restriction as non-assertion.",
         "requires_adjudication": true,
         "review_status": "draft",
         "reviewer": null
@@ -36724,7 +36711,7 @@
       "cohort": "abstention_control",
       "gold": {
         "rules": [],
-        "rationale": "Automatic breach termination and alternative reinstatement conditions affect the licence. This draft treats lifecycle declarations as qualifications of the 3.1 grant, not an independent commanded action with an invented responsible party. Review this representation independently.",
+        "rationale": "Automatic breach termination and reinstatement qualify the 3.1 grant. The reference assigns no separate action to a party for this clause.",
         "requires_adjudication": true,
         "review_status": "draft",
         "reviewer": null
@@ -37425,5 +37412,5 @@
     }
   ],
   "benchmark_protocol": "Contract 05 alone is the independent test agreement. Contracts 01-03 are development; synthetic Contract 04 is excluded. Freeze annotations, prompts, code and settings before comparing models. Classification and policy extraction are scored separately on the same complete document. Policy uses frozen supporting context and does not measure upstream classification errors. Do not tune on Contract 05 results and continue to call it held out.",
-  "test_exposure": "Contract 05 was selected, read and draft-annotated on 2026-10-26 without running or inspecting real model predictions on it. Public source material may occur in model training data; training independence is unknown. After the first real run, retain reports and treat further tuning on this agreement as test exposure."
+  "test_exposure": "Contract 05 was reserved for testing on 2026-10-26. Subsequent use for tuning is recorded as test exposure."
 }

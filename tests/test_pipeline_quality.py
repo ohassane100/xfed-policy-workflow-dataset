@@ -1114,7 +1114,7 @@ class QualityTests(unittest.TestCase):
         scored = score_report(data, report, ROOT)
         self.assertEqual(scored['metrics']['policy']['real/full_document']['canonical_rules']['recall'], 0)
         self.assertEqual(scored['metrics']['policy']['real/operative']['exact_case_accuracy'], 0)
-        with self.assertRaisesRegex(ValueError, 'Independent review'):
+        with self.assertRaisesRegex(ValueError, 'not marked reviewed'):
             score_report(data, report, ROOT, require_reviewed=True)
 
 

@@ -502,7 +502,7 @@ class Pipeline:
                     result, report = generate(source, client, self.root, self.progress,
                                              classified=read_json(self.path(contract, '1.3')))
                     report['unresolved_chunks'] = self.state(contract)['labels']['NEEDS_CONTEXT']
-                    self.progress(len(source['items']), len(source['items']), 'Saving policy draft')
+                    self.progress(len(source['items']), len(source['items']), 'Saving policy')
                     write_json(self.output(contract) / '2 policy_generation/generation_report.json', report)
                 else:
                     raise ValueError('Automated policy review is disabled.')

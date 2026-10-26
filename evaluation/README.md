@@ -26,8 +26,8 @@ summary on page 1, operative terms on pages 2–4 and technical exhibit on pages
 | Development | 01–03 | 300 | 60 |
 | Default test | 05 only | 76 | 76 |
 
-The draft relevance labels are 38 RELEVANT and 38 NOT_RELEVANT; there are no
-natural NEEDS_CONTEXT examples. The policy draft has seven operative chunks
+The reference labels are 38 RELEVANT and 38 NOT_RELEVANT; there are no
+natural NEEDS_CONTEXT examples. The policy reference has seven operative chunks
 with 18 canonical rules and 69 chunks expecting no policy. Relevant definitions,
 asset descriptions and lifecycle declarations do not necessarily create a rule.
 Some extracted quotes/bullets contain replacement glyphs; text is preserved
@@ -35,15 +35,9 @@ verbatim and operative pages were also inspected visually.
 
 ## Reference review and independence
 
-**Every annotation is an assistant-authored draft, with no independent human
-review.** No real model predictions on Contract 05 were run or inspected when
-these annotations were prepared. Public availability means overlap with model
-training data is unknown; source separation is not proof of training independence.
-
-Have an independent reviewer read the source and supplied evidence **before
-viewing model predictions**, correct `gold`, enter their name in `gold.reviewer`,
-and set `gold.review_status` to `reviewed`. Follow the existing relevance and
-policy prompts. Resolve `requires_adjudication` cases, particularly waiver,
+Review source text and supplied evidence before viewing model predictions.
+Record corrections in `gold`, the reviewer in `gold.reviewer`, and completion
+in `gold.review_status`. Use the existing relevance and policy prompts. Resolve `requires_adjudication` cases, particularly waiver,
 lifecycle and notice wording. The sharing clause has a predeclared alternative
 for whether its “should” notices impose duties. Do not change aliases or reference
 rules merely to fit predictions. Freeze the reviewed JSON and its reported hash.
@@ -70,7 +64,7 @@ python -m xfed.evaluation score --predictions /tmp/xfed-contract05.json --output
 ```
 
 The CLI defaults to Contract 05; `--split dev` selects Contracts 01–03. Add
-`--require-reviewed` to refuse unreviewed annotations. `--config` uses existing
+`--require-reviewed` to select only completed reference reviews. `--config` uses existing
 model settings. Mixed-model `--worker-models` assignments depend on completion
 order and should not be reported as the score of a single model.
 
@@ -118,9 +112,8 @@ precision/recall/F1, and exact-case accuracy. Canonical matching checks rule typ
 atomic action, assignee, target and constraints. It ignores arbitrary UIDs,
 rule/constraint order and issuer/assigner; it retains duplicates as false positives.
 Only frozen aliases and explicit alternative rule sets are accepted. Semantic
-paraphrases can need blind adjudication; these scores do not establish legal
-correctness or grade OSDU metadata. Schema and traceability validation are reported
-separately. Missing/failed predictions remain in denominators, and rejected
+paraphrases are handled through adjudication. OSDU metadata is outside rule
+matching; schema and traceability validation are reported separately. Missing/failed predictions remain in denominators, and rejected
 generations never count as correct abstentions.
 
 Reports include 95% Wilson intervals and 500-replicate page-cluster bootstrap

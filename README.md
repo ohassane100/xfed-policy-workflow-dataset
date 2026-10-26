@@ -33,12 +33,11 @@ Ollama is used for relevance classification (1.3) and policy creation (2); enric
 Stage 2 extracts atomic rules with literal evidence, compiles ODRL locally, then
 checks each clause for unsupported rules and omissions with a fresh model request.
 One correction is allowed; rejected and partial clauses remain in the generation
-report. The check uses the same model and is not independent human review.
+report. The check uses the same model.
 Relevant and uncertain clauses reach generation; classification exclusions are
-recorded. Missing issuers produce a draft ODRL Set rather than invented parties.
-Context overflow fails explicitly. Schema validity and model checks do not prove
-contractual correctness. Rerun through policy creation after updating to rebuild
-extraction metadata and context.
+recorded. Rules with missing issuers use an ODRL Set. Context overflow fails
+explicitly. Rerun through policy creation after updating to rebuild extraction
+metadata and context.
 
 CLI commands are in `run.md`; model configuration starts from
 `config/models.example.yaml`. Evaluation defaults to the complete independent

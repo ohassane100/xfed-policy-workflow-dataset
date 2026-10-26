@@ -5,7 +5,7 @@ Used for the machine-readable policy rules in `05_policy_schema.json`: permissio
 
 Reference: https://www.w3.org/TR/odrl-model/
 
-Draft extraction uses an ODRL Set when the issuing party is unknown. Agreement
+Extraction uses an ODRL Set when the issuing party is unknown. Agreement
 permissions/prohibitions still require an assigner; the compiler does not invent
 one. Source-backed descriptive labels/custom operands require deployment mapping.
 

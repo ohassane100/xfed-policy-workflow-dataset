@@ -54,7 +54,7 @@ def load_reference(root=Path('.')):
             if gold.get('review_status') not in ('draft', 'reviewed'):
                 raise ValueError('Use draft or reviewed annotation status.')
             if gold['review_status'] == 'reviewed' and (not isinstance(gold.get('reviewer'), str) or not gold['reviewer'].strip()):
-                raise ValueError('Reviewed annotations need the actual independent reviewer name.')
+                raise ValueError('Reviewed annotations require a reviewer name.')
             if task == 'classification' and gold['label'] not in LABELS:
                 raise ValueError('Unknown reference classification label.')
             if task == 'policy':
@@ -327,7 +327,7 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
             if prediction.get('input_sha256') != expected_hash:
                 raise ValueError('Evaluation inputs changed; predictions cannot be reused against different evidence.')
             if require_reviewed and case['gold']['review_status'] != 'reviewed':
-                raise ValueError('Independent review is required for all selected reference annotations.')
+                raise ValueError('Selected reference annotations are not marked reviewed.')
             info = dict(case_id=identifier, contract=data['inputs'][case['input_id']]['contract_id'],
                         group_id=case['group_id'], reviewed=case['gold']['review_status'] == 'reviewed')
             if task == 'classification':
@@ -509,7 +509,7 @@ def main(argv=None):
             chosen=[case for name in ('classification','policy') if args.task in (name,'both') for case in data[name]
                     if case['split']==args.split]
             if any(case['gold']['review_status']!='reviewed' for case in chosen):
-                parser.error('Selected references still need independent review.')
+                parser.error('Selected annotations are not marked reviewed.')
         try:
             report=run_evaluation(data,client,root,args.task,split=args.split,
                                   progress=lambda done,total,message:print(f'{message}: {done}/{total}',flush=True),

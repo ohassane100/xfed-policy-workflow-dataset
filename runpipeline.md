@@ -116,11 +116,11 @@ for classification only; 0 preserves server automatic selection.
 Worker rows show the worker, model, selected GPU, completed count and current activity.
 Detailed request timings and token totals remain available in run metadata.
 Policy validation rejects fragment identifiers and LegalTag names absent from the
-supplied evidence. Schema and evidence checks still do not establish semantic correctness.
+supplied evidence.
 
 Automated step 3 is disabled; its module, prompt and schema are retained for future
 use. **Run through policy creation** finishes at step 2. Inspect generated clauses,
-abstentions and rejections in the generation report, then review the draft manually.
+abstentions and rejections in the generation report.
 
 After restarting the updated UI, open **Generation settings → Compare 1.3 settings**
 at the existing browser URL. It uses the primary model and existing Ollama API, displays a comparison
@@ -162,11 +162,10 @@ and run step 1.3 from the same 1.2 input. Download the classification JSON
 and save its run metadata before the next run, which replaces those outputs.
 Compare classification labels as well as elapsed time. Request-time totals can exceed stage wall time when concurrent.
 
-For ground-truth comparisons of classification and policy generation, use
-**Test-set evaluation** (contracts 02–03 only). Use the local CLI development
-split (contract 01) to adjust prompts and settings first. Independent annotation review
-is needed before publication. Dataset, metric definitions and CLI usage
-are in [evaluation/README.md](evaluation/README.md).
+For classification and policy evaluation, use **Independent contract evaluation**
+with Contract 05. Use the CLI development split (Contracts 01–03) to adjust prompts
+and settings. Dataset, metric definitions and CLI usage are in
+[evaluation/README.md](evaluation/README.md).
 
 ## 5. GPU Monitor - Another Gorina5 Terminal
 

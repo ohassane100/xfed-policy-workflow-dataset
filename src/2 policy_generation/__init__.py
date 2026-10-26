@@ -88,7 +88,7 @@ def validate_fragment(fragment, contract, item, root):
 
 
 def check_grounding(fragment, evidence):
-    """Conservative literal checks; semantic entailment still requires evidence review."""
+    """Check source-grounded identifiers, parties, actions and constraint operators."""
 
     def grounded_identifiers(value):
         if isinstance(value, dict):

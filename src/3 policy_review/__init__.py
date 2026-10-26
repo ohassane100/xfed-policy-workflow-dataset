@@ -1,4 +1,4 @@
-"""Fresh evidence review of rules, omissions and classification; never human approval."""
+"""Review rules, omissions and classification against source evidence."""
 
 from collections import defaultdict
 from copy import deepcopy

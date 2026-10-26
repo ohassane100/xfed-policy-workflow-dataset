@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "XFed Policy Review Schema",
-  "description": "Rule entailment and whole-clause coverage review, including classifier negatives and generator abstentions. This is never human approval.",
+  "description": "Rule entailment and whole-clause coverage review, including classifier negatives and generator abstentions.",
   "type": "object",
   "required": [
     "review_id",

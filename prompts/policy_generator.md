@@ -19,7 +19,7 @@ For each distinct rule return:
   notification is NOT the actor who must send it. Do not substitute an issuer,
   owner or beneficiary for the responsible party. Data is an asset, not a party.
   An optional issuer identifies the evidenced party issuing the rule. Omit it
-  when unknown; the application keeps such rules in a draft ODRL Set instead of
+  when unknown; the application keeps such rules in an ODRL Set instead of
   inventing an issuer to claim a complete Agreement.
 - action: ONE atomic verb. Prefer use, share, reproduce, modify, distribute,
   publish, delete, retain, notify, acknowledge, provideAccess, obtainApproval,
@@ -76,4 +76,3 @@ non-rule text. Return rules: [] and unrepresented: [] for a clause with no opera
 rule. Give a concise reason for the overall decision. Optional osdu metadata is
 separate from rules: include it only when explicitly supported. Never invent
 LegalTag names, countries, expiry dates or classifications. Omit unknown metadata.
-The result remains a draft.
