@@ -19,6 +19,11 @@ inherit its action, actor, conditions or purpose from a parent. Do not discard
 such an item just because it does not repeat words like "data" or "use".
 
 Judge meaning, conditions and exceptions, not the presence of keywords:
+- Read every sentence of a mixed clause. A financial, audit-cost or retention
+  provision can contain a data-security exception or a restriction on retaining
+  raw data. Classify that operative restriction, not just the clause's main topic.
+- Table cells inherit the asset identity, holder and scope from their own row,
+  headers and introduction. Do not substitute parties or assets from another row.
 - Decide whether this primary text has substantive contractual meaning before
   using the topic of its parent or section. Do not promote a standalone heading
   merely because that section contains important rules.

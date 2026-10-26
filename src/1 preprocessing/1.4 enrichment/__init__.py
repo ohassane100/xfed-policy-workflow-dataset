@@ -10,7 +10,7 @@ REFERENCES = re.compile(rf'\b(?:articles?|clauses?|sections?|paragraphs?|provisi
 
 
 class ContextIndex:
-    def __init__(self, chunks):
+    def __init__(self, chunks, blocks=()):
         self.clauses = defaultdict(list)
         self.definitions = defaultdict(list)
         self.scopes = {}
@@ -18,6 +18,47 @@ class ContextIndex:
         self.sections = defaultdict(list)
         self.children = defaultdict(list)
         self.main_scopes = {}
+        self.table_context = defaultdict(list)
+        by_block = defaultdict(list)
+        for chunk in chunks:
+            for identifier in chunk['source']['block_ids']:
+                by_block[identifier].append(chunk)
+        # Preserve table row identity without rewriting the original chunks.
+        # PDF text blocks commonly split the asset, holder and restriction cells.
+        groups, current, preceding = [], [], None
+        for block in blocks:
+            if current and (block.get('type') != 'table' or block['page'] != current[-1]['page']
+                            or block.get('table_id') != current[-1].get('table_id')):
+                groups.append((current, preceding))
+                current = []
+            if block.get('type') == 'table' and block.get('bbox'):
+                current.append(block)
+            elif block.get('type') != 'other':
+                preceding = block
+        if current:
+            groups.append((current, preceding))
+        for group, introduction in groups:
+            rows = []
+            for block in group:
+                # With new extraction metadata, only use a positively identified
+                # row. Older saved blocks retain the conservative baseline band.
+                if block.get('table_id') and 'table_row' not in block and not block.get('table_header'):
+                    continue
+                if not rows or (block.get('table_row') != rows[-1][0].get('table_row')
+                                or abs(block['bbox'][1] - rows[-1][0]['bbox'][1]) > 3):
+                    rows.append([])
+                rows[-1].append(block)
+            headers = [block for block in group if block.get('table_header')]
+            if not headers and rows and not group[0].get('table_id'):
+                header_text = ' '.join(block['text'] for block in rows[0])
+                if not re.search(r'\b(?:shall|must|may|only|not|no|means)\b', header_text, re.I):
+                    headers = rows[0]
+            for row in rows:
+                supporting = [*headers, *row, *([introduction] if introduction else [])]
+                for block in row:
+                    for chunk in by_block[block['block_id']]:
+                        self.table_context[chunk['chunk_id']].extend(
+                            target for source in supporting for target in by_block[source['block_id']])
         main_scope = 0
         for scope, chunk in scoped_chunks(chunks):
             heading = scope_heading(chunk['heading']) if chunk.get('heading') else None
@@ -38,6 +79,11 @@ class ContextIndex:
                 if re.search(r'\d', match[1]) or scope_heading(match[0]):
                     continue
                 end = matches[i + 1].start() if i + 1 < len(matches) else len(chunk['text'])
+                body = chunk['text'][match.end():end].strip()
+                # Empty form fields such as repeated "Date: ______" are not definitions.
+                if (not re.search(r'\w', re.sub(r'[_\[\].\-]', '', body))
+                        or re.match(r'\s*[_\.]{3,}', body)):
+                    continue
                 definition = {k: v for k, v in chunk.items() if k != 'classification'}
                 definition['text'] = chunk['text'][match.start():end].strip()
                 self.definitions[match[1].strip().casefold()].append((scope, definition))
@@ -73,6 +119,9 @@ class ContextIndex:
             attach(candidates[0], relationship, descendants)
             return candidates[0]
 
+        for target in self.table_context.get(chunk['chunk_id'], []):
+            attach(target, 'other')
+
         parent = chunk.get('parent_clause_id')
         visited_parents = set()
         qualified_sections = set()
@@ -94,7 +143,10 @@ class ContextIndex:
                                                    if entry['relationship'] == 'parent'])
         for match in (REFERENCES.finditer(reference_text) if include_references else ()):
             suffix = reference_text[match.end():match.end() + 100]
-            if re.match(r'\s+of\s+(?:the\s+)?(?:Regulation|Directive|Data Act|GDPR|[A-Z][\w -]*Act)\b', suffix):
+            prefix = reference_text[max(0, match.start() - 70):match.start()]
+            if (re.match(r'\s+(?:of\s+)?(?:the\s+)?(?:Regulation|Directive|Data Act|GDPR)\b', suffix, re.I)
+                    or re.match(r'\s+of\s+(?:the\s+)?[A-Z][\w -]*Act\b', suffix)
+                    or re.search(r'\b(?:GDPR|Data Act|Regulation\s+\(EU\)\s+\d+/\d+)\s*[,:(]?\s*$', prefix, re.I)):
                 missing.append(match.group() + ': external legal reference')
                 continue
             target_scope = None
@@ -142,7 +194,7 @@ class ContextIndex:
                     definitions = self.definitions[term]
                     local = [d for s, d in definitions if s == scope]
                     candidates = local or [d for s, d in definitions if s == self.main_scopes[scope]]
-                    precise = [d for d in candidates if re.search(r'\b(?:means|shall mean|has the meaning)\b', d['text'].splitlines()[0])]
+                    precise = [d for d in candidates if re.search(r'\b(?:means|shall mean|has the meaning)\b', d['text'].splitlines()[0], re.I)]
                     if precise:
                         candidates = precise
                     if len(candidates) == 1:
@@ -155,16 +207,16 @@ class ContextIndex:
         return context, list(dict.fromkeys(missing))
 
 
-def enrich(document, root=Path('.'), progress=None):
+def enrich(document, root=Path('.'), progress=None, blocks=()):
     validate(document, 3, root)
     updated = deepcopy(document)
-    index = ContextIndex(updated['chunks'])
+    index = ContextIndex(updated['chunks'], blocks)
     items = []
     for position, chunk in enumerate(updated['chunks']):
         if progress:
             progress(position, len(updated['chunks']), chunk['chunk_id'])
         initial = chunk['classification']
-        if initial['label'] != 'RELEVANT':
+        if initial['label'] == 'NOT_RELEVANT':
             continue
         context, missing = index.context_for(chunk)
         item = dict({k: v for k, v in chunk.items() if k != 'classification'}, context=context)

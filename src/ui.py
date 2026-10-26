@@ -21,7 +21,7 @@ from xfed.enrichment import enrich
 from xfed.llm import OllamaPool, load_client
 from xfed.llm.service import OllamaServicePool, nvidia_gpus
 from xfed.policy_generation import generate
-# Automated policy review is disabled; implementation retained in xfed.policy_review.
+# The separate review stage is disabled; generation uses its clause evidence check.
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
 from xfed.evaluation import load_reference, reference_summary, run_evaluation
 
@@ -113,8 +113,11 @@ class CachedClient:
 
     def discard_last_response(self):
         """A downstream evidence/semantic validation failure must not become a reusable answer."""
+        self.discard_response(getattr(self, 'last_cache_key', None))
+
+    def discard_response(self, key):
         with self.lock:
-            if self.cache.pop(getattr(self, 'last_cache_key', None), None) is not None:
+            if self.cache.pop(key, None) is not None:
                 write_json(self.path, self.cache)
 
 
@@ -290,6 +293,7 @@ class Pipeline:
             if report is not None:
                 report_summary = dict(status=report['status'],
                                       skipped=sum(not c['generated'] for c in report['clauses']),
+                                      partial=report.get('summary', {}).get('partial_needs_review', 0),
                                       unresolved=report.get('unresolved_chunks', 0))
                 if report.get('warnings'):
                     report_summary['warnings'] = len(report['warnings'])
@@ -317,6 +321,7 @@ class Pipeline:
                        think=request.get('think', self.defaults['think']))
         OllamaPool([self.ollama_url], model, num_predict=128, **options)
         options['variants'] = variants
+        options['blocks'] = read_json(self.path(contract, '1.1'), {}).get('blocks', [])
         with self.lock:
             if self.job['status'] in ('running', 'cancelling'):
                 raise ValueError('A job is already running. Wait or cancel it first.')
@@ -486,13 +491,16 @@ class Pipeline:
                 elif stage == '1.2':
                     result = segment(source, self.root)
                 elif stage == '1.3':
-                    result = classify(source, client, self.root, self.progress)
+                    blocks = read_json(self.path(contract, '1.1'), {}).get('blocks', [])
+                    result = classify(source, client, self.root, self.progress, blocks=blocks)
                 elif stage == '1.4':
-                    updated, result = enrich(source, self.root, self.progress)
+                    blocks = read_json(self.path(contract, '1.1'), {}).get('blocks', [])
+                    updated, result = enrich(source, self.root, self.progress, blocks=blocks)
                     self.progress(len(updated['chunks']), len(updated['chunks']), 'Saving enrichment')
                     write_output(self.path(contract, '1.3'), updated, 3, self.root)
                 elif stage == '2':
-                    result, report = generate(source, client, self.root, self.progress)
+                    result, report = generate(source, client, self.root, self.progress,
+                                             classified=read_json(self.path(contract, '1.3')))
                     report['unresolved_chunks'] = self.state(contract)['labels']['NEEDS_CONTEXT']
                     self.progress(len(source['items']), len(source['items']), 'Saving policy draft')
                     write_json(self.output(contract) / '2 policy_generation/generation_report.json', report)

@@ -21,7 +21,7 @@ from xfed.common import map_chunks, write_json
 from xfed.enrichment import ContextIndex, enrich
 from xfed.llm import OllamaPool
 from xfed.llm.service import OllamaServicePool, nvidia_gpus
-from xfed.policy_generation import (complete_fragment, generate, generate_answer, generate_item,
+from xfed.policy_generation import (compile_plan, complete_fragment, generate, generate_answer, generate_item,
                                     response_schema, summarize_error, validate_fragment)
 from jsonschema import Draft202012Validator, ValidationError
 from xfed.policy_review import conflicts, review
@@ -64,6 +64,32 @@ def reviewed(value):
         reason='Simulated review.', missing_rules=[] if value['candidate_rules'] else ['Deletion duty omitted.'])
 
 
+def plan(item, kind='obligation', **changes):
+    rule = dict(kind=kind, actor='Provider', action='delete', asset='supplied data',
+                conditions=[dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT12H'),
+                            dict(leftOperand='event', operator='eq', rightOperand='notice')],
+                evidence=[dict(chunk_id=item['chunk_id'], quote=item['text'])], duties=[], remedies=[])
+    rule.update(changes)
+    return dict(rules=[rule], unrepresented=[], reason='Simulated source-backed rule.')
+
+
+def no_rule_review(value):
+    return dict(relevance='NOT_RELEVANT', rule_reviews=[], coverage='NO_RULES_NEEDED',
+                reason='Simulated no-rule evidence check.', missing_rules=[])
+
+
+class PlanClient(Client):
+    def __init__(self, answer, check=None):
+        super().__init__(answer)
+        self.check = check or (lambda value: reviewed(value) if value['candidate_rules'] else no_rule_review(value))
+
+    def generate(self, prompt, value, output_schema, **options):
+        if 'candidate_rules' in value:
+            self.calls.append((deepcopy(value), options))
+            return deepcopy(self.check(value))
+        return super().generate(prompt, value, output_schema, **options)
+
+
 class QualityTests(unittest.TestCase):
     def setUp(self):
         self.item = dict(chunk(), context=[])
@@ -84,6 +110,15 @@ class QualityTests(unittest.TestCase):
                 chunk('c3', 'SensitiveDataset means the supplied measurements.', clause_id='3')]
         context, _ = ContextIndex(data).context_for(data[0])
         self.assertEqual({row['chunk_id'] for row in context}, {'c2', 'c3'})
+
+    def test_external_articles_cannot_resolve_to_same_numbered_contract_clauses(self):
+        for text in ('Processor shall comply with Article 6 GDPR.',
+                     'Processor shall comply with GDPR Article 6.',
+                     'Processor shall comply with Article 6 of the Data Act.'):
+            source = [chunk('c1', text), chunk('c2', '6. Recipient may publish Data.', clause_id='6')]
+            context, missing = ContextIndex(source).context_for(source[0])
+            self.assertNotIn('c2', [row['chunk_id'] for row in context])
+            self.assertTrue(any('external legal reference' in value for value in missing))
 
     def test_missing_policy_context_does_not_erase_relevance(self):
         self.classified['chunks'][0]['text'] += ' Subject to clause 88.'
@@ -147,10 +182,13 @@ class QualityTests(unittest.TestCase):
             for source in trace['sourceClauses']:
                 source.pop('text')
         policy['osdu'] = {}
-        answer = dict(policy=policy, reason='Deletion obligation.')
+        completed = complete_fragment(policy, 'contract', self.item)
+        validate_fragment(completed, 'contract', self.item, ROOT)
+        self.assertNotIn('osdu', completed)
+        answer = plan(self.item)
         output_schema = response_schema(ROOT)
         Draft202012Validator(output_schema).validate(answer)
-        output, entry, failed = generate_item(self.item, Client(answer), 'prompt', 'contract', output_schema, ROOT)
+        output, entry, failed = generate_item(self.item, PlanClient(answer), 'prompt', 'contract', output_schema, ROOT)
         self.assertFalse(failed)
         self.assertNotIn('osdu', output)
         self.assertEqual(entry['generated'], True)
@@ -188,7 +226,7 @@ class QualityTests(unittest.TestCase):
 
     def test_abstention_counts_do_not_imply_good_policy(self):
         inputs = dict(contract_id='contract', items=[dict(chunk(f'c{i}'), context=[]) for i in range(5)])
-        policy, report = generate(inputs, Client(dict(policy=None, reason='Simulated abstention.')), ROOT)
+        policy, report = generate(inputs, PlanClient(dict(rules=[], unrepresented=[], reason='Simulated abstention.')), ROOT)
         self.assertIsNone(policy)
         self.assertEqual(report['summary']['abstained_needs_review'], 5)
         self.assertEqual(report['models']['simulated']['generated'], 0)
@@ -316,10 +354,7 @@ class QualityTests(unittest.TestCase):
                     answer = reviewed(value)
                 elif 'contract_id' in value:
                     identifier = value['clause']['chunk_id']
-                    answer = dict(policy=dict(odrlPolicy=dict(obligation=[dict(uid='r1', target='data '+identifier,
-                        assigner='Provider', assignee='Provider', action='delete')]), traceability=[dict(ruleUid='r1',
-                        ruleType='obligation', sourceClauses=[dict(chunk_id=identifier, relationship='primary')])]),
-                        reason='Simulated deletion duty.')
+                    answer = plan(value['clause'], asset='data '+identifier, conditions=[])
                 else:
                     answer = dict(label='RELEVANT')
                 self.send(dict(message=dict(content=json.dumps(answer)), done=True, done_reason='stop',
@@ -341,13 +376,13 @@ class QualityTests(unittest.TestCase):
             self.assertEqual([row['chunk_id'] for row in result['clause_reviews']], ['c0', 'c1', 'c2'])
             self.assertEqual(result['status'], 'reviewed_no_issues_found')
             self.assertEqual(report['summary']['generated'], 3)
-            self.assertEqual(len(requests), 9)
-            for offset in (0, 3, 6):
+            self.assertEqual(len(requests), 12)
+            for offset in (0, 3, 6, 9):
                 self.assertEqual({p['model'] for p in requests[offset:offset+3]}, set(names))
                 self.assertTrue(all('main_gpu' not in p['options'] for p in requests[offset:offset+3]))
             self.assertEqual(len(pool.clients), 3)
             self.assertEqual(pool.metadata()['completed'], [3, 3, 3])
-            self.assertTrue(all(worker['performance']['responses'] == 3 for worker in pool.metadata()['models']))
+            self.assertTrue(all(worker['performance']['responses'] == 4 for worker in pool.metadata()['models']))
             for payload in requests:
                 self.assertIs(payload['think'], False)
                 self.assertIs(payload['truncate'], False)
@@ -695,6 +730,216 @@ class QualityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Duplicate obligation'):
             validate_fragment(policy, 'contract', self.item, ROOT)
 
+    def test_rule_plan_requires_literal_primary_evidence_and_preserves_conditions(self):
+        answer = plan(self.item)
+        Draft202012Validator(response_schema(ROOT)).validate(answer)
+        output = compile_plan(answer, 'contract', self.item)
+        validate_fragment(output, 'contract', self.item, ROOT)
+        rule = output['odrlPolicy']['obligation'][0]
+        self.assertEqual(rule['assignee'], 'Provider')
+        self.assertEqual(rule['constraint'], answer['rules'][0]['conditions'])
+        self.assertEqual(output['traceability'][0]['sourceClauses'][0]['text'], self.item['text'])
+        for evidence in ([dict(chunk_id='c1', quote='Provider may keep the data.')],
+                         [dict(chunk_id='context', quote='Definition of Data.')]):
+            item = dict(self.item, context=[dict(chunk('context', 'Definition of Data.'), relationship='definition')])
+            answer['rules'][0]['evidence'] = evidence
+            with self.assertRaisesRegex(ValueError, 'evidence|primary'):
+                compile_plan(answer, 'contract', item)
+
+    def test_nested_duties_keep_their_actors_and_duplicates_are_rejected(self):
+        item = dict(self.item, text='Recipient may use supplied data after Provider notifies Operator.')
+        answer = plan(item, 'permission', actor='Recipient', action='use', conditions=[])
+        duty = dict(actor='Provider', action='notify', asset='supplied data',
+                    conditions=[dict(leftOperand='recipient', operator='eq', rightOperand='Operator')],
+                    evidence=[dict(chunk_id='c1', quote=item['text'])])
+        answer['rules'][0]['duties'] = [duty]
+        output = compile_plan(answer, 'contract', item)
+        validate_fragment(output, 'contract', item, ROOT)
+        self.assertEqual(output['odrlPolicy']['permission'][0]['duty'][0]['assignee'], 'Provider')
+        answer['rules'][0]['duties'].append(deepcopy(duty))
+        with self.assertRaisesRegex(ValueError, 'Duplicate duty'):
+            validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+
+    def test_wrong_modality_is_repaired_using_fresh_evidence_feedback(self):
+        attempts = []
+        def answer(value):
+            attempts.append(value)
+            return plan(self.item, 'permission' if len(attempts) == 1 else 'obligation')
+        def check(value):
+            response = reviewed(value)
+            if value['candidate_rules'][0]['rule_type'] == 'permission':
+                response.update(coverage='MISSING_RULES', missing_rules=['Provider must delete within 12 hours after notice.'])
+                response['rule_reviews'][0].update(verdict='CONTRADICTED', reason='Must delete is a duty, not a permission.')
+            return response
+        client = PlanClient(answer, check)
+        output, entry, failed = generate_item(self.item, client, 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertIn('obligation', output['odrlPolicy'])
+        self.assertEqual(len(client.calls), 4)
+        self.assertEqual(entry['generation_attempts'], 2)
+        self.assertIn('not a permission', entry['correction_reason'])
+        self.assertTrue(entry['semantic_check']['same_model_as_generator'])
+        self.assertIn('correction', client.calls[2][0])
+
+    def test_semantically_wrong_rules_are_rejected_despite_valid_json(self):
+        def check(value):
+            response = reviewed(value)
+            response['rule_reviews'][0].update(verdict='CONTRADICTED', reason='The source forbids this action.')
+            return response
+        output, entry, failed = generate_item(self.item, PlanClient(plan(self.item, 'permission'), check),
+                                             'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertIsNone(output)
+        self.assertTrue(failed)
+        self.assertEqual(entry['semantic_check']['rule_reviews'][0]['verdict'], 'CONTRADICTED')
+
+    def test_rejected_plans_and_checks_are_evicted_from_the_response_cache(self):
+        def check(value):
+            response = reviewed(value)
+            response['rule_reviews'][0].update(verdict='CONTRADICTED', reason='Wrong actor.')
+            return response
+        with TemporaryDirectory() as directory:
+            raw = PlanClient(plan(self.item), check)
+            cached = CachedClient(raw, Path(directory) / 'responses.json', Event(), False)
+            output, entry, failed = generate_item(self.item, cached, 'prompt', 'contract', response_schema(ROOT), ROOT)
+            self.assertTrue(failed)
+            self.assertIsNone(output)
+            self.assertEqual(cached.cache, {})
+            self.assertEqual(len(raw.calls), 4)
+
+    def test_unknown_issuer_uses_a_set_and_explicit_issuer_can_form_an_agreement(self):
+        answer = plan(self.item, 'permission')
+        output = compile_plan(answer, 'contract', self.item)
+        self.assertEqual(output['odrlPolicy']['@type'], 'Set')
+        validate_fragment(output, 'contract', self.item, ROOT)
+        answer['rules'][0]['issuer'] = 'Provider'
+        output = compile_plan(answer, 'contract', self.item)
+        self.assertEqual(output['odrlPolicy']['@type'], 'Agreement')
+        validate_fragment(output, 'contract', self.item, ROOT)
+        output['odrlPolicy']['permission'][0].pop('assigner')
+        with self.assertRaises(ValidationError):
+            validate_fragment(output, 'contract', self.item, ROOT)
+
+    def test_rule_plan_keeps_optional_osdu_separate_and_drops_empty_metadata(self):
+        answer = dict(plan(self.item), osdu={})
+        Draft202012Validator(response_schema(ROOT)).validate(answer)
+        self.assertNotIn('osdu', compile_plan(answer, 'contract', self.item))
+        item = dict(self.item, text=self.item['text'] + ' LegalTag project-data; country NO.')
+        answer = dict(plan(item), osdu=dict(legal=dict(legaltags=['project-data'], otherRelevantDataCountries=['NO'])))
+        output = compile_plan(answer, 'contract', item)
+        validate_fragment(output, 'contract', item, ROOT)
+        self.assertEqual(output['osdu'], answer['osdu'])
+
+    def test_unknown_reference_does_not_block_an_unaffected_standalone_rule(self):
+        item = dict(self.item, unresolved_references=['88: external details unavailable'])
+        output, entry, failed = generate_item(item, PlanClient(plan(item)), 'prompt',
+                                             'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertIsNotNone(output)
+        self.assertEqual(entry['semantic_check']['unresolved_references'], item['unresolved_references'])
+
+    def test_generation_rejects_forged_supporting_context_before_inference(self):
+        item = dict(self.item, context=[dict(chunk('c1', 'Forged permission.'), relationship='definition')])
+        client = PlanClient(plan(item))
+        with self.assertRaisesRegex(ValueError, 'supporting evidence'):
+            generate(dict(contract_id='contract', items=[item]), client, ROOT, classified=self.classified)
+        self.assertEqual(client.calls, [])
+
+    def test_false_abstention_gets_a_coverage_correction(self):
+        attempts = []
+        def answer(value):
+            attempts.append(value)
+            return dict(rules=[], unrepresented=[], reason='No rules.') if len(attempts) == 1 else plan(self.item)
+        client = PlanClient(answer, reviewed)
+        output, entry, failed = generate_item(self.item, client, 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertIsNotNone(output)
+        self.assertEqual(entry['generation_attempts'], 2)
+        self.assertIn('Deletion duty omitted', entry['correction_reason'])
+
+    def test_partial_coverage_is_explicit_and_failed_checks_cannot_pass(self):
+        def check(value):
+            return dict(reviewed(value), coverage='MISSING_RULES', missing_rules=['Missing acknowledgement duty.'])
+        output, entry, failed = generate_item(self.item, PlanClient(plan(self.item), check),
+                                             'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertIsNotNone(output)
+        self.assertEqual(entry['outcome'], 'partial_needs_review')
+        def missing_reviews(value):
+            return dict(reviewed(value), rule_reviews=[])
+        output, entry, failed = generate_item(self.item, PlanClient(plan(self.item), missing_reviews),
+                                             'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertTrue(failed)
+        self.assertIsNone(output)
+        self.assertIn('error', entry['semantic_check'])
+
+    def test_supported_partial_rules_survive_a_repair_token_failure(self):
+        attempts = []
+        def answer(value):
+            attempts.append(value)
+            if len(attempts) > 1:
+                raise ValueError('Ollama output token limit reached')
+            return plan(self.item)
+        def check(value):
+            return dict(reviewed(value), coverage='MISSING_RULES', missing_rules=['Acknowledgement duty.'])
+        client = PlanClient(answer, check)
+        client.last_request = dict(thinking_chars=10, answer_chars=0)
+        output, entry, failed = generate_item(self.item, client, 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertIsNotNone(output)
+        self.assertEqual(entry['outcome'], 'partial_needs_review')
+        self.assertIn('token limit', entry['repair_error'])
+
+    def test_reviewed_missing_evidence_is_an_abstention_not_a_transport_failure(self):
+        answer = dict(rules=[], unrepresented=[dict(evidence=[dict(chunk_id='c1', quote=self.item['text'])],
+                      reason='Responsible actor definition missing.')], reason='Cannot safely encode.')
+        check = lambda value: dict(no_rule_review(value), relevance='RELEVANT', coverage='NEEDS_CONTEXT')
+        output, entry, failed = generate_item(self.item, PlanClient(answer, check), 'prompt',
+                                             'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertIsNone(output)
+        self.assertEqual(entry['outcome'], 'abstained_needs_review')
+
+    def test_uncertain_clauses_reach_generation_and_exclusions_are_accounted_for(self):
+        classified = dict(contract_id='contract', chunks=[
+            dict(chunk('c1'), classification=dict(label='NEEDS_CONTEXT')),
+            dict(chunk('c2', 'Invoice payment.'), classification=dict(label='NOT_RELEVANT', reason='Payment only.'))])
+        _, enriched = enrich(classified, ROOT)
+        self.assertEqual([item['chunk_id'] for item in enriched['items']], ['c1'])
+        output, report = generate(enriched, PlanClient(plan(enriched['items'][0])), ROOT, classified=classified)
+        self.assertIsNotNone(output)
+        self.assertEqual(report['source_coverage'], dict(total_chunks=2, submitted_chunks=1,
+            not_submitted=[dict(chunk_id='c2', label='NOT_RELEVANT', reason='Payment only.')]))
+
+    def test_contract04_table_scope_and_blank_date_fields(self):
+        from xfed.extraction import extract_document
+        from xfed.segmentation import segment
+        document = extract_document(ROOT / 'contracts/contract_04/input/contract.pdf', 'contract_04', ROOT)
+        chunks = segment(document, ROOT)['chunks']
+        index = ContextIndex(chunks, document['blocks'])
+        restriction = next(row for row in chunks if row['text'].startswith('Project use only. No external licensing'))
+        block = next(row for row in document['blocks'] if row['block_id'] in restriction['source']['block_ids'])
+        self.assertIn('table_id', block)
+        self.assertIn('table_row', block)
+        context, _ = index.context_for(restriction)
+        texts = '\n'.join(row['text'] for row in context)
+        self.assertIn('B03 Operator geological', texts)
+        self.assertIn('Operator; pre-existing well-interval', texts)
+        self.assertIn('Holder and scope', texts)
+        self.assertIn('They do not override the dataset restrictions', texts)
+        self.assertNotIn('Supplier; pre-existing HW-710', texts)
+        self.assertNotIn('date', index.definitions)
+
+    def test_rule_mismatches_explain_missing_and_unexpected_rules_without_softening_scores(self):
+        from xfed.evaluation import policy_counts
+        data = dict(inputs={'i': dict(contract_id='contract', clause=chunk(), policy_context=[], context=[])},
+                    contexts={}, value_aliases={}, contract_aliases={}, action_aliases={})
+        gold = dict(kind='obligation', action='delete', target='supplied data', assignee='Provider')
+        case = dict(input_id='i', gold=dict(rules=[gold]))
+        counts = policy_counts(case, dict(policy=fragment(self.item, 'permission')), data, ROOT)
+        self.assertEqual((counts['tp'], counts['fp'], counts['fn']), (0, 1, 1))
+        self.assertEqual(counts['rule_differences']['missing'][0]['kind'], 'obligation')
+        self.assertEqual(counts['rule_differences']['unexpected'][0]['kind'], 'permission')
+
     def test_split_manifest_counts_and_missing_predictions(self):
         from xfed.evaluation import digest, load_reference, score_report
         data = load_reference(ROOT)
@@ -737,7 +982,9 @@ class QualityTests(unittest.TestCase):
             def reset_assignments(self): pass
             def metadata(self): return dict(model=self.model)
         def answer(value):
-            return dict(policy=None, reason='Simulated abstention.') if 'contract_id' in value else dict(label='RELEVANT')
+            if 'candidate_rules' in value:
+                return no_rule_review(value)
+            return dict(rules=[], unrepresented=[], reason='Simulated abstention.') if 'contract_id' in value else dict(label='RELEVANT')
         data = load_reference(ROOT)
         for split, count, policy_count in [('dev', 300, 60), ('test', 76, 76)]:
             report = run_evaluation(data, Runner(answer), ROOT, split=split)

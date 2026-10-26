@@ -38,14 +38,14 @@ def settings_for(name, num_ctx):
     return settings
 
 
-def selected_chunks(document, limit, root):
+def selected_chunks(document, limit, root, blocks=()):
     chunks = document['chunks']
     if limit >= len(chunks):
         return {chunk['chunk_id'] for chunk in chunks}
     # Spread the sample over the contract, including clauses with the most supporting evidence.
     baseline = OllamaClient('http://127.0.0.1:11434', 'sampling', num_predict=4096,
                             relevance_batch_size=1, relevance_compact=False, relevance_num_ctx=32768)
-    groups = classification_batches(document, baseline, root)
+    groups = classification_batches(document, baseline, root, blocks=blocks)
     longest = sorted(groups, key=lambda group: request_bytes(group['items'], baseline, root), reverse=True)
     chosen = {group['chunk_id'] for group in longest[:min(2, limit)]}
     for index in range(limit):
@@ -55,8 +55,8 @@ def selected_chunks(document, limit, root):
     return chosen
 
 
-def run_variant(document, chunk_ids, client, root, progress=None):
-    groups = classification_batches(document, client, root, chunk_ids)
+def run_variant(document, chunk_ids, client, root, progress=None, blocks=()):
+    groups = classification_batches(document, client, root, chunk_ids, blocks=blocks)
     if not groups:
         raise ValueError('No clauses selected for benchmarking.')
     # Warm exactly the allocation being measured, then exclude that request from the timing/counters.
@@ -86,8 +86,8 @@ def run_variant(document, chunk_ids, client, root, progress=None):
 
 def compare_settings(document, base_url, model, root=Path('.'), limit=24, num_ctx=32768, timeout=600,
                      variants=DEFAULT_VARIANTS, progress=None, completed=None, cancel=None, think=None,
-                     client_ready=None):
-    chunk_ids = selected_chunks(document, limit or len(document['chunks']), root)
+                     client_ready=None, blocks=()):
+    chunk_ids = selected_chunks(document, limit or len(document['chunks']), root, blocks)
     report = dict(contract=document['contract_id'], model=model, sampled_chunk_ids=sorted(chunk_ids), runs=[])
     reference, digest = None, None
     def checkpoint(done, total, message):
@@ -110,7 +110,8 @@ def compare_settings(document, base_url, model, root=Path('.'), limit=24, num_ct
                 raise ValueError('Model digest changed during the comparison; results are not comparable.')
             digest = client.model_digest
             result = run_variant(document, chunk_ids, client, root,
-                                 lambda done, total, message: checkpoint(done, total, f'{name}: {done}/{total} requests'))
+                                 lambda done, total, message: checkpoint(done, total, f'{name}: {done}/{total} requests'),
+                                 blocks=blocks)
             result.update(name=name, settings=settings, status='complete')
             if name == 'baseline':
                 reference = result
@@ -154,13 +155,17 @@ def main(argv=None):
     if args.output and args.output.resolve().is_relative_to((root / 'contracts').resolve()):
         parser.error('Save benchmark reports outside contracts/ to preserve pipeline files.')
     source = base / 'output/1 preprocessing/1.2 segmentation/contract_chunks.json'
+    blocks_path = base / 'output/1 preprocessing/1.1 extraction/document_blocks.json'
+    blocks = json.loads(blocks_path.read_text(encoding='utf-8'))['blocks'] if blocks_path.is_file() else []
     if source.is_file():
         document = json.loads(source.read_text(encoding='utf-8'))
         validate(document, 2, root)
     else:
         from xfed.extraction import extract_document
         from xfed.segmentation import segment
-        document = segment(extract_document(base / 'input/contract.pdf', args.contract, root), root)
+        extracted = extract_document(base / 'input/contract.pdf', args.contract, root)
+        blocks = extracted['blocks']
+        document = segment(extracted, root)
     def completed(result, report):
         if result['status'] == 'complete':
             stats = result['options']['models'][0]['performance']
@@ -174,7 +179,7 @@ def main(argv=None):
     report = compare_settings(document, args.base_url, args.model, root, args.limit, args.num_ctx,
                               args.timeout, args.variants,
                               progress=lambda done, total, message: print(message, flush=True),
-                              completed=completed)
+                              completed=completed, blocks=blocks)
     if any(result['status'] == 'failed' for result in report['runs']):
         parser.exit(1, 'Some comparisons failed; inspect their errors before selecting settings.\n')
 

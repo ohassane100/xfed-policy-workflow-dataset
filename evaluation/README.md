@@ -81,6 +81,13 @@ where needed. **Policy extraction is scored independently of relevance**, includ
 all non-rule controls. These are stage scores, not an end-to-end pipeline score.
 Production prompts and pipeline stages have not been tuned on Contract 05.
 
+Policy inference now includes a source-backed rule plan, deterministic ODRL
+compilation and a fresh same-model evidence/coverage check with one correction.
+Its plan and check are saved in each prediction's generation report. Strict rule
+scores are unchanged; mismatches list missing and unexpected canonical rules.
+These checks are part of inference, not the gold judge. Compare new runs separately
+from earlier direct-generation runs; do not combine their scores or timings.
+
 Runs are uncached and preserve saved pipeline outputs. UI reports are saved under
 ignored `evaluation/runs/` and restored after restart. Each report contains source,
 reference, input, code/schema and prompt hashes; case IDs, gold, predictions,

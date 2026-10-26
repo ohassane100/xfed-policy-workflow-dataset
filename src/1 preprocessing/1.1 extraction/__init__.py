@@ -26,7 +26,10 @@ def extract_document(pdf_path: Path, contract_id: str, root=Path('.')) -> dict:
                         sizes[round(span['size'], 1)] += len(span['text'].strip())
             body_size = sizes.most_common(1)[0][0] if sizes else 12
             try:
-                tables = [pymupdf.Rect(t.bbox) for t in page.find_tables().tables
+                tables = [dict(identifier=f'p{page.number + 1}t{position}', bbox=pymupdf.Rect(t.bbox),
+                               rows=[pymupdf.Rect(row.bbox) for row in t.rows],
+                               header=pymupdf.Rect(t.header.bbox) if t.header.bbox else None)
+                          for position, t in enumerate(page.find_tables().tables)
                           if t.row_count >= 2 and t.col_count >= 2]
             except Exception as error:
                 warnings.warn(f"Page {page.number + 1}: table detection unavailable: {error}")
@@ -46,7 +49,10 @@ def extract_document(pdf_path: Path, contract_id: str, root=Path('.')) -> dict:
                 if len(text) < 250 and (bold > len(text) * .65 or
                                        min(s['size'] for s in spans) > body_size * 1.15):
                     kind = 'heading'
-                if any(t.contains(pymupdf.Point((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)) for t in tables):
+                center = pymupdf.Point((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
+                table = next((t for t in tables if t['bbox'].contains(center)
+                              or (t['header'] is not None and t['header'].contains(center))), None)
+                if table is not None:
                     kind = 'table'
                 marginal = bbox[1] < page.rect.height * .075 or bbox[3] > page.rect.height * .87
                 if marginal and re.fullmatch(r'\d+|(?:Page|Side)\s+\d+(?:\s+(?:of|av)\s+\d+)?', text, re.I):
@@ -57,6 +63,16 @@ def extract_document(pdf_path: Path, contract_id: str, root=Path('.')) -> dict:
                     kind = 'other'
                 value = dict(block_id=f'b{len(blocks) + 1:06}', type=kind, text=text,
                              page=page.number + 1, bbox=bbox)
+                if table is not None and kind == 'table':
+                    value['table_id'] = table['identifier']
+                    # A block spanning several rows cannot safely be assigned to
+                    # just its centre row. Keep the original text without guessing.
+                    rows = [index for index, row in enumerate(table['rows'])
+                            if row.y0 <= bbox[1] + 2 and row.y1 >= bbox[3] - 2]
+                    if len(rows) == 1:
+                        value['table_row'] = rows[0]
+                    if table['header'] is not None and table['header'].contains(center):
+                        value['table_header'] = True
                 number = clause_number(text)
                 if number and kind != 'other':
                     value['numbering'] = number

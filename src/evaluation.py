@@ -93,14 +93,16 @@ def reference_summary(data, split='test'):
                 reviewed={task: sum(case['gold']['review_status'] == 'reviewed' for case in cases)
                           for task, cases in selected.items()},
                 reference_sha256=digest(data), test_exposure=data['test_exposure'] if split == 'test' else None,
-                limitations=data['limitations'])
+                limitations=data.get('limitations', []))
 
 
 def inference_files(root):
     root = Path(root)
     paths = [root / file for file in ('src/evaluation.py', 'src/llm/__init__.py', 'src/llm/service.py',
-             'src/common/__init__.py', 'src/1 preprocessing/1.3 relevance/__init__.py',
-             'src/2 policy_generation/__init__.py')]
+             'src/common/__init__.py', 'src/1 preprocessing/1.1 extraction/__init__.py',
+             'src/1 preprocessing/1.2 segmentation/__init__.py', 'src/1 preprocessing/1.3 relevance/__init__.py',
+             'src/1 preprocessing/1.4 enrichment/__init__.py',
+             'src/2 policy_generation/__init__.py', 'src/3 policy_review/__init__.py')]
     paths += sorted((root / 'prompts').glob('*.md')) + sorted((root / 'schemas').glob('*.json'))
     return {path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths}
 
@@ -240,6 +242,9 @@ def policy_counts(case, prediction, data, root=Path('.')):
                       expected_rules=len(expected), predicted_rules=len(actual),
                       validation_error=validation_error,
                       schema_and_traceability_valid=fragment is not None and not failed)
+        counts['rule_differences'] = dict(
+            missing=[json.loads(rule) for rule, count in (gold_count - predicted_count).items() for _ in range(count)],
+            unexpected=[json.loads(rule) for rule, count in (predicted_count - gold_count).items() for _ in range(count)])
         # Additional diagnostics preserve rule scope in every constraint comparison.
         def conditions(rules):
             result = Counter()
@@ -333,7 +338,8 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
                 correct = info['exact']
             if not correct:
                 mismatches.append(dict(task=task, case_id=identifier, expected=case['gold'], predicted=prediction,
-                                       scoring_error=info.get('validation_error')))
+                                       scoring_error=info.get('validation_error'),
+                                       **(dict(rule_differences=info['rule_differences']) if task == 'policy' else {})))
             cohorts[case['source_type']+'/'+case['cohort']].append(info)
         if task == 'policy':
             for source_type in ('real',):
@@ -362,7 +368,7 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
                   scorer_sha256=hashlib.sha256((Path(root) / 'src/evaluation.py').read_bytes()).hexdigest(),
                   incomplete_tasks=[task for task in report['selected_cases'] if task not in report.get('execution', {})],
                   reference_status='reviewed' if all(value['reviewed'] == value['n'] for task in metrics.values() for value in task.values()) else 'provisional',
-                  metric_notes=data['limitations'], interval_note='Wilson intervals assume independent cases. Page-cluster bootstrap intervals resample pages within each fixed source contract (500 replicates); neither interval establishes generalisation to new contracts.')
+                  metric_notes=data.get('limitations', []), interval_note='Wilson intervals assume independent cases. Page-cluster bootstrap intervals resample pages within each fixed source contract (500 replicates); neither interval establishes generalisation to new contracts.')
     return output
 
 

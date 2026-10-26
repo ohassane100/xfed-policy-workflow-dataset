@@ -67,6 +67,19 @@
             "minItems": 4,
             "maxItems": 4,
             "description": "Optional PyMuPDF-style bounding box [x0, y0, x1, y1]."
+          },
+          "table_id": {
+            "type": "string",
+            "description": "Detected table identity on this page; keeps adjacent tables separate."
+          },
+          "table_row": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Detected row when the complete text block fits one row."
+          },
+          "table_header": {
+            "type": "boolean",
+            "description": "Whether this block belongs to the detected table header."
           }
         },
         "additionalProperties": false

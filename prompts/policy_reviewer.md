@@ -27,6 +27,12 @@ CONTRADICTED means the evidence states a materially conflicting term.
 UNSUPPORTED means a rule or material detail is invented or not established.
 AMBIGUOUS means supplied evidence is insufficient to decide. Explain specifically.
 Schema validity and exact citations alone do not establish entailment.
+Challenge the candidate rather than accepting a plausible summary. In particular,
+check the direction of elapsed-time comparisons: within/no later than is an upper
+bound, while at least is a lower bound with its stated before/after event intact.
+An invented generic use permission cannot stand in for a procedural obligation.
+Check each table rule against its own row asset, holder, header and introduction.
+Do not let a correct quotation excuse a wrong modality, actor or missing exception.
 
 Check coverage of the entire PRIMARY clause, not just the candidate rules. A
 generator can wrongly return no rules. COMPLETE means its operative rules are
@@ -38,3 +44,6 @@ unselected alternative, heading or commentary. An explicit conditional rule is
 still operative; preserve its conditions rather than dismissing it automatically.
 Relative deadlines must stay relative to the stated trigger. Procedural security,
 incident, approval, flow-down, audit and deletion duties are part of coverage.
+For listed unresolved references, identify which candidate or omitted requirement
+actually depends on the unknown content. Unaffected standalone rules can still be
+entailed; do not invent the missing restriction or silently ignore a dependency.

@@ -49,7 +49,7 @@ def review_schema(candidates, root):
                     missing_rules=dict(type='array', items=dict(type='string', minLength=1))))
 
 
-def review_item(item, worker, prompt, contract, root):
+def review_item(item, worker, prompt, contract, root, require_resolved=True):
     candidates = item['candidate_rules']
     expected = {row['rule']['uid']: row['rule_type'] for row in candidates}
     response_schema = review_schema(candidates, root)
@@ -79,7 +79,7 @@ def review_item(item, worker, prompt, contract, root):
             if answer['relevance'] == 'NEEDS_CONTEXT':
                 answer['coverage'] = 'NEEDS_CONTEXT'
                 answer['missing_rules'] = []
-            if item.get('unresolved_references') and answer['coverage'] in ('COMPLETE', 'NO_RULES_NEEDED'):
+            if require_resolved and item.get('unresolved_references') and answer['coverage'] in ('COMPLETE', 'NO_RULES_NEEDED'):
                 answer['coverage'] = 'NEEDS_CONTEXT'
                 answer['reason'] += ' Unresolved references: ' + '; '.join(item['unresolved_references'])
             return dict(answer, chunk_id=item['chunk_id'], reviewer=reviewer,

@@ -166,11 +166,11 @@ def classify_batch(items, client, root=Path('.'), num_ctx=None):
                 classify_batch(items[middle:], client, root, num_ctx))
 
 
-def classification_batches(document, client, root=Path('.'), chunk_ids=None, include_references=False):
+def classification_batches(document, client, root=Path('.'), chunk_ids=None, include_references=False, blocks=()):
     from xfed.enrichment import ContextIndex
 
     validate(document, 2, root)
-    index = ContextIndex(document['chunks'])
+    index = ContextIndex(document['chunks'], blocks)
     batch_size = getattr(client, 'relevance_batch_size', 1)
     if type(batch_size) is not int or not 1 <= batch_size <= 16:
         raise ValueError('relevance_batch_size must be between 1 and 16.')
@@ -198,11 +198,11 @@ def classification_batches(document, client, root=Path('.'), chunk_ids=None, inc
             for group in groups]
 
 
-def classify(document, client, root=Path('.'), progress=None):
+def classify(document, client, root=Path('.'), progress=None, blocks=()):
     output = deepcopy(document)
     if progress:
         progress(0, len(output['chunks']), 'Preparing classification requests')
-    work = classification_batches(output, client, root)
+    work = classification_batches(output, client, root, blocks=blocks)
     lengths = {group['chunk_id']: len(group['items']) for group in work}
     completed = 0
     def report(done, total, message):
@@ -222,7 +222,7 @@ def classify(document, client, root=Path('.'), progress=None):
                and 'safe input budget' not in chunk['classification'].get('reason', '').lower()
                and 'context limit reached' not in chunk['classification'].get('reason', '').lower()}
     if pending:
-        retry = classification_batches(document, client, root, pending, include_references=True)
+        retry = classification_batches(document, client, root, pending, include_references=True, blocks=blocks)
         retry = [dict(group, items=[item for item in group['items']
                                    if item['context'] != initial[item['clause']['chunk_id']]['context']])
                  for group in retry]

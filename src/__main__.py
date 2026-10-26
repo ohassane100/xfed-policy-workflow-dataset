@@ -8,7 +8,7 @@ from xfed.relevance import classify
 from xfed.enrichment import enrich
 from xfed.llm import load_client
 from xfed.policy_generation import generate
-# Automated review retained in xfed.policy_review for future use.
+# Generation uses a clause evidence check; the separate review stage is disabled.
 
 
 def main(argv=None):
@@ -54,17 +54,17 @@ def main(argv=None):
             print(f"{contract}: {len(document['blocks'])} blocks, {len(chunks['chunks'])} chunks", flush=True)
             if args.through == '1.2':
                 continue
-            classified = classify(chunks, client, args.root)
+            classified = classify(chunks, client, args.root, blocks=document['blocks'])
             write_output(paths['classified_chunks.json'], classified, 3, args.root)
             if args.through == '1.3':
                 continue
-            classified, enriched = enrich(classified, args.root)
+            classified, enriched = enrich(classified, args.root, blocks=document['blocks'])
             write_output(paths['classified_chunks.json'], classified, 3, args.root)
             write_output(paths['enriched_relevance.json'], enriched, 4, args.root)
             pending = sum(c['classification']['label'] == 'NEEDS_CONTEXT' for c in classified['chunks'])
             print(f"{contract}: {len(enriched['items'])} relevant, {pending} still need context", flush=True)
             if args.through == '2':
-                policy, report = generate(enriched, client, args.root)
+                policy, report = generate(enriched, client, args.root, classified=classified)
                 report['unresolved_chunks'] = pending
                 write_json(output / '2 policy_generation/generation_report.json', report)
                 if policy is not None:
