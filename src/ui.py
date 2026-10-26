@@ -431,8 +431,30 @@ class Pipeline:
             metadata.unlink(missing_ok=True)
 
     def reset_generated(self, contract):
-        self.invalidate(contract, '1.1')
-        (self.output(contract) / '.llm_cache.json').unlink(missing_ok=True)
+        output = self.output(contract)
+        expected = self.root / 'contracts' / contract / 'output'
+        if output.resolve() != expected:
+            raise ValueError('Reset requires the contract output directory to be inside this repository.')
+        paths = [path for path in output.rglob('*.json') if path.is_file() or path.is_symlink()]
+        if any(not path.resolve().is_relative_to(expected) for path in paths):
+            raise ValueError('Reset cannot remove JSON through a link outside the contract output directory.')
+        for path in paths:
+            path.unlink()
+
+    def reset(self, request):
+        contract = request.get('contract')
+        self.base(contract)
+        with self.lock:
+            if self.job['status'] in ('running', 'cancelling'):
+                raise ValueError('Wait for the current job to stop before resetting records.')
+            self.reset_generated(contract)
+            if self.benchmark_report and self.benchmark_report.get('contract') == contract:
+                self.benchmark_report = None
+            if self.job.get('contract') == contract:
+                self.active_client = None
+                self.job = dict(status='idle', stage=None, completed=0, total=0,
+                                message='Ready', log=[])
+        return self.state(contract)
 
     def run(self, contract, selected, raw_client, reuse, fresh_run=False):
         base = self.base(contract)
@@ -650,6 +672,8 @@ def handler(pipeline):
                     raise ValueError('Expected a JSON object.')
                 if self.path == '/api/run':
                     self.send(pipeline.start(request), 202)
+                elif self.path == '/api/reset':
+                    self.send(pipeline.reset(request))
                 elif self.path == '/api/benchmark':
                     self.send(pipeline.start_benchmark(request), 202)
                 elif self.path == '/api/evaluation':

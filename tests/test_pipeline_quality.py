@@ -505,6 +505,92 @@ class QualityTests(unittest.TestCase):
             self.assertFalse(stale.exists())
             self.assertNotIn('3', pipeline.state('contract')['stages'])
 
+    def test_reset_removes_all_generated_json_for_only_the_selected_contract(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ('contract', 'other'):
+                source = root / 'contracts' / name / 'input/contract.pdf'
+                source.parent.mkdir(parents=True)
+                source.write_bytes(b'source PDF')
+            pipeline = Pipeline(root, 'http://localhost:11434')
+            generated = [pipeline.path('contract', stage) for stage in pipeline.state('contract')['stages']]
+            generated += [pipeline.output('contract') / name for name in (
+                '.runs.json', '.llm_cache.json', 'policy.json',
+                '2 policy_generation/generation_report.json', '3 policy_review/policy_review.json')]
+            for path in generated:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('broken JSON', encoding='utf-8')  # Reset also recovers unreadable records.
+            preserved = [root / 'schemas/schema.json', root / 'evaluation/reference.json',
+                         root / 'evaluation/runs/report.json', pipeline.output('other') / 'policy.json',
+                         pipeline.output('contract') / '.gitkeep']
+            for path in preserved:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('keep', encoding='utf-8')
+            pipeline.job.update(status='complete', contract='contract', stage='2')
+            pipeline.benchmark_report = dict(contract='contract')
+            pipeline.evaluation_report = dict(run_id='saved-evaluation')
+            state = pipeline.reset(dict(contract='contract'))
+            self.assertFalse(any(path.exists() for path in generated))
+            self.assertTrue(all(path.read_text(encoding='utf-8') == 'keep' for path in preserved))
+            self.assertEqual((root / 'contracts/contract/input/contract.pdf').read_bytes(), b'source PDF')
+            self.assertTrue(all(not stage['ready'] and stage['run'] is None for stage in state['stages'].values()))
+            self.assertIsNone(state['report'])
+            self.assertEqual(state['job']['status'], 'idle')
+            self.assertIsNone(pipeline.benchmark_report)
+            self.assertEqual(pipeline.evaluation_report, dict(run_id='saved-evaluation'))
+            pipeline.reset(dict(contract='contract'))  # An already empty contract can be reset again.
+
+    def test_reset_rejects_active_jobs_unknown_contracts_and_other_output_paths(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / 'contracts/contract/input/contract.pdf'
+            source.parent.mkdir(parents=True)
+            source.touch()
+            pipeline = Pipeline(root, 'http://localhost:11434')
+            saved = pipeline.output('contract') / 'policy.json'
+            saved.parent.mkdir()
+            saved.write_text('{}', encoding='utf-8')
+            for status in ('running', 'cancelling'):
+                pipeline.job.update(status=status, contract='other')
+                with self.assertRaisesRegex(ValueError, 'current job'):
+                    pipeline.reset(dict(contract='contract'))
+                self.assertTrue(saved.exists())
+            pipeline.job['status'] = 'idle'
+            with self.assertRaisesRegex(ValueError, 'Unknown contract'):
+                pipeline.reset(dict(contract='../contract'))
+            with patch.object(pipeline, 'output', return_value=root / 'schemas'):
+                with self.assertRaisesRegex(ValueError, 'output directory'):
+                    pipeline.reset(dict(contract='contract'))
+            self.assertTrue(saved.exists())
+
+    def test_reset_endpoint_clears_records_and_returns_empty_stage_state(self):
+        from urllib.request import Request, urlopen
+        from xfed.ui import handler
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / 'contracts/contract/input/contract.pdf'
+            source.parent.mkdir(parents=True)
+            source.touch()
+            pipeline = Pipeline(root, 'http://localhost:11434')
+            saved = pipeline.output('contract') / '.llm_cache.json'
+            write_json(saved, dict(cached='response'))
+            server = ThreadingHTTPServer(('127.0.0.1', 0), handler(pipeline))
+            thread = Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                request = Request(f'http://127.0.0.1:{server.server_port}/api/reset',
+                                  data=json.dumps(dict(contract='contract')).encode(),
+                                  headers={'Content-Type': 'application/json'})
+                with urlopen(request, timeout=5) as response:
+                    state = json.load(response)
+                self.assertFalse(saved.exists())
+                self.assertEqual(state['contract'], 'contract')
+                self.assertTrue(all(not stage['ready'] for stage in state['stages'].values()))
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
     def test_heading_bypass_does_not_discard_substantive_merged_terms(self):
         heading = dict(clause=chunk(text='7. Confidentiality', heading='7. Confidentiality'), context=[], unresolved_references=[])
         client = Client(dict(label='RELEVANT'))

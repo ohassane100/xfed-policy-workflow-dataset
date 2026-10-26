@@ -73,6 +73,9 @@ The example configuration also enables same-model workers for CLI pipeline/evalu
 Services started by a run stop on completion, failure, cancellation, or normal UI
 shutdown. The existing system service is left running. With parallelization off,
 the UI sends one request at a time to that shared service.
+Use **Reset contract** beside the run buttons to delete all generated JSON,
+cached responses and run history for the selected contract, then return to step
+1.1. Confirm the deletion in the dialog. Reset is unavailable while a job is active.
 Private workers allocate additional model memory alongside any models still
 loaded by the shared service.
 The API provides schema constraints, generation controls and cancellation to the
