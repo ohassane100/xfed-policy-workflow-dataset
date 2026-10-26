@@ -1,5 +1,7 @@
 """Run private Ollama workers using the server installation and model store."""
 
+import csv
+import json
 import os
 from pathlib import Path, PurePosixPath
 import shlex
@@ -12,6 +14,30 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 from . import OllamaPool
+
+
+def nvidia_gpus():
+    """Map physical nvidia-smi indices to stable CUDA UUIDs."""
+    try:
+        result = subprocess.run(['nvidia-smi', '--query-gpu=index,uuid', '--format=csv,noheader,nounits'],
+                                capture_output=True, text=True, timeout=10, check=True)
+        devices = [dict(index=int(row[0].strip()), uuid=row[1].strip())
+                   for row in csv.reader(result.stdout.splitlines()) if row]
+        if (not devices or any(device['index'] < 0 or not device['uuid'].startswith('GPU-') for device in devices) or
+                len({device['index'] for device in devices}) != len(devices) or
+                len({device['uuid'] for device in devices}) != len(devices)):
+            raise ValueError('No unique NVIDIA devices were reported.')
+        return sorted(devices, key=lambda device: device['index'])
+    except (OSError, subprocess.SubprocessError, ValueError, IndexError) as error:
+        raise RuntimeError(f'Cannot discover NVIDIA GPU indices and UUIDs with nvidia-smi: {error}') from error
+
+
+def worker_pid(log_path):
+    with log_path.open('rb') as stream:
+        lines = stream.read(8192).decode('utf-8', errors='replace').splitlines()
+    return next((int(line.split('=', 1)[1]) for line in lines
+                 if line.startswith('XFED_OLLAMA_PID=') and line.split('=', 1)[1].isdigit()
+                 and int(line.split('=', 1)[1]) > 1), None)
 
 
 class OllamaServicePool(OllamaPool):
@@ -62,6 +88,7 @@ class OllamaServicePool(OllamaPool):
             # The server sees its chosen GPU as device 0. Never send the physical
             # GPU index as an inference option to that isolated server.
             client.gpu = gpu
+            client.placement_status = 'pending' if gpu is not None else 'auto'
         self.worker_gpus = list(gpus)
 
     def _environment(self):
@@ -87,6 +114,15 @@ class OllamaServicePool(OllamaPool):
         if os.name != 'posix':
             raise RuntimeError('Managed Ollama workers must run on the Linux GPU server, such as Gorina5.')
         environment = self._environment()
+        self.gpu_devices = nvidia_gpus() if any(gpu is not None for gpu in self.worker_gpus) else []
+        devices = {device['index']: device['uuid'] for device in self.gpu_devices}
+        if any(gpu is not None and gpu not in devices for gpu in self.worker_gpus):
+            raise ValueError(f'Choose detected NVIDIA GPU indices {sorted(devices)}. '
+                             f'At most {min(32, len(devices))} workers can use different GPUs on this host.')
+        for index, client in enumerate(self.clients):
+            if client.gpu is not None:
+                client.gpu_uuid = devices[client.gpu]
+                client.verify_placement = lambda client=client, index=index: self._verify_gpu(client, index)
         urls = list(dict.fromkeys(c.url.removesuffix('/api/chat') for c in self.clients))
         for index, url in enumerate(urls):
             if self.cancel.is_set():
@@ -94,7 +130,12 @@ class OllamaServicePool(OllamaPool):
             settings = dict(environment, OLLAMA_HOST=url,
                             OLLAMA_NUM_PARALLEL=str(self.workers_per_endpoint))
             if self.worker_gpus[index] is not None:
-                settings['CUDA_VISIBLE_DEVICES'] = str(self.worker_gpus[index])
+                settings.update(CUDA_VISIBLE_DEVICES=devices[self.worker_gpus[index]],
+                                CUDA_DEVICE_ORDER='PCI_BUS_ID', OLLAMA_VULKAN='0',
+                                GGML_VK_VISIBLE_DEVICES='-1', ROCR_VISIBLE_DEVICES='-1',
+                                HIP_VISIBLE_DEVICES='-1')
+                if not settings.get('OLLAMA_LLM_LIBRARY', '').startswith('cuda'):
+                    settings.pop('OLLAMA_LLM_LIBRARY', None)
             # A separate session gives every worker a known process group. Record
             # its PID before exec so cleanup can signal it as the ollama user,
             # even when sudo changes identity or forks a supervising process.
@@ -133,6 +174,58 @@ class OllamaServicePool(OllamaPool):
                     self.cancel.wait(0.1)
         self._started = True
 
+    def _verify_gpu(self, client, index):
+        """Check this server's actual runner processes before accepting a response."""
+        if self.cancel.is_set():
+            raise InterruptedError('GPU verification cancelled.')
+        client.observed_gpus = None
+        try:
+            with self._service_lock:
+                process, log_path = self._servers[index]
+                server_pid = worker_pid(log_path)
+            if server_pid is None or process.poll() is not None:
+                raise RuntimeError('The worker server PID is unavailable.')
+            processes = subprocess.run(['ps', '-eo', 'pid=,ppid='], capture_output=True,
+                                       text=True, timeout=10, check=True)
+            parents = {}
+            for line in processes.stdout.splitlines():
+                parts = line.split()
+                if len(parts) == 2:
+                    parents[int(parts[0])] = int(parts[1])
+            applications = subprocess.run(['nvidia-smi', '--query-compute-apps=pid,gpu_uuid',
+                                          '--format=csv,noheader,nounits'], capture_output=True,
+                                         text=True, timeout=10, check=True)
+            def belongs_to_worker(pid):
+                seen = set()
+                while pid > 1 and pid not in seen:
+                    if pid == server_pid:
+                        return True
+                    seen.add(pid)
+                    pid = parents.get(pid, 0)
+                return False
+            observed = {row[1].strip() for row in csv.reader(applications.stdout.splitlines())
+                        if len(row) == 2 and row[0].strip().isdigit() and belongs_to_worker(int(row[0]))}
+            indices = {device['uuid']: device['index'] for device in self.gpu_devices}
+            client.observed_gpus = [indices.get(uuid, uuid) for uuid in sorted(observed)]
+            if observed != {client.gpu_uuid}:
+                raise RuntimeError(f'Requested GPU {client.gpu} ({client.gpu_uuid}), '
+                                   f'observed {client.observed_gpus or "no NVIDIA runner (CPU fallback or process visibility unavailable)"}.')
+            with urlopen(client.url.removesuffix('/api/chat') + '/api/ps', timeout=10) as response:
+                status = json.load(response)
+            models = status.get('models') if isinstance(status, dict) else None
+            if not isinstance(models, list):
+                raise ValueError('The worker returned invalid model residency information.')
+            loaded = next((model for model in models if isinstance(model, dict) and
+                           model.get('name') == client.model and model.get('digest') == client.model_digest), None)
+            if (not loaded or type(loaded.get('size_vram')) not in (int, float) or loaded['size_vram'] <= 0):
+                raise RuntimeError('The worker does not report the selected model resident on a GPU; '
+                                   'CPU fallback or model unloading cannot satisfy pinned GPU placement.')
+            client.placement_status, client.placement_error = 'verified', None
+        except (OSError, subprocess.SubprocessError, ValueError, IndexError, RuntimeError) as error:
+            client.placement_status = 'failed'
+            client.placement_error = str(error)
+            raise RuntimeError(f'GPU placement verification failed for {client.model}: {error}') from error
+
     def preflight(self):
         try:
             if self._closed or self.cancel.is_set():
@@ -167,17 +260,13 @@ class OllamaServicePool(OllamaPool):
                 if process.poll() is None:
                     deadline, group = monotonic() + 1, None
                     while group is None and process.poll() is None:
-                        with log_path.open('rb') as stream:
-                            lines = stream.read(8192).decode('utf-8', errors='replace').splitlines()
-                        group = next((line.split('=', 1)[1] for line in lines
-                                      if line.startswith('XFED_OLLAMA_PID=') and
-                                      line.split('=', 1)[1].isdigit()), None)
+                        group = worker_pid(log_path)
                         if group is not None or monotonic() >= deadline:
                             break
                         Event().wait(0.05)
                     def signal_group(signal):
                         result = subprocess.run(['sudo', '-n', '-u', self.service['user'], '--',
-                                                 'kill', '-' + signal, '--', '-' + group],
+                                                 'kill', '-' + signal, '--', '-' + str(group)],
                                                 capture_output=True, text=True, timeout=10, check=False)
                         if result.returncode and process.poll() is None:
                             raise RuntimeError(f'Could not stop worker group {group}: {result.stderr.strip()}')

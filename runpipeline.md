@@ -48,10 +48,20 @@ the same model and settings; saved metadata records each clause's worker and dig
 **Auto** starts one private Ollama server with `OLLAMA_NUM_PARALLEL` equal to the
 worker count. Ollama chooses placement, including spanning GPUs for large models.
 **Different GPU per worker** starts one server per worker, each restricted using
-`CUDA_VISIBLE_DEVICES` to a distinct physical index from `nvidia-smi`.
+`CUDA_VISIBLE_DEVICES` to the UUID resolved from its physical `nvidia-smi` index.
+Vulkan and ROCm are disabled for these NVIDIA workers, so another backend cannot
+bypass the CUDA selection. The UI offers only detected cards and limits this mode
+to one worker per card, up to the application's cap of 32. Auto permits up to 32
+request workers; usable concurrency depends on memory and model/context size.
 Each worker loads its own copy of the model; the model and context must fit its GPU.
 Auto uses one model runner with additional context memory for concurrent requests.
 Check actual placement and available memory with `nvidia-smi`.
+Worker rows say **requested** until an uncached response verifies placement.
+Before accepting each response, the app matches that server's process descendants
+against `nvidia-smi` GPU UUIDs and checks model GPU residency through `/api/ps`.
+Wrong, missing or unverifiable placement fails the run instead of accepting the
+response. Verification needs visibility of the worker processes through `ps` and
+`nvidia-smi`. The worker tooltip includes its UUID, observed GPUs and any error.
 Disable **Reuse completed model requests** when checking GPU activity so cached
 answers do not bypass inference. Restart the updated UI process after syncing files;
 parallelization stays disabled when the running backend does not advertise support.

@@ -98,7 +98,7 @@ document.querySelectorAll('.metrics .metric-icon').forEach((el,i)=>el.replaceChi
 $('refresh').replaceChildren(icon('refresh'));$('previous').replaceChildren(icon('left'));$('next').replaceChildren(icon('right'));$('download').prepend(icon('download'));$('download').style.display='flex';$('download').style.alignItems='center';$('download').style.gap='6px';
 const stages=[['1.1','Extraction','document_blocks.json','blocks'],['1.2','Segmentation','contract_chunks.json','chunks'],['1.3','Relevance','classified_chunks.json','chunks'],['1.4','Enrichment','enriched_relevance.json','items'],['2','Policy creation','policy.json','traceability']];
 let reviewSource=null;
-let stage='1.1',state=null,output=null,records=[],selected=null,page=0,view='records',outputKey='',busy=false,resetting=false,modelsOK=false,modelsChecked=false,loading=false,stateRequest=0,screen='dashboard',overview=null,overviewLoading=false,overviewKey='',preferredModel='',installedModels=[],preferredModels=[],gpuSelectionAvailable=false,modelUnloadingAvailable=false;
+let stage='1.1',state=null,output=null,records=[],selected=null,page=0,view='records',outputKey='',busy=false,resetting=false,modelsOK=false,modelsChecked=false,loading=false,stateRequest=0,screen='dashboard',overview=null,overviewLoading=false,overviewKey='',preferredModel='',installedModels=[],preferredModels=[],gpuSelectionAvailable=false,modelUnloadingAvailable=false,gpuDevices=[],maxWorkers=32;
 function element(tag,text,cls){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;}
 async function api(path,body){const res=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json();if(!res.ok)throw Error(data.error||'Request failed');return data;}
 function showError(error){$('error').textContent=String(error.message||error);$('error').classList.remove('hidden');}
@@ -116,21 +116,29 @@ function modelSettings(){
   think:thinking==='auto'?'auto':thinking==='default'?null:thinking==='on'};
 }
 function renderWorkers(){
+ if($('placement').value==='gpu'&&gpuDevices.length<2)$('placement').value='auto';
  const parallel=$('parallel').checked,pinned=$('placement').value==='gpu';
- const count=Math.min(32,Math.max(2,Math.floor(Number($('worker-count').value)||2)));
- $('worker-count').value=count;
+ const limit=pinned?Math.min(maxWorkers,gpuDevices.length):maxWorkers;
+ const count=Math.min(limit,Math.max(2,Math.floor(Number($('worker-count').value)||2)));
+ $('worker-count').max=limit;$('worker-count').value=count;
  const previous=[...document.querySelectorAll('.parallel-gpu')].map(input=>input.value);
+ const chosen=[];
  document.querySelectorAll('.parallel-gpu-field').forEach(field=>field.remove());
  if(pinned)for(let index=0;index<count;index++){
-  const gpuField=element('div',undefined,'field parallel-gpu-field'),gpuLabel=element('label','GPU index for worker '+(index+1)),gpu=element('input');
-  gpu.type='number';gpu.min='0';gpu.step='1';gpu.required=true;gpu.className='parallel-gpu';gpu.id='parallel-gpu-'+(index+1);gpu.value=previous[index]??index;gpu.onchange=controls;gpuLabel.htmlFor=gpu.id;
+  const gpuField=element('div',undefined,'field parallel-gpu-field'),gpuLabel=element('label','GPU for worker '+(index+1)),gpu=element('select');
+  for(const device of gpuDevices){const option=new Option('GPU '+device.index,String(device.index));option.title=device.uuid;gpu.append(option);}
+  const prior=previous[index]===undefined?null:Number(previous[index]);
+  const value=gpuDevices.some(device=>device.index===prior)&&!chosen.includes(prior)?prior:gpuDevices.find(device=>!chosen.includes(device.index)).index;
+  chosen.push(value);
+  gpu.required=true;gpu.className='parallel-gpu';gpu.id='parallel-gpu-'+(index+1);gpu.value=String(value);gpu.onchange=controls;gpuLabel.htmlFor=gpu.id;
   gpuField.append(gpuLabel,gpu);$('parallel-options').append(gpuField);
  }
  $('parallel-options').classList.toggle('hidden',!parallel);
- $('worker-note').textContent=parallel?count+' workers share the clauses using '+($('model').value||'the selected model')+'. '+(pinned?'Each worker runs its own copy on its selected GPU. Each copy and its context must fit that card.':'One private service processes concurrent requests; Ollama chooses GPU placement and may span GPUs. Concurrency increases context memory.'):'One request at a time using the selected model on the shared service.';
+ $('worker-note').textContent=parallel?count+' workers share the clauses using '+($('model').value||'the selected model')+'. '+(pinned?'Each worker runs a copy pinned by GPU UUID. Placement is verified after inference; each copy and its context need enough memory on its card. '+limit+' GPU workers supported on this host.':'One private service processes concurrent requests; Auto may use one GPU or span GPUs. Up to '+maxWorkers+' request workers are allowed, subject to available memory. '+gpuDevices.length+' NVIDIA GPUs detected.'):'One request at a time using the selected model on the shared service.';
  controls();
 }
-function workerLabel(worker){const gpu=worker.gpu??worker.main_gpu;return worker.model+' / '+new URL(worker.url).host+' / '+(gpu==null?'GPU Auto':'GPU '+gpu);}
+function gpuLabel(worker){const gpu=worker.gpu??worker.main_gpu;return gpu==null?'GPU Auto':'GPU '+gpu+' '+(worker.placement_status==='verified'?'verified':worker.placement_status==='failed'?'verification failed':'requested');}
+function workerLabel(worker){return worker.model+' / '+new URL(worker.url).host+' / '+gpuLabel(worker);}
 function nav(){
  const target=$('stage-nav');target.replaceChildren();
  stages.forEach(([id,name])=>{
@@ -232,9 +240,8 @@ function updateJob(job){
   else if(w.active_request)activity=({'Waiting for Ollama':'Waiting','Generating answer':'Generating','Thinking':'Thinking'})[w.active_request.phase]||'Processing';
   else if(w.active_chunks?.length)activity='Processing';
   else if(job.status!=='running')activity=job.status==='complete'?'Finished':'Stopped';
-  const assignedGpu=w.gpu??w.main_gpu,gpu=assignedGpu==null?'GPU Auto':'GPU '+assignedGpu;
-  const row=element('div',['Worker '+(index+1),w.model,gpu,w.completed+' completed',w.failed?w.failed+' failed':null,activity].filter(Boolean).join(' · '));
-  row.title=w.url+' / '+(assignedGpu==null?'Ollama chooses GPU placement.':'Server restricted to GPU '+assignedGpu+'.');
+  const row=element('div',['Worker '+(index+1),w.model,gpuLabel(w),w.completed+' completed',w.failed?w.failed+' failed':null,activity].filter(Boolean).join(' · '));
+  row.title=[w.url,w.gpu_uuid,w.observed_gpus?.length?'Observed GPUs: '+w.observed_gpus.join(', '):null,w.placement_error].filter(Boolean).join(' / ');
   return row;
  }));
  $('job-badge').textContent=job.status==='complete'?'Complete':job.status==='cancelling'?'Cancelling':job.status==='running'?'Running':job.status==='failed'?'Failed':'Cancelled';
@@ -471,6 +478,10 @@ $('contract-search').oninput=()=>renderContractTable('contracts-table',$('contra
   const config=await api('/api/config');
   preferredModel=config.model_defaults?.model||'';
   gpuSelectionAvailable=config.same_model_workers===true;
+  gpuDevices=Array.isArray(config.gpu_devices)?config.gpu_devices:[];
+  maxWorkers=config.max_workers||32;
+  $('placement').querySelector('[value="gpu"]').disabled=gpuDevices.length<2;
+  $('placement').title=config.gpu_detection_error||'GPU indices match nvidia-smi; workers use the corresponding UUIDs.';
   modelUnloadingAvailable=config.model_unloading===true;
   preferredModels=config.preferred_models||[];
   for(const field of ['num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_num_ctx','relevance_num_batch','timeout'])if(config.model_defaults?.[field])$(field).value=config.model_defaults[field];

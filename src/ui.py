@@ -19,7 +19,7 @@ from xfed.segmentation import segment
 from xfed.relevance import classify
 from xfed.enrichment import enrich
 from xfed.llm import OllamaPool, load_client
-from xfed.llm.service import OllamaServicePool
+from xfed.llm.service import OllamaServicePool, nvidia_gpus
 from xfed.policy_generation import generate
 # Automated policy review is disabled; implementation retained in xfed.policy_review.
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
@@ -165,6 +165,10 @@ class Pipeline:
             metadata = client.metadata()
             job['workers'] = [dict(model=member['model'], url=member['url'], main_gpu=member['main_gpu'],
                                    gpu=member.get('gpu'),
+                                   gpu_uuid=member.get('gpu_uuid'),
+                                   placement_status=member.get('placement_status'),
+                                   observed_gpus=member.get('observed_gpus'),
+                                   placement_error=member.get('placement_error'),
                                    completed=metadata['completed'][index],
                                    assigned=metadata['assigned'][index], failed=metadata['failed'][index],
                                    active_chunks=metadata['active_chunks'][index],
@@ -625,8 +629,13 @@ def handler(pipeline):
                 if route.path == '/':
                     self.send(Path(__file__).with_name('ui.html').read_bytes(), content_type='text/html; charset=utf-8')
                 elif route.path == '/api/config':
+                    try:
+                        devices, gpu_error = nvidia_gpus(), None
+                    except RuntimeError as error:
+                        devices, gpu_error = [], str(error)
                     self.send(dict(contracts=pipeline.contracts(), ollama_url=pipeline.ollama_url,
                                    model_defaults=pipeline.defaults,
+                                   gpu_devices=devices, gpu_detection_error=gpu_error, max_workers=32,
                                    worker_gpu_selection=True,
                                    same_model_workers=True,
                                    model_unloading=True,

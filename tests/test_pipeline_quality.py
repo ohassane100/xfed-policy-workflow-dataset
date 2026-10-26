@@ -20,7 +20,7 @@ import unittest
 from xfed.common import map_chunks, write_json
 from xfed.enrichment import ContextIndex, enrich
 from xfed.llm import OllamaPool
-from xfed.llm.service import OllamaServicePool
+from xfed.llm.service import OllamaServicePool, nvidia_gpus
 from xfed.policy_generation import (complete_fragment, generate, generate_answer, generate_item,
                                     response_schema, summarize_error, validate_fragment)
 from jsonschema import Draft202012Validator, ValidationError
@@ -352,6 +352,15 @@ class QualityTests(unittest.TestCase):
                 self.assertIs(payload['think'], False)
                 self.assertIs(payload['truncate'], False)
                 self.assertIs(payload['shift'], False)
+            with TemporaryDirectory() as directory:
+                cache = Path(directory) / 'responses.json'
+                cached = CachedClient(pool, cache, Event(), False)
+                for worker in pool.clients:
+                    worker.verify_placement = MagicMock(side_effect=RuntimeError('GPU placement mismatch'))
+                with self.assertRaisesRegex(RuntimeError, 'GPU placement mismatch'):
+                    classify(source, cached, ROOT)
+                self.assertFalse(cache.exists())  # Wrongly placed responses must not become reusable answers.
+                self.assertTrue(all(worker.verify_placement.called for worker in pool.clients))
         finally:
             server.shutdown()
             server.server_close()
@@ -372,7 +381,9 @@ class QualityTests(unittest.TestCase):
                     kwargs['stdout'].flush()
                     return process
                 with patch('xfed.llm.service.os', SimpleNamespace(name='posix')), \
-                     patch.object(OllamaServicePool, '_environment', return_value={'OLLAMA_MODELS': '/existing/models'}), \
+                     patch.object(OllamaServicePool, '_environment', return_value={'OLLAMA_MODELS': '/existing/models',
+                                  'OLLAMA_VULKAN': '1', 'OLLAMA_LLM_LIBRARY': 'vulkan'}), \
+                     patch('xfed.llm.service.nvidia_gpus', return_value=[dict(index=i, uuid=f'GPU-physical-{i}') for i in range(5)]), \
                      patch('xfed.llm.service.subprocess.Popen', side_effect=start) as launch, \
                      patch('xfed.llm.service.subprocess.run', return_value=SimpleNamespace(returncode=0)) as stop, \
                      patch('xfed.llm.service.urlopen', side_effect=lambda *a, **k: BytesIO(b'{}')), \
@@ -390,7 +401,12 @@ class QualityTests(unittest.TestCase):
                         self.assertIn('OLLAMA_NUM_PARALLEL=' + parallel, command)
                         self.assertEqual(command[-2:], ['/local/ollama/bin/ollama', 'serve'])
                         if gpus:
-                            self.assertIn('CUDA_VISIBLE_DEVICES=' + str(gpus[index]), command)
+                            self.assertIn('CUDA_VISIBLE_DEVICES=GPU-physical-' + str(gpus[index]), command)
+                            self.assertIn('CUDA_DEVICE_ORDER=PCI_BUS_ID', command)
+                            self.assertIn('OLLAMA_VULKAN=0', command)
+                            self.assertIn('GGML_VK_VISIBLE_DEVICES=-1', command)
+                            self.assertNotIn('OLLAMA_LLM_LIBRARY=vulkan', command)
+                            self.assertEqual(pool.clients[index].gpu_uuid, f'GPU-physical-{gpus[index]}')
                         else:
                             self.assertFalse(any(arg.startswith('CUDA_VISIBLE_DEVICES=') for arg in command))
                     self.assertTrue(all(c.main_gpu is None for c in pool.clients))
@@ -414,6 +430,7 @@ class QualityTests(unittest.TestCase):
             return next(pending)
         with patch('xfed.llm.service.os', SimpleNamespace(name='posix')), \
              patch.object(OllamaServicePool, '_environment', return_value={}), \
+             patch('xfed.llm.service.nvidia_gpus', return_value=[dict(index=i, uuid=f'GPU-{i}') for i in range(2)]), \
              patch('xfed.llm.service.subprocess.Popen', side_effect=start), \
              patch('xfed.llm.service.subprocess.run', return_value=SimpleNamespace(returncode=0)) as stop, \
              patch('xfed.llm.service.urlopen', side_effect=lambda *a, **k: BytesIO(b'{}')), \
@@ -449,6 +466,7 @@ class QualityTests(unittest.TestCase):
             raise URLError('Not ready yet')
         with patch('xfed.llm.service.os', SimpleNamespace(name='posix')), \
              patch.object(OllamaServicePool, '_environment', return_value={}), \
+             patch('xfed.llm.service.nvidia_gpus', return_value=[dict(index=i, uuid=f'GPU-{i}') for i in range(2)]), \
              patch('xfed.llm.service.subprocess.Popen', side_effect=start) as launch, \
              patch('xfed.llm.service.subprocess.run', return_value=SimpleNamespace(returncode=0)) as stop, \
              patch('xfed.llm.service.urlopen', side_effect=waiting), \
@@ -473,6 +491,61 @@ class QualityTests(unittest.TestCase):
             pool = OllamaServicePool(['http://localhost:11434'], 'same-model', worker_count=2,
                                      service=dict(models_dir='/override/models'))
             self.assertEqual(pool._environment()['OLLAMA_MODELS'], '/override/models')
+
+    def test_gpu_inventory_uses_physical_indices_and_rejects_missing_devices(self):
+        with patch('xfed.llm.service.subprocess.run', return_value=SimpleNamespace(stdout='2, GPU-b\n0, GPU-a\n')):
+            self.assertEqual(nvidia_gpus(), [dict(index=0, uuid='GPU-a'), dict(index=2, uuid='GPU-b')])
+        for output in ('', '0, GPU-a\n1, GPU-a\n', '0, unknown\n'):
+            with self.subTest(output=output), patch('xfed.llm.service.subprocess.run', return_value=SimpleNamespace(stdout=output)):
+                with self.assertRaisesRegex(RuntimeError, 'Cannot discover'):
+                    nvidia_gpus()
+        with patch('xfed.llm.service.os', SimpleNamespace(name='posix')), \
+             patch.object(OllamaServicePool, '_environment', return_value={}), \
+             patch('xfed.llm.service.nvidia_gpus', return_value=[dict(index=0, uuid='GPU-a')]), \
+             patch('xfed.llm.service.subprocess.Popen') as launch:
+            pool = OllamaServicePool(['http://localhost:11434'], 'same-model', worker_count=2, worker_gpus=[0, 1])
+            with self.assertRaisesRegex(ValueError, 'At most 1 workers'):
+                pool._start()
+            launch.assert_not_called()
+
+    def test_gpu_verification_checks_worker_descendants_and_rejects_wrong_gpu_or_cpu(self):
+        with TemporaryDirectory() as directory:
+            log = Path(directory) / 'worker.log'
+            log.write_text('XFED_OLLAMA_PID=10000\n', encoding='utf-8')
+            pool = OllamaServicePool(['http://localhost:11434'], 'same-model', worker_count=2, worker_gpus=[0, 2])
+            process = MagicMock()
+            process.poll.return_value = None
+            pool._servers = [(process, log)]
+            pool.gpu_devices = [dict(index=0, uuid='GPU-a'), dict(index=2, uuid='GPU-b')]
+            client = pool.clients[0]
+            client.gpu_uuid = 'GPU-a'
+            client.model_digest = 'same-digest'
+            # Runner is a grandchild; an unrelated model on GPU-b is deliberately ignored.
+            parents = SimpleNamespace(stdout='10000 10\n10001 10000\n10002 10001\n20000 20\n')
+            for applications, accepted in [('10002, GPU-a\n20000, GPU-b\n', True),
+                                           ('10002, GPU-b\n', False),
+                                           ('10002, GPU-a\n10002, GPU-b\n', False),
+                                           ('20000, GPU-a\n', False)]:
+                residency = dict(models=[dict(name='same-model', digest='same-digest', size_vram=1024)])
+                with self.subTest(applications=applications), patch('xfed.llm.service.subprocess.run',
+                        side_effect=[parents, SimpleNamespace(stdout=applications)]), \
+                     patch('xfed.llm.service.urlopen', side_effect=lambda *a, **k: BytesIO(json.dumps(residency).encode())):
+                    if accepted:
+                        pool._verify_gpu(client, 0)
+                        self.assertEqual(client.placement_status, 'verified')
+                        self.assertEqual(client.observed_gpus, [0])
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, 'GPU placement verification failed'):
+                            pool._verify_gpu(client, 0)
+                        self.assertEqual(client.placement_status, 'failed')
+                        self.assertTrue(client.placement_error)
+            for residency in (dict(models=[]), dict(models=[dict(name='same-model', digest='same-digest', size_vram=0)])):
+                with self.subTest(residency=residency), \
+                     patch('xfed.llm.service.subprocess.run', side_effect=[parents, SimpleNamespace(stdout='10000, GPU-a\n')]), \
+                     patch('xfed.llm.service.urlopen', side_effect=lambda *a, **k: BytesIO(json.dumps(residency).encode())):
+                    with self.assertRaisesRegex(RuntimeError, 'does not report the selected model resident'):
+                        pool._verify_gpu(client, 0)
+            pool._servers = []  # These are simulated PIDs, never signal them.
 
     def test_dashboard_single_installed_model_can_have_parallel_workers(self):
         pipeline = Pipeline(ROOT, 'http://localhost:11434')

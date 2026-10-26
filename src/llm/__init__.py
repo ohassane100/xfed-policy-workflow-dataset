@@ -101,7 +101,8 @@ class OllamaClient:
     def metadata(self):
         result = {key: getattr(self, key, None) for key in
                   ('url', 'model', 'model_digest', 'timeout', 'num_ctx', 'num_predict', 'think',
-                   'main_gpu', 'gpu', 'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
+                   'main_gpu', 'gpu', 'gpu_uuid', 'placement_status', 'observed_gpus', 'placement_error',
+                   'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
                    'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch', 'auto_think', 'auto_relevance_think')}
         with self._stats_lock:
             result['performance'] = dict(self.stats, context_requests=dict(self.stats['context_requests']))
@@ -275,6 +276,8 @@ class OllamaClient:
             raise InterruptedError('Model request cancelled.')
         if not isinstance(result, dict):
             raise ValueError('Ollama response incomplete or truncated; increase output tokens before accepting it.')
+        if verify := getattr(self, 'verify_placement', None):
+            verify()
         with self._stats_lock:
             self.stats['responses'] += 1
             contexts = self.stats['context_requests']
