@@ -90,6 +90,10 @@ Private workers allocate additional model memory alongside any models still
 loaded by the shared service.
 The API provides schema constraints, generation controls and cancellation to the
 same Ollama installation; invoking the Ollama CLI would also use its service API.
+If a backend rejects a response schema with `failed to parse grammar`, the client
+retries once in JSON mode and keeps that mode for the worker. The full schema is
+included in the prompt and validated locally. Worker metadata records the format,
+fallback count and original error. Other HTTP errors are not retried this way.
 
 Step 1.3 defaults to one clause per request with **Labels and optional reasons**,
 matching the 14 October request format. Batching and **Labels only** remain optional;

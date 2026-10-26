@@ -55,6 +55,9 @@ class OllamaClient:
         self.main_gpu = main_gpu
         self.cancel = cancel if cancel is not None else Event()
         self._connections, self._connections_lock = {}, Lock()
+        self.response_format = 'schema'
+        self.schema_grammar_fallbacks = 0
+        self.schema_grammar_error = None
 
     def cancel_requests(self):
         self.cancel.set()
@@ -103,7 +106,8 @@ class OllamaClient:
                   ('url', 'model', 'model_digest', 'timeout', 'num_ctx', 'num_predict', 'think',
                    'main_gpu', 'gpu', 'gpu_uuid', 'placement_status', 'observed_gpus', 'placement_error',
                    'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
-                   'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch', 'auto_think', 'auto_relevance_think')}
+                   'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch', 'auto_think', 'auto_relevance_think',
+                   'response_format', 'schema_grammar_fallbacks', 'schema_grammar_error')}
         with self._stats_lock:
             result['performance'] = dict(self.stats, context_requests=dict(self.stats['context_requests']))
             result['active_request'] = None
@@ -146,6 +150,26 @@ class OllamaClient:
 
     def generate(self, system, value, schema, num_predict=None, think=None, num_ctx=None, num_batch=None,
                  truncate=None, compact_json=False):
+        options = dict(num_predict=num_predict, think=think, num_ctx=num_ctx, num_batch=num_batch,
+                       truncate=truncate, compact_json=compact_json)
+        try:
+            return self._generate(system, value, schema, **options)
+        except RuntimeError as error:
+            rejection = error.__cause__
+            if (self.response_format != 'schema' or not isinstance(schema, dict)
+                    or not isinstance(rejection, HTTPError) or rejection.code != 400
+                    or 'failed to parse grammar' not in str(error).lower()):
+                raise
+            # Some Ollama backends reject otherwise valid response schemas.
+            # JSON mode avoids that schema compiler; validation stays unchanged.
+            with self._stats_lock:
+                self.response_format = 'json'
+                self.schema_grammar_fallbacks += 1
+                self.schema_grammar_error = str(error)[:2000]
+        return self._generate(system, value, schema, **options)
+
+    def _generate(self, system, value, schema, num_predict=None, think=None, num_ctx=None, num_batch=None,
+                  truncate=None, compact_json=False):
         from jsonschema import Draft202012Validator
         if self.cancel.is_set():
             raise InterruptedError('Model request cancelled.')
@@ -164,7 +188,12 @@ class OllamaClient:
             effective_think = self.auto_think
         if effective_think is not None and not isinstance(effective_think, bool):
             raise ValueError('think must be true, false, or omitted.')
-        payload = dict(model=self.model, stream=True, format=schema, keep_alive=self.keep_alive,
+        response_format = schema
+        if self.response_format == 'json':
+            response_format = 'json'
+            system += ('\n\nReturn exactly one JSON object conforming to this JSON schema:\n' +
+                       json.dumps(schema, ensure_ascii=False, separators=(',', ':')))
+        payload = dict(model=self.model, stream=True, format=response_format, keep_alive=self.keep_alive,
                        messages=[dict(role='system', content=system),
                                  dict(role='user', content=json.dumps(value, ensure_ascii=False,
                                       **({'separators': (',', ':')} if compact_json else {})))],

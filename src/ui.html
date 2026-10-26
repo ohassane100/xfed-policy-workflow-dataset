@@ -277,7 +277,7 @@ async function refreshBenchmark(){
 function evaluationSummary(report){
  const rows=[],metrics=report.metrics||{};
  const aggregate=([name,value])=>value.aggregate||/\/(?:all_curated_cases|full_document)$/.test(name);
- const relevance=Object.entries(metrics.classification||{}).filter(entry=>!aggregate(entry)).map(([,value])=>value);
+ const relevance=Object.values(metrics.classification||{}).filter(value=>!value.aggregate);
  const policyEntries=Object.entries(metrics.policy||{}),policyCases=policyEntries.filter(entry=>!aggregate(entry));
  const combined=policyEntries.filter(aggregate),policy=(combined.length?combined:policyCases).map(([,value])=>value);
  const sum=(groups,read)=>groups.length&&groups.every(value=>Number.isFinite(read(value)))?groups.reduce((total,value)=>total+read(value),0):null;

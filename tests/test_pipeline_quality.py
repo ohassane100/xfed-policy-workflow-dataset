@@ -19,7 +19,7 @@ import unittest
 
 from xfed.common import map_chunks, write_json
 from xfed.enrichment import ContextIndex, enrich
-from xfed.llm import OllamaPool
+from xfed.llm import OllamaClient, OllamaPool
 from xfed.llm.service import OllamaServicePool, nvidia_gpus
 from xfed.policy_generation import (compile_plan, complete_fragment, generate, generate_answer, generate_item,
                                     response_schema, summarize_error, validate_fragment)
@@ -396,6 +396,100 @@ class QualityTests(unittest.TestCase):
                     classify(source, cached, ROOT)
                 self.assertFalse(cache.exists())  # Wrongly placed responses must not become reusable answers.
                 self.assertTrue(all(worker.verify_placement.called for worker in pool.clients))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+
+    def test_schema_grammar_rejection_recovers_with_three_workers_and_validates_json(self):
+        barrier, requests = Barrier(3), []
+        grammar_error = dict(error=dict(code=400,
+            message='Failed to initialize samplers: failed to parse grammar', type='invalid_request_error'))
+
+        class Handler(BaseHTTPRequestHandler):
+            def send(self, value, status=200):
+                body = json.dumps(value).encode() + b'\n'
+                self.send_response(status)
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_GET(self):
+                self.send(dict(models=[dict(name='simulated-model', digest='digest', details=dict(family='qwen35'))]))
+
+            def do_POST(self):
+                payload = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                if self.path == '/api/show':
+                    self.send(dict(details=dict(family='qwen35'), thinking=dict(values=[True, False])))
+                    return
+                requests.append(payload)
+                value = json.loads(payload['messages'][1]['content'])
+                forced = value.get('force_error')
+                if forced == 'grammar':
+                    self.send(grammar_error, 400)
+                    return
+                if forced:
+                    self.send(dict(error='llama-server process has terminated' if forced == 500 else 'invalid request'), forced)
+                    return
+                if isinstance(payload['format'], dict):
+                    barrier.wait(timeout=5)
+                    self.send(grammar_error, 400)
+                    return
+                answer = ({} if value.get('invalid_answer') else reviewed(value)
+                          if 'candidate_rules' in value else plan(value['clause']))
+                self.send(dict(message=dict(content=json.dumps(answer)), done=True, done_reason='stop',
+                               eval_count=25, prompt_eval_count=200))
+
+            def log_message(self, *args):
+                pass
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base = f'http://127.0.0.1:{server.server_port}'
+        try:
+            pool = OllamaPool([base], 'simulated-model', workers_per_endpoint=3,
+                              num_ctx=32768, num_predict=4096, timeout=10)
+            pool.preflight()
+            items = [dict(chunk(f'c{i}'), context=[]) for i in range(3)]
+            for _ in range(2):
+                policy, report = generate(dict(contract_id='contract', items=items), pool, ROOT)
+                self.assertEqual(report['summary']['generated'], 3)
+                self.assertEqual(len(policy['odrlPolicy']['obligation']), 3)
+            structured = [value for value in requests if isinstance(value['format'], dict)]
+            recovered = [value for value in requests if value['format'] == 'json']
+            self.assertEqual(len(structured), 3)  # One rejected schema per worker, not per clause.
+            self.assertEqual(len(recovered), 12)  # Both extraction and evidence review run twice.
+            for payload in recovered:
+                prompt = payload['messages'][0]['content']
+                marker = 'Return exactly one JSON object conforming to this JSON schema:\n'
+                self.assertIn(marker, prompt)
+                supplied_schema = json.loads(prompt.split(marker, 1)[1])
+                self.assertEqual(supplied_schema['type'], 'object')
+                self.assertFalse(supplied_schema['additionalProperties'])
+                if 'candidate_rules' not in json.loads(payload['messages'][1]['content']):
+                    self.assertEqual(supplied_schema, response_schema(ROOT))
+                self.assertIs(payload['truncate'], False)
+                self.assertIs(payload['shift'], False)
+            for worker in pool.metadata()['models']:
+                self.assertEqual(worker['response_format'], 'json')
+                self.assertEqual(worker['schema_grammar_fallbacks'], 1)
+                self.assertIn('failed to parse grammar', worker['schema_grammar_error'])
+            with self.assertRaises(ValidationError):
+                pool.clients[0].generate('prompt', dict(invalid_answer=True), response_schema(ROOT))
+            for status in (400, 500):
+                client = OllamaClient(base, 'simulated-model', timeout=10)
+                previous = len(requests)
+                with self.assertRaisesRegex(RuntimeError, f'Ollama HTTP {status}'):
+                    client.generate('prompt', dict(force_error=status), response_schema(ROOT))
+                self.assertEqual(len(requests), previous + 1)
+                self.assertEqual(client.response_format, 'schema')
+                self.assertEqual(client.schema_grammar_fallbacks, 0)
+            client = OllamaClient(base, 'simulated-model', timeout=10)
+            previous = len(requests)
+            with self.assertRaisesRegex(RuntimeError, 'failed to parse grammar'):
+                client.generate('prompt', dict(force_error='grammar'), response_schema(ROOT))
+            self.assertEqual(len(requests), previous + 2)  # Stop if JSON mode also fails.
         finally:
             server.shutdown()
             server.server_close()
