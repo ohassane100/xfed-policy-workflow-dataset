@@ -66,15 +66,28 @@ def load_reference(root=Path('.')):
                             raise ValueError('Reference rules need action, target, and assignee strings.')
                         if any(not all(key in value for key in ('leftOperand','operator','rightOperand')) for value in rule.get('constraint', [])):
                             raise ValueError('Reference constraints need leftOperand, operator and rightOperand.')
+    for contract, source in data['sources'].items():
+        if source.get('sampling') != 'full_document':
+            continue
+        inputs = {key: value for key, value in data['inputs'].items() if value['contract_id'] == contract}
+        clauses = sorted((value['clause'] for value in inputs.values()), key=lambda clause: clause['chunk_id'])
+        if (len(clauses) != source['segmented_chunks'] or len({clause['chunk_id'] for clause in clauses}) != len(clauses)
+                or digest(dict(contract_id=contract, chunks=clauses)) != source['segmentation_content_sha256']):
+            raise ValueError('Full-document reference must retain every frozen source chunk unchanged.')
+        for task in ('classification', 'policy'):
+            selected = [case['input_id'] for case in data[task] if case['input_id'] in inputs]
+            if len(selected) != len(inputs) or set(selected) != set(inputs):
+                raise ValueError('Both tasks must cover every full-document source chunk exactly once.')
     return data
 
 
-def reference_summary(data, split='dev'):
+def reference_summary(data, split='test'):
     if split not in ('dev', 'test'):
         raise ValueError('Choose dev or test.')
     selected = {task: [case for case in data[task] if case['split'] == split]
                 for task in ('classification', 'policy')}
     return dict(version=data['version'], status=data['status'], split=split,
+                sources={contract: deepcopy(source) for contract, source in data['sources'].items() if source['split'] == split},
                 counts={task: dict(total=len(cases)) for task, cases in selected.items()},
                 classification_labels=dict(Counter(case['gold']['label'] for case in selected['classification'])),
                 reviewed={task: sum(case['gold']['review_status'] == 'reviewed' for case in cases)
@@ -121,7 +134,7 @@ def wilson(correct, total):
     return [max(0, centre - half), min(1, centre + half)]
 
 
-def classification_metrics(rows):
+def classification_metrics(rows, macro_labels=None):
     matrix = {label: dict.fromkeys([*LABELS, 'ERROR'], 0) for label in LABELS}
     for row in rows:
         predicted = row.get('label') if not row.get('error') else None
@@ -135,10 +148,14 @@ def classification_metrics(rows):
                              precision_wilson_ci95=wilson(tp,predicted),recall_wilson_ci95=wilson(tp,support))
     total = len(rows)
     correct = sum(matrix[label][label] for label in LABELS)
+    # The fixed gold-supported labels define the macro denominator. An absent
+    # NEEDS_CONTEXT class is unmeasured, not a zero on an otherwise perfect run.
+    macro_labels = list(macro_labels) if macro_labels is not None else [label for label in LABELS if counts[label]['support']]
     return dict(n=total, accuracy=ratio(correct, total), accuracy_wilson_ci95=wilson(correct, total),
-                macro_precision=sum(value['precision'] or 0 for value in counts.values()) / len(LABELS),
-                macro_recall=sum(value['recall'] or 0 for value in counts.values()) / len(LABELS),
-                macro_f1=sum(value['f1'] or 0 for value in counts.values()) / len(LABELS),
+                macro_labels=macro_labels,
+                macro_precision=ratio(sum(counts[label]['precision'] or 0 for label in macro_labels), len(macro_labels)),
+                macro_recall=ratio(sum(counts[label]['recall'] or 0 for label in macro_labels), len(macro_labels)),
+                macro_f1=ratio(sum(counts[label]['f1'] or 0 for label in macro_labels), len(macro_labels)),
                 weighted_f1=ratio(sum(value['support'] * (value['f1'] or 0) for value in counts.values()), total),
                 balanced_accuracy=ratio(sum(value['recall'] or 0 for value in counts.values()),
                                         sum(value['support'] > 0 for value in counts.values())),
@@ -322,16 +339,20 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
             for source_type in ('real',):
                 combined = [row for name, rows in list(cohorts.items()) if name.startswith(source_type+'/') for row in rows]
                 if combined:
-                    cohorts[source_type+'/all_curated_cases'] = combined
+                    full_document = all(data['sources'][row['contract']].get('sampling') == 'full_document' for row in combined)
+                    cohorts[source_type + ('/full_document' if full_document else '/all_curated_cases')] = combined
         metrics[task] = {}
         for name, rows in cohorts.items():
+            if task == 'classification':
+                labels = [label for label in LABELS if any(row['gold'] == label for row in rows)]
+                operation = lambda sample, labels=labels: classification_metrics(sample, labels)
             result = operation(rows)
             interval_key = 'macro_f1' if task == 'classification' else 'exact_case_accuracy'
             result[interval_key + '_page_cluster_ci95'] = cluster_interval(rows, operation, interval_key)
             if task == 'policy':
                 result['canonical_rule_f1_page_cluster_ci95'] = cluster_interval(rows, operation, 'canonical_rules.f1')
             result['reviewed'] = sum(row['reviewed'] for row in rows)
-            result['aggregate'] = name.endswith('/all_curated_cases')
+            result['aggregate'] = task == 'policy' and name.endswith(('/all_curated_cases', '/full_document'))
             result['by_contract'] = {contract: operation([row for row in rows if row['contract'] == contract]) for contract in sorted({row['contract'] for row in rows})}
             metrics[task][name] = result
     if not metrics:
@@ -345,7 +366,7 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
     return output
 
 
-def run_evaluation(data, client, root=Path('.'), task='both', split='dev', progress=None, cancel=None, completed=None):
+def run_evaluation(data, client, root=Path('.'), task='both', split='test', progress=None, cancel=None, completed=None):
     from xfed.relevance import classify_batch, fits
     from xfed.policy_generation import generate_item, response_schema
     if task not in ('classification', 'policy', 'both'):
@@ -445,7 +466,7 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command',choices=['describe','run','score'])
     parser.add_argument('--root',type=Path,default=Path.cwd())
-    parser.add_argument('--split',choices=['dev','test'],default='dev',help='Local development by default; use test only after fixing settings.')
+    parser.add_argument('--split',choices=['dev','test'],default='test',help='Contract 05 by default; use dev for previously inspected Contracts 01-03.')
     parser.add_argument('--task',choices=['classification','policy','both'],default='both')
     parser.add_argument('--model')
     parser.add_argument('--worker-models',nargs='+')

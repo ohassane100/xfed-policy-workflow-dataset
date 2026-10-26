@@ -698,15 +698,15 @@ class QualityTests(unittest.TestCase):
     def test_split_manifest_counts_and_missing_predictions(self):
         from xfed.evaluation import digest, load_reference, score_report
         data = load_reference(ROOT)
-        for split, size in [('dev', 100), ('test', 200)]:
+        for split, size, cohort in [('dev', 300, 'real/coverage'), ('test', 76, 'real/full_document')]:
             selected = [c['case_id'] for c in data['classification'] if c['split'] == split]
             self.assertEqual(len(selected), size)
             report = dict(reference_version=data['version'], reference_sha256=digest(data),
                           split=split, task='classification', source='real',
                           selected_cases=dict(classification=selected), predictions={}, execution={})
             scored = score_report(data, report, ROOT)
-            self.assertEqual(scored['metrics']['classification']['real/coverage']['errors'], size)
-            self.assertEqual(scored['metrics']['classification']['real/coverage']['accuracy'], 0)
+            self.assertEqual(scored['metrics']['classification'][cohort]['errors'], size)
+            self.assertEqual(scored['metrics']['classification'][cohort]['accuracy'], 0)
             report['selected_cases']['classification'].pop()
             with self.assertRaises(ValueError):
                 score_report(data, report, ROOT)
@@ -739,10 +739,10 @@ class QualityTests(unittest.TestCase):
         def answer(value):
             return dict(policy=None, reason='Simulated abstention.') if 'contract_id' in value else dict(label='RELEVANT')
         data = load_reference(ROOT)
-        for split, count in [('dev', 100), ('test', 200)]:
+        for split, count, policy_count in [('dev', 300, 60), ('test', 76, 76)]:
             report = run_evaluation(data, Runner(answer), ROOT, split=split)
             self.assertEqual(len(report['predictions']['classification']), count)
-            self.assertEqual(len(report['predictions']['policy']), count // 5)
+            self.assertEqual(len(report['predictions']['policy']), policy_count)
             self.assertEqual(report['status'], 'complete')
             self.assertTrue(report['run_id'])
             self.assertTrue(report['inference_sha256'])
@@ -757,8 +757,8 @@ class QualityTests(unittest.TestCase):
         from unittest.mock import patch
         from xfed.evaluation import load_reference, reference_summary
         summary = reference_summary(load_reference(ROOT), split='test')
-        self.assertEqual(summary['counts']['classification']['total'], 200)
-        self.assertEqual(summary['counts']['policy']['total'], 40)
+        self.assertEqual(summary['counts']['classification']['total'], 76)
+        self.assertEqual(summary['counts']['policy']['total'], 76)
         with TemporaryDirectory() as directory:
             root = Path(directory)
             pipeline = Pipeline(root, 'http://127.0.0.1:11434')
@@ -776,6 +776,99 @@ class QualityTests(unittest.TestCase):
             restored = Pipeline(root, 'http://127.0.0.1:11434')
             self.assertEqual(restored.evaluation_report['status'], 'cancelled')
             self.assertEqual(restored.evaluation_report['error'], 'Simulated cancellation')
+
+    def test_contract05_is_the_complete_independent_source_for_both_tasks(self):
+        from xfed.evaluation import digest, load_reference, reference_summary
+        from xfed.extraction import extract_document
+        from xfed.segmentation import segment
+        data = load_reference(ROOT)
+        self.assertEqual(set(reference_summary(data)['sources']), {'contract_05'})
+        self.assertEqual({key for key, source in data['sources'].items() if source['split'] == 'dev'},
+                         {'contract_01', 'contract_02', 'contract_03'})
+        segmented = segment(extract_document(ROOT / data['sources']['contract_05']['pdf'], 'contract_05', ROOT), ROOT)
+        inputs = {key: value for key, value in data['inputs'].items() if value['contract_id'] == 'contract_05'}
+        self.assertEqual([value['clause'] for value in inputs.values()], segmented['chunks'])
+        self.assertEqual(digest(segmented), data['sources']['contract_05']['segmentation_content_sha256'])
+        for task in ('classification', 'policy'):
+            cases = [case for case in data[task] if case['split'] == 'test']
+            self.assertEqual({case['input_id'] for case in cases}, set(inputs))
+            self.assertTrue(all(case['gold']['review_status'] == 'draft' for case in cases))
+        known = {chunk['chunk_id']: chunk for chunk in segmented['chunks']}
+        for value in inputs.values():
+            for field in ('context', 'policy_context'):
+                for identifier in value[field]:
+                    context = data['contexts'][identifier]
+                    original = known[context['chunk_id']]
+                    self.assertIn(context['text'], original['text'])
+                    self.assertEqual(context['source'], original['source'])
+
+    def test_full_document_reference_rejects_omissions_and_source_edits(self):
+        from unittest.mock import patch
+        from xfed.evaluation import load_reference
+        original = load_reference(ROOT)
+        for task in ('classification', 'policy'):
+            data = deepcopy(original)
+            data[task].pop()  # Contract 05 follows the retained development cases.
+            with patch.object(Path, 'read_text', return_value=json.dumps(data)):
+                with self.assertRaisesRegex(ValueError, 'every full-document source chunk'):
+                    load_reference(ROOT)
+        data = deepcopy(original)
+        data['inputs']['contract_05:c000017']['clause']['text'] += ' altered'
+        with patch.object(Path, 'read_text', return_value=json.dumps(data)):
+            with self.assertRaisesRegex(ValueError, 'frozen source chunk unchanged'):
+                load_reference(ROOT)
+
+    def test_absent_class_is_unmeasured_without_lowering_perfect_macro_scores(self):
+        from xfed.evaluation import classification_metrics
+        rows = [dict(gold=label, label=label) for label in ('RELEVANT', 'NOT_RELEVANT')]
+        scores = classification_metrics(rows)
+        self.assertEqual(scores['macro_f1'], 1)
+        self.assertEqual(scores['macro_labels'], ['RELEVANT', 'NOT_RELEVANT'])
+        self.assertIsNone(scores['per_class']['NEEDS_CONTEXT']['recall'])
+        rows[0]['label'] = 'NEEDS_CONTEXT'
+        scores = classification_metrics(rows)
+        self.assertEqual(scores['macro_f1'], .5)
+        self.assertEqual(scores['confusion_matrix']['RELEVANT']['NEEDS_CONTEXT'], 1)
+
+    def test_contract05_policy_gold_roundtrip_and_all_abstain_baseline(self):
+        from xfed.evaluation import digest, input_for, load_reference, policy_counts, score_report
+        data = load_reference(ROOT)
+        cases = [case for case in data['policy'] if case['split'] == 'test']
+        predictions = {}
+        for case in cases:
+            item = input_for(data, case, True)
+            fragment = None
+            for option in [case['gold']['rules'], *case['gold'].get('alternatives', [])]:
+                policy, traces = {}, []
+                for position, gold in enumerate(option):
+                    rule = deepcopy(gold)
+                    kind = rule.pop('kind')
+                    rule['uid'] = f'r{position}'
+                    if kind in ('permission', 'prohibition'):
+                        rule['assigner'] = 'Equinor and the former Volve license partners'
+                    policy.setdefault(kind, []).append(rule)
+                    traces.append(dict(ruleUid=rule['uid'], ruleType=kind,
+                        sourceClauses=[dict(chunk_id=item['chunk_id'], relationship='primary')]))
+                candidate = complete_fragment(dict(odrlPolicy=policy, traceability=traces), 'contract_05', item) if option else None
+                self.assertTrue(policy_counts(case, dict(policy=candidate), data, ROOT)['exact'])
+                if option == case['gold']['rules']:
+                    fragment = candidate
+            predictions[case['case_id']] = dict(policy=fragment, input_sha256=digest(item))
+        report = dict(reference_version=data['version'], reference_sha256=digest(data), split='test', task='policy',
+            selected_cases=dict(policy=list(predictions)), predictions=dict(policy=predictions), execution={})
+        scored = score_report(data, report, ROOT)
+        complete = scored['metrics']['policy']['real/full_document']
+        self.assertEqual(complete['n'], 76)
+        self.assertEqual(complete['canonical_rules']['f1'], 1)
+        self.assertEqual(complete['exact_case_accuracy'], 1)
+        self.assertEqual(scored['reference_status'], 'provisional')
+        for prediction in predictions.values():
+            prediction['policy'] = None
+        scored = score_report(data, report, ROOT)
+        self.assertEqual(scored['metrics']['policy']['real/full_document']['canonical_rules']['recall'], 0)
+        self.assertEqual(scored['metrics']['policy']['real/operative']['exact_case_accuracy'], 0)
+        with self.assertRaisesRegex(ValueError, 'Independent review'):
+            score_report(data, report, ROOT, require_reviewed=True)
 
 
 if __name__ == '__main__':

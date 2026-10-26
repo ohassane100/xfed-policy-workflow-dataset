@@ -37,7 +37,9 @@ Unresolved 1.4 clauses are excluded, and skipped clauses are reported.
 Context overflow fails explicitly rather than silently truncating input.
 
 CLI commands are in `run.md`; model configuration starts from
-`config/models.example.yaml`. Run focused tests with:
+`config/models.example.yaml`. Evaluation defaults to the complete independent
+Contract 05 (Equinor Volve data licence); Contracts 01–03 are development material.
+See [evaluation/README.md](evaluation/README.md). Run focused tests with:
 
 ```bash
 python -m unittest discover -s "tests/1 preprocessing/1.3 relevance"
