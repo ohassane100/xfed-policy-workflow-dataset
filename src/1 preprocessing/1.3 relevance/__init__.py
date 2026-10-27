@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 import re
 
-from xfed.common import map_chunks, schema, validate
+from xfed.common import map_chunks, schema, standalone_heading, validate
 
 
 def classification_request(items, client, root=Path('.')):
@@ -99,17 +99,22 @@ def classify_batch(items, client, root=Path('.'), num_ctx=None):
         raise ValueError('Batch input chunk IDs must be unique.')
     # Only metadata-confirmed short headings qualify; substantive merged text
     # and sentence fragments still need the model and their source context.
-    headings = [bool(item['clause'].get('heading'))
-                and item['clause']['text'].strip() == item['clause']['heading'].strip()
-                and len(item['clause']['text'].split()) <= 14
-                and not re.search(r'\b(?:shall|must|may|means|is|are)\b|[;:]\s*\S',
-                                  item['clause']['text'], re.I)
-                for item in items]
+    headings = [standalone_heading(item['clause']) for item in items]
     if any(headings):
         remaining = iter(classify_batch([item for item, heading in zip(items, headings) if not heading],
                                         client, root, num_ctx))
         return [dict(label='NOT_RELEVANT', reason='Standalone heading; retained as supporting context.')
                 if heading else next(remaining) for heading in headings]
+    options_without_parent = [not item['context'] and not item['clause'].get('heading')
+        and bool(re.match(r'^\s*[\u2610\u2611\u2612\u25a1\uf0a8]', item['clause']['text']))
+        and len(item['clause']['text'].split()) <= 14
+        and not re.search(r'\b(?:shall|must|may|will|can|means)\b', item['clause']['text'], re.I)
+        for item in items]
+    if any(options_without_parent):
+        remaining = iter(classify_batch([item for item, option in zip(items, options_without_parent) if not option],
+                                        client, root, num_ctx))
+        return [dict(label='NEEDS_CONTEXT', reason='Isolated checkbox option; its operative introduction is missing.')
+                if option else next(remaining) for option in options_without_parent]
     prompt, value, response_schema = classification_request(items, client, root)
     maximum_context = getattr(client, 'num_ctx', 32768)
     num_ctx = num_ctx or getattr(client, 'relevance_num_ctx', 0) or maximum_context

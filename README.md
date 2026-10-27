@@ -30,13 +30,15 @@ Rerunning a stage invalidates its downstream outputs.
 
 Ollama is used for relevance classification (1.3) and policy creation (2); enrichment (1.4) resolves context deterministically.
 
-Stage 2 extracts atomic rules with literal evidence, compiles ODRL locally, then
+Stage 2 extracts atomic rules with source IDs, copies original evidence locally, compiles ODRL, then
 checks each clause for unsupported rules and omissions with a fresh model request.
 One correction is allowed; rejected and partial clauses remain in the generation
 report. The check uses the same model.
-Actor/asset labels must appear in cited evidence. Unsupported rule groups are
+Actor/asset labels must appear in cited source clauses. Unsupported rule groups are
 withheld together with their prerequisites; supported groups can remain as an
 explicit partial draft.
+Evaluation saves predictions and provisional scores after each completed request;
+unfinished cases stay visible until final scoring.
 Relevant and uncertain clauses reach generation; classification exclusions are
 recorded. Rules with missing issuers use an ODRL Set. Context overflow fails
 explicitly. Rerun through policy creation after updating to rebuild extraction

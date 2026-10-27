@@ -177,6 +177,13 @@ def request_value(contract, item, budget):
 
 
 def generate_answer(client, prompt, contract, item, output_schema, feedback=None):
+    decoder_schema = output_schema
+    if ('osdu' in output_schema.get('properties', {}) and not re.search(
+            r'\b(?:OSDU|legal\s*tags?)\b', '\n'.join(clause['text'] for clause in [item, *item['context']]), re.I)):
+        # Optional, unused LegalTag unions break some server grammar compilers.
+        # Keep the saved policy validator strict; decode only relevant fields.
+        decoder_schema = deepcopy(output_schema)
+        decoder_schema['properties'].pop('osdu')
     num_ctx = getattr(client, 'num_ctx', 16384)
     initial_output_limit = getattr(client, 'num_predict', 4096)
     maximum_output_limit = max(initial_output_limit, min(num_ctx - 1024, initial_output_limit * 2))
@@ -195,7 +202,7 @@ def generate_answer(client, prompt, contract, item, output_schema, feedback=None
         if feedback is not None:
             value['correction'] = feedback
         try:
-            answer = client.generate(prompt, value, output_schema, num_predict=output_limit,
+            answer = client.generate(prompt, value, decoder_schema, num_predict=output_limit,
                                      truncate=False, compact_json=True)
             return answer, supplied_clause, context_retries, output_retries
         except ValueError as error:
@@ -288,7 +295,7 @@ def response_schema(root=Path('.')):
     """A small source-backed rule plan; IDs, traceability and ODRL are compiled locally."""
     text = dict(type='string', minLength=1)
     evidence = dict(type='array', minItems=1, items=dict(type='object', additionalProperties=False,
-        required=['chunk_id', 'quote'], properties=dict(chunk_id=text, quote=text)))
+        required=['chunk_id'], properties=dict(chunk_id=text)))
     original = schema(5, root)
     def inline(value):
         if isinstance(value, list):
@@ -321,22 +328,26 @@ def response_schema(root=Path('.')):
 
 
 def compile_plan(answer, contract, item):
-    """Check literal evidence spans and deterministically build the saved policy schema."""
+    """Resolve source IDs, check legacy quotes and deterministically build ODRL."""
     def sources(entries):
         result, seen = [], set()
         for entry in entries:
+            # PDF wrapping changes whitespace, not words. Match whitespace
+            # flexibly while retaining the exact original source in traceability.
+            quote = entry.get('quote')
+            pattern = r'\s+'.join(re.escape(word) for word in quote.split()) if quote is not None else None
             matches = [clause for clause in [item, *item['context']]
-                       if clause['chunk_id'] == entry['chunk_id'] and entry['quote'].strip()
-                       and entry['quote'] in clause['text']]
+                       if clause['chunk_id'] == entry['chunk_id']
+                       and (quote is None or pattern and re.search(pattern, clause['text']))]
             if not matches:
-                raise ValueError('Rule evidence quote must be an exact nonempty span of a supplied chunk.')
+                raise ValueError('Rule evidence ID must resolve to a supplied source; any legacy quote must match its original words.')
             for clause in matches:
                 if clause['chunk_id'] not in seen:
                     seen.add(clause['chunk_id'])
                     result.append(dict(chunk_id=clause['chunk_id'], relationship=(
                         'primary' if clause['chunk_id'] == item['chunk_id'] else 'context')))
         if item['chunk_id'] not in seen:
-            raise ValueError('Every atomic rule needs a literal evidence span from the primary clause.')
+            raise ValueError('Every atomic rule needs source evidence from the primary clause.')
         return result
 
     for omitted in answer['unrepresented']:
@@ -344,17 +355,50 @@ def compile_plan(answer, contract, item):
     policy, traces = {}, []
     def compile_rule(value, kind):
         # A correct citation does not ground an invented party or asset. Require
-        # literal labels in the rule's own cited spans, including definitions.
+        # literal labels in the rule's own cited clauses, including definitions.
         def normalized(text):
             return re.sub(r'\s+', ' ', unicodedata.normalize('NFKC', text).casefold()).strip()
-        cited = [normalized(entry['quote']) for entry in value['evidence']]
+        source_refs = sources(value['evidence'])
+        cited_ids = {entry['chunk_id'] for entry in source_refs}
+        # Resolve antecedents such as "such records" inside a cited clause.
+        # Labels must still be literal source text; no new party/asset is inferred.
+        cited = [normalized(clause['text']) for clause in [item, *item['context']]
+                 if clause['chunk_id'] in cited_ids]
         for field in ('actor', 'asset', 'issuer'):
             if field in value and not any(re.search(r'(?<!\w)' + re.escape(normalized(value[field])) + r'(?!\w)', span)
                                           for span in cited):
                 raise ValueError('Rule ' + field + ' must use a literal label from its cited evidence; '
                                  'cite the supplied definition instead of inventing a label.')
+        if value['action'].casefold() in ('notify', 'inform', 'report'):
+            named_recipient = re.search(r'\b(?:notify|inform)\s+(?:(?:the|all|each)\s+)?'
+                r'[A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,3}\s+(?:of|about|without|within|regarding|that)\b', item['text'])
+            if named_recipient and not any(condition['leftOperand'].casefold() == 'recipient' for condition in value['conditions']):
+                raise ValueError('Notification recipient is explicit in the source but missing from conditions; '
+                                 'encode the notified party as recipient, not as actor or target.')
+        for condition in value['conditions']:
+            if (condition['leftOperand'].casefold() == 'elapsedtime'
+                    and isinstance(condition['rightOperand'], str)
+                    and not re.fullmatch(r'P(?=\d|T\d)[\dYMWDTHS.]+', condition['rightOperand'], re.I)):
+                raise ValueError('elapsedTime requires an ISO 8601 duration or a number with units; '
+                                 'preserve qualitative wording such as without undue delay in a timing constraint.')
+        if kind == 'prohibition':
+            scope = ' '.join(cited)
+            exceptions = r'\b(?:unless|except|without|outside|other than|non[- ]|unauthori[sz]ed|unapproved)\b'
+            if re.search(r'\b(?:not|nor|no)\b', scope) and not re.search(exceptions, scope):
+                for condition in value['conditions']:
+                    values = condition['rightOperand']
+                    values = values if isinstance(values, list) else [values]
+                    if (condition['leftOperand'].casefold() in ('purpose', 'recipient')
+                            and condition['operator'] in ('neq', 'isNoneOf')
+                            and values and all(isinstance(part, str) and normalized(part)
+                                               and any(re.search(r'\b(?:for|to|with)\s+(?:(?:a|an|the)\s+)?'
+                                                                 + re.escape(normalized(part)), span)
+                                                       for span in cited) for part in values)):
+                        raise ValueError('Prohibition constraint reverses a source restriction: kind already supplies '
+                                         'negation. Use a positive comparison for the stated purpose/recipient; '
+                                         'negative comparisons require an explicit source exclusion or exception.')
         uid = f'r{len(traces) + 1}'
-        traces.append(dict(ruleUid=uid, ruleType=kind, sourceClauses=sources(value['evidence'])))
+        traces.append(dict(ruleUid=uid, ruleType=kind, sourceClauses=source_refs))
         rule = dict(uid=uid, assignee=value['actor'], action=value['action'], target=value['asset'])
         if value['conditions']:
             rule['constraint'] = value['conditions']
@@ -467,7 +511,13 @@ def generate_item(item, client, prompt, contract, request_schema, root):
             output_retries += output_retry_count
             Draft202012Validator(request_schema).validate(answer)
             diagnostics.update(rule_plan=answer, generation_attempts=attempt + 1)
-            fragment = compile_plan(answer, contract, supplied)
+            # Omission claims are review data, not accepted rules. A bad claim
+            # must not prevent checking an otherwise empty or sound extraction.
+            try:
+                compile_plan(dict(answer, rules=[]), contract, supplied)
+            except ValueError as error:
+                diagnostics['unrepresented_evidence_error'] = str(error)
+            fragment = compile_plan(dict(answer, unrepresented=[]), contract, supplied)
             if fragment is not None:
                 validate_fragment(fragment, contract, supplied, root)
             candidates = []
@@ -481,6 +531,8 @@ def generate_item(item, client, prompt, contract, request_schema, root):
             diagnostics['semantic_check'] = dict(checked, same_model_as_generator=True)
             entailed = not checked.get('error') and all(row['verdict'] == 'ENTAILED' for row in checked['rule_reviews'])
             complete = checked['coverage'] == ('COMPLETE' if fragment else 'NO_RULES_NEEDED')
+            if fragment is None and entailed and checked['coverage'] == 'NO_RULES_NEEDED':
+                return result(None, answer['reason'], outcome='abstained_needs_review')
             if entailed and complete and not answer['unrepresented']:
                 return result(fragment, answer['reason'], outcome='generated' if fragment else 'abstained_needs_review')
             # Keep sound rules after a repair rather than discarding them solely for
@@ -541,7 +593,7 @@ def generate(document, client, root=Path('.'), progress=None, classified=None):
         'profile': 'http://www.w3.org/ns/odrl/2/core',
     }, traceability=[])
     report = dict(contract_id=contract, status='draft', clauses=[],
-                  generation_strategy='source_backed_plan_with_same_model_check_v2')
+                  generation_strategy='source_ids_with_same_model_check_v3')
     if classified is not None:
         validate(classified, 3, root)
         originals = {chunk['chunk_id']: chunk for chunk in classified['chunks']}

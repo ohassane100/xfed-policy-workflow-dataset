@@ -10,11 +10,20 @@ Standalone headings, form labels and commentary have no independent rules. A
 heading merged with substantive contractual terms must be judged on those terms.
 Use supplied parents, definitions and references to interpret incomplete items.
 Relevant context alone does not make an unrelated primary clause relevant.
+Correction, validation, delivery and accuracy duties for shared technical records
+and research-output publication, attribution or metadata registration are in scope,
+including when they occur under general performance or liability headings.
 
 For EVERY candidate rule, including nested duties/remedies, verify:
 - Correct modality: a must/shall duty is not merely a permission.
 - Correct responsible actor, beneficiary, action, target asset and recipients.
 - Every necessary trigger, purpose, precondition, exception, deadline and limit.
+- Evaluate each constraint's actual operator, not just its words. A prohibition
+  applies when its constraints are true: purpose eq advertising bans advertising;
+  purpose neq/isNoneOf advertising bans other purposes. The latter reverses a
+  source ban on advertising. The same applies to recipient restrictions. Negative
+  operators require an explicit source exclusion or exception. Mark reversed
+  constraint polarity CONTRADICTED even when the rule's kind/action are correct.
 - No invented identifiers, dates, LegalTags, selected options or external law.
 - Its primary clause supports the rule; context only interprets that clause.
 - No broadening: absence of automatic access does not ban a different activity.
@@ -27,6 +36,11 @@ CONTRADICTED means the evidence states a materially conflicting term.
 UNSUPPORTED means a rule or material detail is invented or not established.
 AMBIGUOUS means supplied evidence is insufficient to decide. Explain specifically.
 Schema validity and exact citations alone do not establish entailment.
+Verify the encoded JSON fields, not a plausible paraphrase of them. If your reason
+mentions a required recipient, exception or deadline that is absent from the
+candidate's fields, the candidate is not ENTAILED. An illustrative example does
+not need a second rule, and a conditional permission alone does not entail an
+opposite prohibition outside its conditions.
 Check literal actor/asset labels against the cited source, and check their roles
 against the meaning of the entire clause. Do not accept a generic use permission,
 notification duty or remedy merely because related words occur in the text.

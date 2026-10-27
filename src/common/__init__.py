@@ -43,6 +43,24 @@ def scope_heading(text):
     return None
 
 
+def standalone_heading(chunk):
+    """Recognize explicit titles, including numbered titles with child clauses."""
+    heading, text = chunk.get('heading', '').strip(), chunk['text'].strip()
+    if not text:
+        return False
+    if not heading and chunk.get('child_clause_ids'):
+        first = text.splitlines()[0]
+        if re.fullmatch(r'[\d.() ]+', first):
+            heading = first
+    if not heading:
+        return False
+    numbered_title = (bool(chunk.get('child_clause_ids')) and text.startswith(heading + '\n')
+                      and re.fullmatch(r'[\d.() ]+', heading))
+    return bool((text == heading or numbered_title) and len(text.split()) <= 14
+                and not re.search(r'\b(?:shall|must|may|means|is|are|will|can|only|not|no|without|'
+                                  r'delete|retain|notify|disclose|provide|return|process)\b|[;:]\s*\S', text, re.I))
+
+
 def scoped_chunks(chunks):
     scope, previous = 0, None
     for chunk in chunks:
@@ -91,7 +109,7 @@ def write_json(path, value):
             temporary.unlink(missing_ok=True)
 
 
-def map_chunks(items, operation, client, progress=None):
+def map_chunks(items, operation, client, progress=None, completed=None):
     """Bound in-flight work and collect results in source order."""
     items = list(items)
     workers = getattr(client, 'workers', 1)
@@ -108,12 +126,14 @@ def map_chunks(items, operation, client, progress=None):
         results = []
         for item in items:
             results.append(apply(item))
+            if completed:
+                completed(item, results[-1])
             if progress:
                 progress(len(results), len(items), item['chunk_id'])
         return results
     results = [None] * len(items)
     pool = ThreadPoolExecutor(max_workers=workers)
-    pending, next_index, completed = {}, 0, 0
+    pending, next_index, done_count = {}, 0, 0
     try:
         while next_index < len(items) or pending:
             while next_index < len(items) and len(pending) < workers:
@@ -123,9 +143,11 @@ def map_chunks(items, operation, client, progress=None):
             for future in done:
                 index = pending.pop(future)
                 results[index] = future.result()
-                completed += 1
+                if completed:
+                    completed(items[index], results[index])
+                done_count += 1
                 if progress:
-                    progress(completed, len(items), items[index]['chunk_id'])
+                    progress(done_count, len(items), items[index]['chunk_id'])
         return results
     finally:
         for future in pending:

@@ -84,12 +84,35 @@ Its plan and check are saved in each prediction's generation report. Strict rule
 scores are unchanged; mismatches list missing and unexpected canonical rules.
 These checks are part of inference, not the gold judge. Compare new runs separately
 from earlier direct-generation runs; do not combine their scores or timings.
+Evidence in new model plans contains source IDs; the compiler copies exact text
+locally. Older plans with quotes are still checked, allowing PDF whitespace
+differences while rejecting changed words or source IDs. Notification recipients,
+qualitative timing and clear reversed prohibition predicates receive compiler
+checks in addition to model review.
 
 `--policy-mode gated` routes RELEVANT and NEEDS_CONTEXT clauses to policy
 extraction and scores exclusions and upstream failures against the full policy
 reference. It requires both tasks. The dashboard defaults to this mode when both
 tasks are selected. `isolated` preserves stage comparisons. Neither mode reruns
 PDF extraction or context retrieval; the report states this boundary.
+
+Predictions and `live_metrics` are checkpointed after each completed request, so
+the dashboard and downloaded JSON expose early results and cancellation retains
+completed work. Interim metrics cover completed cases only; `progress` retains
+the full selected-case denominator. Final `metrics` still count every case,
+including missing predictions and failures. Keep each run's code/prompts frozen;
+use a separate local snapshot while editing the next version.
+
+For an existing approved model service forwarded to the local computer, no remote
+scripts, installations or private model services are needed:
+
+```bash
+python -m xfed.evaluation run --split dev --task both --policy-mode gated --model qwen3.5:122b-a10b --base-url http://127.0.0.1:11435 --workers 3 --output tmp/xfed-dev.json
+```
+
+`--workers` limits concurrent requests to that endpoint. Optional OSDU fields are
+left out of the model decoder when the source does not mention them, avoiding a
+server grammar incompatibility without weakening saved-policy validation.
 
 ## Evaluation method and blind review
 

@@ -7,6 +7,11 @@ Read every operative sentence of the PRIMARY clause before writing rules. Identi
 who acts, what they do, the affected asset, the modality, and ALL qualifications.
 Supporting context resolves the primary clause; it cannot independently create a
 rule. Read table row identity, column headers and table introductions together.
+The PRIMARY clause is clause.text with clause.chunk_id. The entries in
+clause.context are supporting evidence, never extra clauses to extract. Before
+returning each rule, verify its evidence contains that PRIMARY chunk_id and its
+operative requirement occurs in PRIMARY text. Do not extract the surrounding
+section's rules simply because they are in a long parent or definition.
 Never borrow an actor or asset from another row. A catalogue entry or definition
 can supply context without itself granting a right.
 
@@ -27,29 +32,50 @@ For each distinct rule return:
   publish, delete, retain, notify, acknowledge, provideAccess, obtainApproval,
   document, encrypt or authenticate when their meanings fit. Preserve a more
   specific source action when necessary; do not convert every action to use.
+  A permission to access/read/retrieve an asset uses read by the accessing party.
+  A provider duty to make information available uses distribute by the provider.
 - asset: the affected information/asset, scoped as in the source. Use the defined
   name literally from the cited evidence, consistently. Do not widen a named
   dataset to all Data, or invent an asset. An issuer also needs a cited literal label.
 - conditions: every purpose, recipient, trigger, deadline, exception and limit,
   expressed as constraints with leftOperand/operator/rightOperand and optional
   unit/dataType. Empty only when the source rule really is unconditional.
-- evidence: literal, minimal quotations with exact chunk_id from supplied text.
-  Include the primary operative span with its negation/modality and qualifications.
-  Also cite supporting actor/asset definitions or table cells when needed. Do not
-  paraphrase quotations, use ellipses, or cite context-only rules as primary rules.
-  Quote the shortest sufficient spans, including qualifications; do not repeat
-  the whole clause for every rule. Keep the overall reason under 600 characters.
+  Conditions specify WHEN the rule applies. The kind already encodes prohibition:
+  'must not use Records for advertising' is prohibition use with purpose eq
+  advertising. Using purpose neq/isNoneOf advertising instead would prohibit
+  other purposes and reverse the source. A recipient named in a prohibition is
+  normally recipient eq/isAnyOf, not isNoneOf. Negative operators require an
+  actual source exclusion or exception; do not repeat the rule's negation in them.
+- evidence: exact chunk_id references to supplied source entries. Always include
+  the PRIMARY chunk_id. Add supporting definitions or table cells only when needed.
+  Prefer {"chunk_id":"the supplied ID"} without a quote: the application copies
+  exact original text locally, including PDF line breaks and missing glyphs.
+  Return IDs only; do not retype quotations in the evidence objects.
+  Do not cite context-only rules as primary rules. Keep the reason under 600 characters.
 - duties: prerequisites to exercising THIS permission, each with its own actor,
   action, asset, conditions and evidence. Empty for other rule kinds. A standalone
   shall/must duty belongs in an obligation, not repeated under unrelated permissions.
 - remedies: duties required after breaching THIS prohibition, with the same fields.
   Empty for other rule kinds. Do not invent remedies or notification duties.
+An exception qualifies its existing rule. Do not turn a possibly shorter legal
+deadline into a second unconditional duty. Preserve the trigger, recipient and
+exception together, and record an unknown shorter deadline using source wording.
+For pronouns such as 'such records', cite the primary antecedent as well as the
+operative sentence. Avoid unnecessary definition quotations when the primary
+clause already identifies the actor and asset.
+Examples introduced by 'such as' illustrate an existing rule, not additional
+independent permissions. Extract the general rule once. A conditional permission
+does not itself create a prohibition outside its conditions; require explicit
+prohibitory language before adding that complement.
 
 Preserve relative time and its event: 'within 12 hours after discovery' means an
 upper bound (lteq), not gteq. Use elapsedTime lteq PT12H with event eq discovery
 when that expresses the source. 'At least 30 days before submission' is a minimum
 lead time (gteq) before that event, not a deadline 30 days after it. Keep business
 days as business days; do not replace them with calendar days or invent dates.
+Use timing eq for qualitative requirements such as 'without undue delay'. They
+are not elapsedTime numeric bounds. Preserve the named notification recipient
+as a recipient condition; including its name in the asset label is insufficient.
 Use valid operators eq, neq, lt, lteq, gt, gteq, isA, hasPart, isPartOf, isAllOf,
 isAnyOf, isNoneOf. A constraint array is conjunctive. Do not flatten OR alternatives
 into mandatory AND conditions. Preserve choices and exceptions on the applicable

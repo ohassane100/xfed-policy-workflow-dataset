@@ -68,7 +68,7 @@ def plan(item, kind='obligation', **changes):
     rule = dict(kind=kind, actor='Provider', action='delete', asset='supplied data',
                 conditions=[dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT12H'),
                             dict(leftOperand='event', operator='eq', rightOperand='notice')],
-                evidence=[dict(chunk_id=item['chunk_id'], quote=item['text'])], duties=[], remedies=[])
+                evidence=[dict(chunk_id=item['chunk_id'])], duties=[], remedies=[])
     rule.update(changes)
     return dict(rules=[rule], unrepresented=[], reason='Simulated source-backed rule.')
 
@@ -328,7 +328,10 @@ class QualityTests(unittest.TestCase):
             barrier.wait(timeout=5)
             return item['chunk_id']
         items = [dict(chunk_id=str(i)) for i in range(3)]
-        self.assertEqual(map_chunks(items, operation, Pool()), ['0', '1', '2'])
+        received = []
+        self.assertEqual(map_chunks(items, operation, Pool(), completed=lambda item, value:
+                                    received.append((item['chunk_id'], value))), ['0', '1', '2'])
+        self.assertEqual(sorted(received), [('0', '0'), ('1', '1'), ('2', '2')])
 
     def test_real_http_clients_overlap_in_classification_generation_and_review(self):
         barrier, requests = Barrier(3), []
@@ -468,7 +471,9 @@ class QualityTests(unittest.TestCase):
                 self.assertEqual(supplied_schema['type'], 'object')
                 self.assertFalse(supplied_schema['additionalProperties'])
                 if 'candidate_rules' not in json.loads(payload['messages'][1]['content']):
-                    self.assertEqual(supplied_schema, response_schema(ROOT))
+                    expected_schema = response_schema(ROOT)
+                    expected_schema['properties'].pop('osdu')
+                    self.assertEqual(supplied_schema, expected_schema)
                 self.assertIs(payload['truncate'], False)
                 self.assertIs(payload['shift'], False)
             for worker in pool.metadata()['models']:
@@ -984,7 +989,7 @@ class QualityTests(unittest.TestCase):
         self.assertIn('token limit', entry['repair_error'])
 
     def test_reviewed_missing_evidence_is_an_abstention_not_a_transport_failure(self):
-        answer = dict(rules=[], unrepresented=[dict(evidence=[dict(chunk_id='c1', quote=self.item['text'])],
+        answer = dict(rules=[], unrepresented=[dict(evidence=[dict(chunk_id='c1')],
                       reason='Responsible actor definition missing.')], reason='Cannot safely encode.')
         check = lambda value: dict(no_rule_review(value), relevance='RELEVANT', coverage='NEEDS_CONTEXT')
         output, entry, failed = generate_item(self.item, PlanClient(answer, check), 'prompt',
@@ -1312,7 +1317,7 @@ class QualityTests(unittest.TestCase):
         permission = deepcopy(answer['rules'][0])
         permission.update(kind='permission', action='use', duties=[dict(
             actor='Provider', action='notify', asset='supplied data', conditions=[],
-            evidence=[dict(chunk_id='c1', quote=item['text'])])])
+            evidence=[dict(chunk_id='c1')])])
         answer['rules'].append(permission)
         def check(value):
             result = reviewed(value)
@@ -1351,6 +1356,108 @@ class QualityTests(unittest.TestCase):
         self.assertIn(disclaimer['text'], [value['text'] for value in context])
         context, _ = index.context_for(operative)
         self.assertNotIn(disclaimer['text'], [value['text'] for value in context])
+
+    def test_numbered_topic_heading_does_not_inherit_its_child_rules(self):
+        heading = chunk('c1', '8.1\nConfidentiality', heading='8.1', clause_id='8.1', child_clause_ids=['8.1.1'])
+        child = chunk('c2', 'Recipient must protect Data.', clause_id='8.1.1', parent_clause_id='8.1')
+        client = Client(dict(label='RELEVANT'))
+        context, _ = ContextIndex([heading, child]).context_for(heading)
+        self.assertNotIn(child['text'], [value['text'] for value in context])
+        self.assertEqual(classify_batch([dict(clause=heading, context=context, unresolved_references=[])], client, ROOT)[0]['label'], 'NOT_RELEVANT')
+        self.assertEqual(client.calls, [])
+        title_without_heading = dict(heading)
+        title_without_heading.pop('heading')
+        self.assertEqual(classify_batch([dict(clause=title_without_heading, context=[], unresolved_references=[])], client, ROOT)[0]['label'], 'NOT_RELEVANT')
+        for text in ('8.1\nRecipient must protect Data.', '8.1\nDelete Data', '8.1\nResearch use only'):
+            substantive = dict(heading, text=text)
+            self.assertEqual(classify_batch([dict(clause=substantive, context=[], unresolved_references=[])], client, ROOT)[0]['label'], 'RELEVANT')
+
+    def test_source_id_evidence_and_pdf_whitespace_preserve_original_citations(self):
+        item = dict(self.item, text='Provider must delete\nthe supplied data within 12 hours after notice.')
+        answer = plan(item)
+        answer['rules'][0]['evidence'] = [dict(chunk_id='c1')]
+        Draft202012Validator(response_schema(ROOT)).validate(answer)
+        output = compile_plan(answer, 'contract', item)
+        self.assertEqual(output['traceability'][0]['sourceClauses'][0]['text'], item['text'])
+        answer['rules'][0]['evidence'][0]['quote'] = item['text'].replace('\n', ' ')
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+        answer['rules'][0]['evidence'][0]['quote'] = item['text'].replace('must', 'may')
+        with self.assertRaisesRegex(ValueError, 'quote'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['evidence'] = [dict(chunk_id='unknown')]
+        with self.assertRaisesRegex(ValueError, 'evidence'):
+            compile_plan(answer, 'contract', item)
+
+    def test_prohibition_polarity_is_checked_even_if_model_review_would_accept_it(self):
+        item = dict(self.item, text='Provider must not use supplied data for advertising.')
+        answer = plan(item, 'prohibition', action='use', conditions=[dict(
+            leftOperand='purpose', operator='isNoneOf', rightOperand='advertising')])
+        with self.assertRaisesRegex(ValueError, 'reverses'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'][0]['operator'] = 'eq'
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+        item = dict(item, text='Provider must not use supplied data for purposes other than research.')
+        answer = plan(item, 'prohibition', action='use', conditions=[dict(
+            leftOperand='purpose', operator='isNoneOf', rightOperand='research')])
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+
+    def test_eval_checkpoints_survive_cancellation_and_never_claim_full_results(self):
+        from xfed.evaluation import load_reference, run_evaluation
+        class Runner(Client):
+            num_ctx = 131072
+            def preflight(self): pass
+            def reset_assignments(self): pass
+            def metadata(self): return dict(model=self.model)
+        snapshots, cancel = [], Event()
+        def completed(report):
+            snapshots.append(report)
+            if report['progress']['classification']['completed'] >= 3:
+                cancel.set()
+        with self.assertRaises(InterruptedError):
+            run_evaluation(load_reference(ROOT), Runner(dict(label='RELEVANT')), ROOT,
+                           task='classification', cancel=cancel, completed=completed)
+        snapshot = snapshots[-1]
+        self.assertEqual(snapshot['status'], 'running')
+        self.assertEqual(snapshot['progress']['classification'], dict(completed=3, total=76))
+        self.assertEqual(len(snapshot['predictions']['classification']), 3)
+        self.assertEqual(snapshot['live_metrics']['classification']['completed']['n'], 3)
+        self.assertNotIn('metrics', snapshot)
+        self.assertEqual(snapshots[0]['progress']['classification']['completed'], 0)
+
+    def test_notification_recipient_and_qualitative_timing_are_not_lost(self):
+        item = dict(self.item, text='Provider must notify Customer of incidents without undue delay.')
+        answer = plan(item, action='notify', asset='incidents', conditions=[])
+        with self.assertRaisesRegex(ValueError, 'recipient'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'] = [dict(leftOperand='recipient', operator='eq', rightOperand='Customer'),
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='undue delay')]
+        with self.assertRaisesRegex(ValueError, 'qualitative'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'][1] = dict(leftOperand='timing', operator='eq', rightOperand='without undue delay')
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+
+    def test_unused_osdu_does_not_break_the_model_decoder_but_explicit_metadata_is_supported(self):
+        captured = []
+        class Capture(Client):
+            def generate(self, prompt, value, shape, **options):
+                captured.append(deepcopy(shape))
+                return super().generate(prompt, value, shape, **options)
+        generate_answer(Capture(plan(self.item)), 'prompt', 'contract', self.item, response_schema(ROOT))
+        self.assertNotIn('osdu', captured[-1]['properties'])
+        item = dict(self.item, text=self.item['text'] + ' OSDU LegalTag project-data.')
+        generate_answer(Capture(plan(item)), 'prompt', 'contract', item, response_schema(ROOT))
+        self.assertIn('osdu', captured[-1]['properties'])
+
+    def test_isolated_checkbox_option_remains_uncertain_without_an_operative_parent(self):
+        client = Client(dict(label='RELEVANT'))
+        item = dict(clause=chunk(text='\u2610 Remote access through a gateway'), context=[], unresolved_references=[])
+        self.assertEqual(classify_batch([item], client, ROOT)[0]['label'], 'NEEDS_CONTEXT')
+        self.assertEqual(client.calls, [])
+        item['context'] = [dict(chunk('parent', 'Recipient may choose one access method:'), relationship='parent')]
+        self.assertEqual(classify_batch([item], client, ROOT)[0]['label'], 'RELEVANT')
+        item['context'] = []
+        item['clause']['text'] = '\u2610 Recipient may use Data for research.'
+        self.assertEqual(classify_batch([item], client, ROOT)[0]['label'], 'RELEVANT')
 
 
 if __name__ == '__main__':

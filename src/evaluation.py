@@ -397,6 +397,7 @@ def policy_metrics(rows):
                     exact_accuracy=ratio(sum(row['exact'] for row in operative), len(operative)),
                     generation_coverage=ratio(generated_operative, len(operative)),
                     selective_exact_accuracy=ratio(sum(row['exact'] for row in operative), generated_operative)),
+                controls=dict(n=len(controls), exact=sum(row['exact'] for row in controls)),
                 outcomes=dict(Counter(row.get('outcome', 'unknown') for row in rows)),
                 field_diagnostics={key: prf(*(sum(row.get('field_slots', {}).get(key, {}).get(count, 0)
                                                 for row in rows) for count in ('tp', 'fp', 'fn')))
@@ -572,6 +573,26 @@ def run_evaluation(data, client, root=Path('.'), task='both', split='test', prog
                                ['src/evaluation.py','src/llm/__init__.py','src/llm/service.py','src/1 preprocessing/1.3 relevance/__init__.py','src/2 policy_generation/__init__.py']},
                   prompts={name: hashlib.sha256((Path(root)/'prompts'/file).read_bytes()).hexdigest()
                            for name, file in [('classification','relevance_classifier.md'),('policy','policy_generator.md')]})
+    live_rows = defaultdict(list)
+    report['live_metrics_scope'] = 'Completed cases only; provisional while inference runs. '
+    report['progress'] = {name: dict(completed=0, total=len(cases)) for name, cases in selected.items()}
+    report['live_metrics'] = {}
+    def record(name, case, item, prediction):
+        prediction = dict(prediction, input_sha256=digest(item))
+        report['predictions'][name][case['case_id']] = prediction
+        if name == 'classification':
+            row = dict(gold=case['gold']['label'], label=prediction.get('label'), error=prediction.get('error'))
+            operation = classification_metrics
+        else:
+            row = policy_counts(case, prediction, data, root)
+            operation = policy_metrics
+        live_rows[name].append(row)
+        report['progress'][name]['completed'] = len(live_rows[name])
+        report['live_metrics'][name] = {'completed': dict(operation(live_rows[name]), aggregate=name == 'policy')}
+    def save_checkpoint():
+        if completed:
+            completed(deepcopy(report))
+    save_checkpoint()
     client.preflight()
     for name, cases in selected.items():
         if not cases:
@@ -607,10 +628,12 @@ def run_evaluation(data, client, root=Path('.'), task='both', split='test', prog
                     raise
                 except Exception as error:
                     return [dict(error=str(error)) for _ in group['group']]
-            results = map_chunks(work,classify,client,lambda done,total,message:checkpoint(done,total,'Classification requests'))
-            for group, values in zip(groups,results):
-                for (case,item),value in zip(group,values):
-                    report['predictions'][name][case['case_id']] = dict(value,input_sha256=digest(item))
+            def classification_completed(group, values):
+                for (case, item), value in zip(group['group'], values):
+                    record(name, case, item, value)
+                save_checkpoint()
+            map_chunks(work,classify,client,lambda done,total,message:checkpoint(done,total,'Classification requests'),
+                       completed=classification_completed)
         else:
             prompt=(Path(root)/'prompts/policy_generator.md').read_text(encoding='utf-8')
             output_schema=response_schema(root)
@@ -637,8 +660,11 @@ def run_evaluation(data, client, root=Path('.'), task='both', split='test', prog
                 except Exception as error:
                     return dict(policy=None,error=str(error),input_sha256=digest(item))
             work=[dict(case,chunk_id=case['case_id']) for case in cases]
-            values=map_chunks(work,policy,client,lambda done,total,message:checkpoint(done,total,'Policy cases'))
-            report['predictions'][name]=dict(zip([case['case_id'] for case in cases],values))
+            def policy_completed(case, value):
+                record(name, case, input_for(data, case, True), value)
+                save_checkpoint()
+            map_chunks(work,policy,client,lambda done,total,message:checkpoint(done,total,'Policy cases'),
+                       completed=policy_completed)
         if inference_files(root) != report['inference_sha256'] or digest(load_reference(root, reference_path)) != report['reference_sha256']:
             raise ValueError('Code, prompts, schemas or references changed during evaluation; restart with frozen inputs.')
         report['execution'][name]=dict(duration_seconds=perf_counter()-started,options=client.metadata())
@@ -660,6 +686,8 @@ def main(argv=None):
                         help='gated includes classification routing errors; requires --task both.')
     parser.add_argument('--model')
     parser.add_argument('--worker-models',nargs='+')
+    parser.add_argument('--workers', type=int, default=1,
+                        help='Concurrent requests to the existing endpoint; does not start model services.')
     parser.add_argument('--base-url',default='http://127.0.0.1:11434')
     parser.add_argument('--config',type=Path)
     parser.add_argument('--predictions',type=Path)
@@ -696,7 +724,7 @@ def main(argv=None):
     else:
         from xfed.llm import OllamaPool,load_client
         if args.config:
-            if args.model or args.worker_models:
+            if args.model or args.worker_models or args.workers != 1:
                 parser.error('Use --config or explicit model selection.')
             client=load_client(args.config)
         else:
@@ -704,7 +732,8 @@ def main(argv=None):
             model=args.model or (names[0] if names else None)
             if not model:
                 parser.error('run requires --model, --worker-models, or --config.')
-            client=OllamaPool([args.base_url],model,worker_models=names,num_predict=4096,timeout=600)
+            client=OllamaPool([args.base_url],model,worker_models=names,workers_per_endpoint=args.workers,
+                              num_predict=4096,timeout=600)
         if args.require_reviewed:
             chosen=[case for name in ('classification','policy') if args.task in (name,'both') for case in data[name]
                     if case['split']==args.split]

@@ -395,8 +395,11 @@ class Pipeline:
         def completed(report):
             write_json(self.root / 'evaluation/runs' / (report['run_id'] + '.json'), report)
             with self.lock:
+                previous_tasks = set((self.evaluation_report or {}).get('execution', {}))
                 self.evaluation_report = deepcopy(report)
-                self.job['log'].append('Saved ' + ', '.join(report['execution']) + ' evaluation predictions')
+                new_tasks = set(report['execution']) - previous_tasks
+                if new_tasks:
+                    self.job['log'].append('Saved ' + ', '.join(sorted(new_tasks)) + ' evaluation predictions')
         try:
             report = run_evaluation(data, client, self.root, progress=progress,
                                     cancel=self.cancel, completed=completed, **options)
