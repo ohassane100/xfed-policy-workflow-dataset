@@ -36,7 +36,7 @@ def conflicts(policy):
 def review_schema(candidates, root):
     entry = deepcopy(schema(6, root)['properties']['rule_reviews']['items'])
     entry['required'] = ['rule_uid', 'rule_type', 'verdict', 'reason']
-    entry['properties']['reason']['minLength'] = 1
+    entry['properties']['reason'].update(minLength=1, maxLength=400)
     if candidates:
         entry['properties']['rule_uid']['enum'] = [row['rule']['uid'] for row in candidates]
     return dict(type='object', additionalProperties=False,
@@ -45,8 +45,8 @@ def review_schema(candidates, root):
                     relevance=dict(type='string', enum=['RELEVANT', 'NOT_RELEVANT', 'NEEDS_CONTEXT']),
                     rule_reviews=dict(type='array', minItems=len(candidates), maxItems=len(candidates), items=entry),
                     coverage=dict(type='string', enum=['COMPLETE', 'MISSING_RULES', 'NO_RULES_NEEDED', 'NEEDS_CONTEXT']),
-                    reason=dict(type='string', minLength=1),
-                    missing_rules=dict(type='array', items=dict(type='string', minLength=1))))
+                    reason=dict(type='string', minLength=1, maxLength=600),
+                    missing_rules=dict(type='array', items=dict(type='string', minLength=1, maxLength=600))))
 
 
 def review_item(item, worker, prompt, contract, root, require_resolved=True):
@@ -88,6 +88,9 @@ def review_item(item, worker, prompt, contract, root, require_resolved=True):
             if hasattr(worker, 'discard_last_response'):
                 worker.discard_last_response()
             failure = summarize_error(error)
+            if not attempt and 'output token limit reached' in failure.lower():
+                failure += ' Return concise explanations within the schema limits; do not repeat source text.'
+                continue
             if any(term in failure.lower() for term in ('safe input budget', 'context limit reached',
                                                         'output token limit reached')) or isinstance(error, RuntimeError):
                 break

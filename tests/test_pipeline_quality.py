@@ -1393,6 +1393,45 @@ class QualityTests(unittest.TestCase):
         self.assertNotIn('duty', output['odrlPolicy']['permission'][0])
         validate_fragment(output, 'contract', item, ROOT)
 
+    def test_reviewer_retries_an_output_limit_without_dropping_evidence(self):
+        from xfed.policy_review import review_item
+        item = dict(self.item, candidate_rules=[dict(rule_type='obligation',
+                    rule=fragment(self.item)['odrlPolicy']['obligation'][0], source_chunk_ids=['c1'])])
+        seen = []
+        def answer(value):
+            seen.append(deepcopy(value))
+            if len(seen) == 1:
+                raise ValueError('Ollama output token limit reached at 4096 tokens')
+            return reviewed(value)
+        result = review_item(item, Client(answer), 'prompt', 'contract', ROOT)
+        self.assertNotIn('error', result)
+        self.assertEqual(result['coverage'], 'COMPLETE')
+        self.assertEqual(len(seen), 2)
+        self.assertEqual(seen[0], seen[1])
+        def always_fails(value):
+            raise ValueError('Ollama output token limit reached at 4096 tokens')
+        client = Client(always_fails)
+        result = review_item(item, client, 'prompt', 'contract', ROOT)
+        self.assertEqual(len(client.calls), 2)
+        self.assertIn('error', result)
+        self.assertEqual(result['rule_reviews'][0]['verdict'], 'AMBIGUOUS')
+
+    def test_reviewer_repairs_oversized_explanations_instead_of_truncating_them(self):
+        from xfed.policy_review import review_item
+        item = dict(self.item, candidate_rules=[dict(rule_type='obligation',
+                    rule=fragment(self.item)['odrlPolicy']['obligation'][0], source_chunk_ids=['c1'])])
+        attempts = []
+        def answer(value):
+            attempts.append(value)
+            result = reviewed(value)
+            if len(attempts) == 1:
+                result['rule_reviews'][0]['reason'] = 'x' * 401
+            return result
+        result = review_item(item, Client(answer), 'prompt', 'contract', ROOT)
+        self.assertNotIn('error', result)
+        self.assertEqual(len(attempts), 2)
+        self.assertEqual(result['rule_reviews'][0]['reason'], 'Simulated supported rule.')
+
     def test_all_invalid_plan_groups_remain_a_failure_instead_of_an_abstention(self):
         answer = plan(self.item, evidence=[dict(chunk_id='missing')])
         output, entry, failed = generate_item(self.item, PlanClient(answer), 'prompt',
