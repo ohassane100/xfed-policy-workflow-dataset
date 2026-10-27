@@ -5,6 +5,10 @@ Used for the machine-readable policy rules in `05_policy_schema.json`: permissio
 
 Reference: https://www.w3.org/TR/odrl-model/
 
+Extraction uses an ODRL Set when the issuing party is unknown. Agreement
+permissions/prohibitions still require an assigner; the compiler does not invent
+one. Source-backed descriptive labels/custom operands require deployment mapping.
+
 ## OSDU
 Used for energy-domain legal/compliance metadata in the optional `osdu` object of `05_policy_schema.json`.
 

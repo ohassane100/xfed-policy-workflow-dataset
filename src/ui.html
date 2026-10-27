@@ -28,7 +28,7 @@
   <div id="error" class="error hidden" role="alert"></div>
   <div id="job-panel" class="job hidden" aria-live="polite"><div class="jobrow"><div class="job-left"><span id="job-badge" class="badge">Ready</span><span id="job-message" class="jobmessage">Ready</span></div><div class="job-right"><span id="job-count"></span><button id="cancel" class="hidden">Cancel &amp; unload</button></div></div><div id="progress" class="progress"><div id="progress-fill"></div></div><div id="run-log" class="runlog"></div><div id="model-runs" class="runlog"></div></div>
   <details id="benchmark-results" class="report hidden"><summary>Step 1.3 speed comparison</summary><p id="benchmark-summary"></p><div id="benchmark-table" class="table-scroll"></div><button id="benchmark-download">Download comparison JSON</button></details>
-  <details id="evaluation-results" class="report hidden"><summary>Reference evaluation results</summary><p id="evaluation-summary"></p><div id="evaluation-table" class="table-scroll"></div><details><summary>Per-class metrics, confusion matrices and uncertainty</summary><pre id="evaluation-details"></pre></details><button id="evaluation-download">Download evaluation JSON</button></details>
+  <details id="evaluation-results" class="report hidden"><summary>Reference evaluation results</summary><p id="evaluation-summary"></p><div id="evaluation-table" class="table-scroll"></div><details><summary>Detailed scores, mismatches and uncertainty</summary><pre id="evaluation-details"></pre></details><button id="evaluation-download">Download evaluation JSON</button></details>
   <section id="dashboard-screen" class="screen">
     <div class="pagehead"><div><div class="eyebrow">Dashboard</div><h1>Overview</h1><p id="overview-note">Contract workspace</p></div><button class="primary" id="open-workspace">Open pipeline</button></div>
     <div class="overview-layout"><div>
@@ -36,7 +36,7 @@
         <div class="metric"><div class="metric-icon">C</div><div><strong id="overview-contracts">0</strong><span>Contracts</span><small id="overview-contract-note">Source PDFs</small></div></div>
         <div class="metric"><div class="metric-icon green">S</div><div><strong id="overview-stages">0</strong><span>Completed stages</span><small>Saved outputs</small></div></div>
         <div class="metric"><div class="metric-icon amber">!</div><div><strong id="overview-pending">0</strong><span>Needs context</span><small>Unresolved clauses</small></div></div>
-        <div class="metric"><div class="metric-icon">P</div><div><strong id="overview-policies">0</strong><span>Policy drafts</span><small>Unreviewed</small></div></div>
+        <div class="metric"><div class="metric-icon">P</div><div><strong id="overview-policies">0</strong><span>Policies</span><small>Generated outputs</small></div></div>
       </div>
       <div class="section-head"><div><h2>Contracts</h2><p id="contract-overview-note">Loading saved outputs</p></div><button class="link" id="all-contracts">View all</button></div>
       <div class="surface table-scroll" id="dashboard-contracts"></div>
@@ -45,21 +45,21 @@
   </section>
   <section id="contracts-screen" class="screen hidden"><div class="pagehead"><div><div class="eyebrow">Source documents</div><h1>Contracts</h1><p id="contracts-note">Source PDFs</p></div></div><div class="filter-tools"><input id="contract-search" type="search" placeholder="Search contracts" aria-label="Search contracts"></div><div id="contracts-table" class="surface table-scroll"></div></section>
   <section id="pipeline-screen" class="screen hidden">
-    <div class="pipeline-contract"><label for="contract">Source contract</label><select id="contract" aria-label="Source contract"></select><span class="badge neutral">1 preprocessing &rarr; 2 policy generation</span></div>
+    <div class="pipeline-contract"><label for="contract">Source contract</label><select id="contract" aria-label="Source contract"></select><span class="badge neutral">Preprocessing &rarr; Policy &rarr; Review</span></div>
     <nav id="stage-nav" class="stage-nav" aria-label="Pipeline stages"></nav>
     <div class="pagehead"><div><div class="eyebrow" id="eyebrow">Contract preprocessing</div><h1 id="title">Extraction</h1><p id="subtitle">document_blocks.json</p></div><span id="stage-badge" class="badge">Not run</span></div>
-    <section aria-label="Run settings"><div class="pipeline-settings"><div class="field model-field"><label id="model-setting-label" for="model">Model for 1.3 and 2</label><div class="modelrow"><select id="model"><option value="">Checking installed models...</option></select><button id="refresh" class="refresh" title="Refresh installed models" aria-label="Refresh installed models"></button></div></div><div class="actions"><button id="run-step" class="primary">Run step 1.1</button><button id="run-through">Run through 2</button><button id="unload" title="Unload selected models from memory; keep downloaded files" disabled>Unload selected models</button></div></div>
-    <label class="check"><input type="checkbox" id="parallel" disabled>Parallelize with different models</label>
-    <div id="parallel-options" class="settings hidden"><div class="field"><label for="parallel-model-count">Number of models</label><input id="parallel-model-count" type="number" value="2" min="2" max="2" step="1"></div><div class="field"><label for="primary-gpu">GPU index for model 1</label><input id="primary-gpu" type="number" min="0" step="1" placeholder="Auto"></div></div>
-    <p id="worker-note"></p>
-    <details class="advanced"><summary>Generation settings</summary><div class="settings"><div class="field"><label for="num_ctx">Maximum context tokens</label><input id="num_ctx" type="number" value="16384" min="1024" max="262144" step="1024"></div><div class="field"><label for="num_predict">Policy output tokens (2)</label><input id="num_predict" type="number" value="4096" min="128" max="131072" step="128"></div><div class="field"><label for="relevance_batch_size">Clauses per classification request (1.3)</label><input id="relevance_batch_size" type="number" value="1" min="1" max="16" step="1"></div><div class="field"><label for="relevance_compact">Classification answers (1.3)</label><select id="relevance_compact"><option value="false">Labels and optional reasons</option><option value="true">Labels only</option></select></div><div class="field"><label for="relevance_num_ctx">Classification context tokens (0 = run setting)</label><input id="relevance_num_ctx" type="number" value="0" min="0" max="262144" step="1024"></div><div class="field"><label for="relevance_num_batch">Classification prompt batch tokens (0 = auto)</label><input id="relevance_num_batch" type="number" value="0" min="0" max="65536" step="128"></div><div class="field"><label for="relevance_num_predict">Classification output tokens (1.3)</label><input id="relevance_num_predict" type="number" value="4096" min="128" max="131072" step="128"></div><div class="field"><label for="relevance_think">Classification thinking (1.3)</label><select id="relevance_think"><option value="auto">Auto (off when supported)</option><option value="default">Use model/run default</option><option value="off">Off (if supported)</option><option value="on">On</option></select></div><div class="field"><label for="think">Run thinking default</label><select id="think"><option value="default">Model default</option><option value="off">Off</option><option value="on">On</option></select></div><div class="field"><label for="timeout">Timeout (seconds)</label><input id="timeout" type="number" value="600" min="10" max="3600" step="10"></div></div><label class="check"><input type="checkbox" id="reuse" checked>Reuse completed model requests</label><p><button id="benchmark">Compare 1.3 settings</button> Measures a 24-clause sample using the same model and preserves saved outputs.</p></details></section>
-    <details class="advanced"><summary>Evaluation against reference set</summary><p id="evaluation-reference-note">Frozen examples cover classification and policy generation. Pipeline outputs are preserved.</p><div class="settings"><div class="field"><label for="evaluation-task">Task</label><select id="evaluation-task"><option value="both">Classification and policy</option><option value="classification">Classification only</option><option value="policy">Policy generation only</option></select></div><div class="field"><label for="evaluation-split">Split</label><select id="evaluation-split"><option value="dev">Development</option><option value="test">Held-out test</option></select></div><div class="field"><label for="evaluation-source">Sources</label><select id="evaluation-source"><option value="all">All (reported separately)</option><option value="real">Real contracts</option><option value="synthetic">Synthetic contract</option></select></div></div><p><button id="evaluate">Evaluate reference set</button> Uses the selected models and generation settings, without cached answers.</p></details>
+    <section aria-label="Run settings"><div class="pipeline-settings"><div class="field model-field"><label id="model-setting-label" for="model">Model for selected stage</label><div class="modelrow"><select id="model"><option value="">Checking installed models...</option></select><button id="refresh" class="refresh" title="Refresh installed models" aria-label="Refresh installed models"></button></div></div><div class="actions"><button id="run-step" class="primary">Run step 1.1</button><button id="run-through">Run through policy creation</button><button id="unload" title="Unload selected models from memory; keep downloaded files" disabled>Unload selected models</button><button id="reset" title="Delete all generated JSON and cached responses for this contract" disabled>Reset contract</button></div></div>
+    <label class="check"><input type="checkbox" id="parallel" disabled>Parallelize the selected model</label>
+    <div id="parallel-options" class="settings hidden"><div class="field"><label for="worker-count">Number of workers</label><input id="worker-count" type="number" value="2" min="2" max="32" step="1"></div><div class="field"><label for="placement">GPU placement</label><select id="placement"><option value="auto">Auto</option><option value="gpu">Different GPU per worker</option></select></div></div>
+    <p id="worker-note"></p><p>Choose a model for the selected stage. Evaluate candidates against the real-contract benchmark; speed alone is insufficient. Policy generation includes source and coverage checks.</p>
+    <details class="advanced"><summary>Generation settings</summary><div class="settings"><div class="field"><label for="num_ctx">Maximum context tokens</label><input id="num_ctx" type="number" value="16384" min="1024" max="262144" step="1024"></div><div class="field"><label for="num_predict">Policy output tokens (2)</label><input id="num_predict" type="number" value="4096" min="128" max="131072" step="128"></div><div class="field"><label for="relevance_batch_size">Clauses per classification request (1.3)</label><input id="relevance_batch_size" type="number" value="1" min="1" max="16" step="1"></div><div class="field"><label for="relevance_compact">Classification answers (1.3)</label><select id="relevance_compact"><option value="false">Labels and optional reasons</option><option value="true">Labels only</option></select></div><div class="field"><label for="relevance_num_ctx">Classification context tokens (0 = run setting)</label><input id="relevance_num_ctx" type="number" value="0" min="0" max="262144" step="1024"></div><div class="field"><label for="relevance_num_batch">Classification prompt batch tokens (0 = auto)</label><input id="relevance_num_batch" type="number" value="0" min="0" max="65536" step="128"></div><div class="field"><label for="relevance_num_predict">Classification output tokens (1.3)</label><input id="relevance_num_predict" type="number" value="4096" min="128" max="131072" step="128"></div><div class="field"><label for="relevance_think">Classification thinking (1.3)</label><select id="relevance_think"><option value="auto">Auto (off when supported)</option><option value="default">Use model/run default</option><option value="off">Off (if supported)</option><option value="on">On</option></select></div><div class="field"><label for="think">Policy thinking (2)</label><select id="think"><option value="auto">Auto (off when supported)</option><option value="default">Model default</option><option value="off">Off</option><option value="on">On</option></select></div><div class="field"><label for="timeout">Timeout (seconds)</label><input id="timeout" type="number" value="600" min="10" max="3600" step="10"></div></div><label class="check"><input type="checkbox" id="reuse" checked>Reuse completed model requests</label><p><button id="benchmark">Compare 1.3 settings</button> Measures a 24-clause sample using the same model and preserves saved outputs.</p></details></section>
+    <details class="advanced"><summary>Contract evaluation</summary><p id="evaluation-reference-note">Contract 05 is the agreement for relevance and policy extraction.</p><div class="settings"><div class="field"><label for="evaluation-task">Task</label><select id="evaluation-task"><option value="both">Relevance and policy</option><option value="classification">Relevance only</option><option value="policy">Policy extraction only</option></select></div><div class="field"><label for="evaluation-policy-mode">Policy evaluation</label><select id="evaluation-policy-mode"><option value="gated">Include relevance routing</option><option value="isolated">Isolated extraction stage</option></select></div></div><p><button id="evaluate">Evaluate Contract 05</button> Tests the complete agreement with the selected model and settings, without cached answers. Including routing counts rules lost through relevance exclusions. Both modes use frozen source context. Tune on Contracts 01–03; Contract 05 has been inspected and is no longer an untouched final test.</p></details>
     <div class="summary"><div class="metric"><div><span id="total-label">Blocks</span><strong id="total">0</strong></div></div><div class="metric ready"><div><span>Relevant</span><strong id="relevant">0</strong></div></div><div class="metric"><div><span>Not relevant</span><strong id="not-relevant">0</strong></div></div><div class="metric pending"><div><span>Needs context</span><strong id="pending">0</strong></div></div></div>
     <section class="output" aria-label="Stage output"><div class="outputtop"><div class="tabs" role="tablist"><button class="tab active" data-view="records" role="tab" aria-selected="true">Records</button><button class="tab" data-view="json" role="tab" aria-selected="false">JSON</button><button class="tab" data-view="pdf" role="tab" aria-selected="false">Source PDF</button></div><button id="download" class="download" disabled>Download JSON</button></div>
     <div id="records-view"><div class="filterbar"><input id="search" type="search" placeholder="Search output" aria-label="Search output"><select id="filter" aria-label="Classification filter"><option value="">All classifications</option><option>RELEVANT</option><option>NOT_RELEVANT</option><option>NEEDS_CONTEXT</option></select><span id="record-count" class="recordcount">0 records</span></div><div class="workspace"><div class="list"><div class="listhead"><span>Identifier</span><span>Source text</span><span>Page</span></div><div id="record-list"></div></div><article id="inspector" class="inspector"><div class="empty"><strong>No output yet</strong>Awaiting stage 1.1</div></article></div><div class="pagination"><span id="page-label">0 records</span><div><button id="previous" aria-label="Previous records" title="Previous records"></button> <button id="next" aria-label="Next records" title="Next records"></button></div></div></div>
     <pre id="json-view" class="json hidden"></pre><div id="pdf-view" class="hidden"><iframe id="pdf" title="Source contract PDF"></iframe></div><details id="report" class="report hidden"><summary>Generation report</summary><pre id="report-text"></pre></details><div class="outputfoot"><span id="output-status">No completed output</span><span id="output-model"></span></div></section>
   </section>
-  <footer class="footer"><span>XFed &middot; Contract-to-policy workspace</span><span>Policy drafts require review and human approval</span></footer>
+  <footer class="footer"><span>XFed &middot; Contract-to-policy workspace</span><span>Policy extraction with source traceability</span></footer>
 </main>
 
 <script>
@@ -97,104 +97,106 @@ function icon(name){const svg=document.createElementNS('http://www.w3.org/2000/s
 document.querySelectorAll('.metrics .metric-icon').forEach((el,i)=>el.replaceChildren(icon(['file','layers','warning','policy'][i])));
 $('refresh').replaceChildren(icon('refresh'));$('previous').replaceChildren(icon('left'));$('next').replaceChildren(icon('right'));$('download').prepend(icon('download'));$('download').style.display='flex';$('download').style.alignItems='center';$('download').style.gap='6px';
 const stages=[['1.1','Extraction','document_blocks.json','blocks'],['1.2','Segmentation','contract_chunks.json','chunks'],['1.3','Relevance','classified_chunks.json','chunks'],['1.4','Enrichment','enriched_relevance.json','items'],['2','Policy creation','policy.json','traceability']];
-let stage='1.1',state=null,output=null,records=[],selected=null,page=0,view='records',outputKey='',busy=false,modelsOK=false,modelsChecked=false,loading=false,stateRequest=0,screen='dashboard',overview=null,overviewLoading=false,overviewKey='',preferredModel='',installedModels=[],preferredModels=[],gpuSelectionAvailable=false,modelUnloadingAvailable=false;
+let reviewSource=null;
+let stage='1.1',state=null,output=null,records=[],selected=null,page=0,view='records',outputKey='',busy=false,resetting=false,modelsOK=false,modelsChecked=false,loading=false,stateRequest=0,screen='dashboard',overview=null,overviewLoading=false,overviewKey='',preferredModel='',installedModels=[],preferredModels=[],gpuSelectionAvailable=false,modelUnloadingAvailable=false,gpuDevices=[],maxWorkers=32;
 function element(tag,text,cls){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;}
 async function api(path,body){const res=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json();if(!res.ok)throw Error(data.error||'Request failed');return data;}
 function showError(error){$('error').textContent=String(error.message||error);$('error').classList.remove('hidden');}
 function clearError(){$('error').classList.add('hidden');}
 function contract(){return $('contract').value;}
-function selectedModels(){return [$('model').value,...[...document.querySelectorAll('.parallel-model')].map(select=>select.value)];}
-function selectedGpus(){return [$('primary-gpu'),...document.querySelectorAll('.parallel-gpu')].map(input=>input.value===''?null:Number(input.value));}
+function selectedModels(){return [$('model').value];}
+function selectedGpus(){return $('placement').value==='auto'?null:[...document.querySelectorAll('.parallel-gpu')].map(input=>input.value===''?null:Number(input.value));}
 function modelSettings(){
  const parallel=$('parallel').checked,names=parallel?selectedModels():[$('model').value],thinking=$('think').value;
- return {model:names[0],parallel,worker_models:parallel?names:undefined,worker_gpus:parallel&&gpuSelectionAvailable?selectedGpus():undefined,
+ return {model:names[0],parallel,worker_count:parallel?Number($('worker-count').value):1,worker_gpus:parallel?selectedGpus():undefined,
   num_ctx:Number($('num_ctx').value),num_predict:Number($('num_predict').value),relevance_num_predict:Number($('relevance_num_predict').value),
   relevance_batch_size:Number($('relevance_batch_size').value),relevance_compact:$('relevance_compact').value==='true',
   relevance_num_ctx:Number($('relevance_num_ctx').value),relevance_num_batch:Number($('relevance_num_batch').value)||null,
   relevance_think:$('relevance_think').value==='auto'?'auto':$('relevance_think').value==='default'?null:$('relevance_think').value==='on',timeout:Number($('timeout').value),
-  think:thinking==='default'?null:thinking==='on'};
+  think:thinking==='auto'?'auto':thinking==='default'?null:thinking==='on'};
 }
 function renderWorkers(){
- if(installedModels.length<2)$('parallel').checked=false;
- const parallel=$('parallel').checked,maximum=Math.min(32,installedModels.length);
- const modelCount=Math.min(Math.max(2,maximum),Math.max(2,Math.floor(Number($('parallel-model-count').value)||2)));
- $('parallel-model-count').max=Math.max(2,maximum);$('parallel-model-count').value=modelCount;
- const previous=selectedModels().slice(1),previousGpus=selectedGpus(),chosen=[$('model').value];
- for(let index=1;index<modelCount;index++){
-  const prior=previous[index-1];
-  const name=installedModels.some(model=>model.name===prior)&&!chosen.includes(prior)?prior:installedModels.find(model=>!chosen.includes(model.name))?.name;
-  if(!name)break;chosen.push(name);
- }
- document.querySelectorAll('.parallel-model-field,.parallel-gpu-field').forEach(field=>field.remove());
- chosen.slice(1).forEach((name,index)=>{
-  const field=element('div',undefined,'field parallel-model-field'),label=element('label','Model '+(index+2)+' for 1.3 and 2'),select=element('select',undefined,'parallel-model');
-  select.id='parallel-model-'+(index+2);label.htmlFor=select.id;
-  for(const model of installedModels){const option=new Option(model.name+' / '+(model.details?.quantization_level||'unknown quantisation'),model.name);option.disabled=model.name!==name&&chosen.includes(model.name);select.append(option);}
-  select.value=name;select.onchange=renderWorkers;field.append(label,select);$('parallel-options').append(field);
-  const gpuField=element('div',undefined,'field parallel-gpu-field'),gpuLabel=element('label','GPU index for model '+(index+2)),gpu=element('input');
-  gpu.type='number';gpu.min='0';gpu.step='1';gpu.placeholder='Auto';gpu.className='parallel-gpu';gpu.id='parallel-gpu-'+(index+2);gpu.value=previousGpus[index+1]??'';gpu.onchange=controls;gpuLabel.htmlFor=gpu.id;
+ if($('placement').value==='gpu'&&gpuDevices.length<2)$('placement').value='auto';
+ const parallel=$('parallel').checked,pinned=$('placement').value==='gpu';
+ const limit=pinned?Math.min(maxWorkers,gpuDevices.length):maxWorkers;
+ const count=Math.min(limit,Math.max(2,Math.floor(Number($('worker-count').value)||2)));
+ $('worker-count').max=limit;$('worker-count').value=count;
+ const previous=[...document.querySelectorAll('.parallel-gpu')].map(input=>input.value);
+ const chosen=[];
+ document.querySelectorAll('.parallel-gpu-field').forEach(field=>field.remove());
+ if(pinned)for(let index=0;index<count;index++){
+  const gpuField=element('div',undefined,'field parallel-gpu-field'),gpuLabel=element('label','GPU for worker '+(index+1)),gpu=element('select');
+  for(const device of gpuDevices){const option=new Option('GPU '+device.index,String(device.index));option.title=device.uuid;gpu.append(option);}
+  const prior=previous[index]===undefined?null:Number(previous[index]);
+  const value=gpuDevices.some(device=>device.index===prior)&&!chosen.includes(prior)?prior:gpuDevices.find(device=>!chosen.includes(device.index)).index;
+  chosen.push(value);
+  gpu.required=true;gpu.className='parallel-gpu';gpu.id='parallel-gpu-'+(index+1);gpu.value=String(value);gpu.onchange=controls;gpuLabel.htmlFor=gpu.id;
   gpuField.append(gpuLabel,gpu);$('parallel-options').append(gpuField);
- });
+ }
  $('parallel-options').classList.toggle('hidden',!parallel);
- $('model-setting-label').textContent=parallel?'Model 1 for 1.3 and 2':'Model for 1.3 and 2';
- $('worker-note').textContent=parallel?chosen.length+' models share the clauses, with one request per model at a time. '+(gpuSelectionAvailable?'Set distinct GPU indices to request separate cards; leave Auto for models that span GPUs. Indices refer to devices visible to Ollama.':'Restart the updated UI server to enable per-model GPU selection.'):'One request at a time using the selected model.';
+ $('worker-note').textContent=parallel?count+' workers share the clauses using '+($('model').value||'the selected model')+'. '+(pinned?'Each worker runs a copy pinned by GPU UUID. Placement is verified after inference; each copy and its context need enough memory on its card. '+limit+' GPU workers supported on this host.':'One private service processes concurrent requests; Auto may use one GPU or span GPUs. Up to '+maxWorkers+' request workers are allowed, subject to available memory. '+gpuDevices.length+' NVIDIA GPUs detected.'):'One request at a time using the selected model on the shared service.';
  controls();
 }
-function workerLabel(worker){return worker.model+' / '+new URL(worker.url).host+' / '+(worker.main_gpu==null?'GPU Auto':'requested GPU '+worker.main_gpu);}
+function gpuLabel(worker){const gpu=worker.gpu??worker.main_gpu;return gpu==null?'GPU Auto':'GPU '+gpu+' '+(worker.placement_status==='verified'?'verified':worker.placement_status==='failed'?'verification failed':'requested');}
+function workerLabel(worker){return worker.model+' / '+new URL(worker.url).host+' / '+gpuLabel(worker);}
 function nav(){
  const target=$('stage-nav');target.replaceChildren();
  stages.forEach(([id,name])=>{
   const s=state?.stages[id],job=state?.job,activeJob=job?.contract===contract()&&job.stage===id;
   const failed=Boolean(s?.error)||(activeJob&&job.status==='failed');
   const running=activeJob&&['running','cancelling'].includes(job.status);
-  const usesAI=['1.3','2'].includes(id);
+  const usesAI=['1.3','2','3'].includes(id);
   const button=element('button',undefined,'stage'+(id===stage?' active':'')+(s?.ready?' done':'')+(failed?' failed':''));
   button.setAttribute('aria-current',id===stage?'step':'false');
   button.setAttribute('aria-label','Stage '+id+': '+name+(usesAI?', uses AI':''));
   button.append(element('span',id,'step-id'));
   const label=element('span',name,'step-main');
   if(usesAI){const ai=element('span','AI','stage-ai');ai.title='Uses AI';label.append(ai);}
-  label.append(element('small',running?'Running':failed?'Failed':s?.ready?s.count+' records':s?.run?.status==='no_supported_rules'?'No supported rules':'Not run'));
+  label.append(element('small',running?'Running':failed?'Failed':id==='3'&&s?.ready?(s.run?.status==='reviewed_no_issues_found'?'Reviewed':'Review needs attention'):s?.ready?s.count+' records':s?.run?.status==='no_supported_rules'?'No supported rules':'Not run'));
   button.append(label);if(s?.ready)button.append(element('span','\u2713','indicator'));
   button.onclick=()=>selectStage(id);target.append(button);
  });
 }
 function controls(){
+ const locked=busy||resetting;
  const index=stages.findIndex(s=>s[0]===stage);
  const parallel=$('parallel').checked,names=parallel?selectedModels():[$('model').value];
- const ready=names.every(name=>installedModels.some(model=>model.name===name))&&(!parallel||(names.length===Number($('parallel-model-count').value)&&new Set(names).size===names.length));
+ const gpus=selectedGpus(),ready=names.every(name=>installedModels.some(model=>model.name===name))&&(!parallel||gpus===null||(gpus.length===Number($('worker-count').value)&&gpus.every(gpu=>Number.isInteger(gpu)&&gpu>=0)&&new Set(gpus).size===gpus.length));
  $('run-step').textContent='Run step '+stage;
- $('run-step').disabled=!contract()||busy||loading||(index>0&&!state?.stages[stages[index-1][0]]?.ready)||(['1.3','2'].includes(stage)&&!ready);
- $('benchmark').disabled=busy||loading||!state?.stages['1.2']?.ready||!$('model').value;
- $('evaluate').disabled=busy||!ready;
- $('run-through').disabled=!contract()||busy||loading||!ready;
- $('unload').disabled=busy||!ready||!modelUnloadingAvailable;
+ $('run-step').disabled=!contract()||locked||loading||(index>0&&!state?.stages[stages[index-1][0]]?.ready&&!(stage==='3'&&['no_supported_rules','generation_rejected'].includes(state?.report?.status)))||(['1.3','2','3'].includes(stage)&&!ready);
+ $('benchmark').disabled=locked||loading||!state?.stages['1.2']?.ready||!$('model').value;
+ $('evaluate').disabled=locked||!ready;
+ $('run-through').disabled=!contract()||locked||loading||!ready;
+ $('unload').disabled=locked||!ready||!modelUnloadingAvailable;
+ $('reset').disabled=!contract()||locked||loading;
  $('unload').title=modelUnloadingAvailable?'Unload selected models from memory; keep downloaded files':'Restart the updated UI server to enable model unloading';
  const currentJob=screen==='pipeline'?state?.job:overview?.job;
  $('cancel').classList.toggle('hidden',!busy||currentJob?.mode==='unload');
  $('cancel').disabled=state?.job.status==='cancelling'||overview?.job.status==='cancelling';
- ['model','num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_compact','relevance_num_ctx','relevance_num_batch','relevance_think','think','timeout','reuse','contract'].forEach(id=>$(id).disabled=busy);
- $('parallel').disabled=busy||installedModels.length<2;$('parallel-model-count').disabled=busy||!parallel;
- $('primary-gpu').disabled=busy||!parallel||!gpuSelectionAvailable;
- $('parallel').title=installedModels.length<2?'At least two installed models are needed.':'';
- document.querySelectorAll('.parallel-model').forEach(input=>input.disabled=busy||!parallel);
- document.querySelectorAll('.parallel-gpu').forEach(input=>input.disabled=busy||!parallel||!gpuSelectionAvailable);
- ['evaluation-task','evaluation-split','evaluation-source'].forEach(id=>$(id).disabled=busy);
+ ['model','num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_compact','relevance_num_ctx','relevance_num_batch','relevance_think','think','timeout','reuse','contract'].forEach(id=>$(id).disabled=locked);
+ $('parallel').disabled=locked||!installedModels.length||!gpuSelectionAvailable;$('worker-count').disabled=locked||!parallel;
+ $('placement').disabled=locked||!parallel;
+ $('parallel').title=gpuSelectionAvailable?'':'Restart the updated UI server to enable same-model workers.';
+ document.querySelectorAll('.parallel-gpu').forEach(input=>input.disabled=locked||!parallel||!gpuSelectionAvailable);
+ ['evaluation-task'].forEach(id=>$(id).disabled=locked);
+ $('evaluation-policy-mode').disabled=locked||$('evaluation-task').value!=='both';
  $('download').disabled=!output;
  document.querySelector('[data-view="pdf"]').disabled=!contract();
  $('open-workspace').disabled=!contract();
- const model=names.filter(Boolean).join(' + ');
+ const model=names.filter(Boolean).join('')+(parallel?' × '+$('worker-count').value:'');
  $('model-label').textContent=model?model:modelsOK?'No installed model':modelsChecked?'Ollama unavailable':'Checking Ollama';
  $('model-chip').classList.toggle('pending',!model);
  $('model-chip').title=model||$('connection').textContent;
 }
 async function selectStage(id){
  stage=id;page=0;selected=null;output=null;outputKey='';records=[];
- $('search').value='';$('filter').value='';$('filter').classList.toggle('hidden',id!=='1.3');
+ $('search').value='';$('filter').value='';$('filter').classList.toggle('hidden',!['1.3','3'].includes(id));
+ const filters=id==='3'?[['','All reviews'],['attention','Needs attention'],['MISSING_RULES','Missing rules'],['NEEDS_CONTEXT','Needs context'],['disagreement','Classification differs']]:[['','All classifications'],...['RELEVANT','NOT_RELEVANT','NEEDS_CONTEXT'].map(x=>[x,x])];
+ $('filter').replaceChildren(...filters.map(([value,label])=>new Option(label,value)));$('filter').setAttribute('aria-label',id==='3'?'Review filter':'Classification filter');
  const info=stages.find(s=>s[0]===id);
  $('title').textContent=info[1];$('subtitle').textContent=info[2];
- $('eyebrow').textContent=id==='2'?'Policy generation':'Contract preprocessing';
- $('total-label').textContent=id==='2'?'Rules':id==='1.1'?'Blocks':id==='1.4'?'Enriched clauses':'Chunks';
+ $('eyebrow').textContent=id==='3'?'Evidence and coverage review':id==='2'?'Policy generation':'Contract preprocessing';
+ $('total-label').textContent=id==='3'?'Reviewed clauses':id==='2'?'Rules':id==='1.1'?'Blocks':id==='1.4'?'Enriched clauses':'Chunks';
  $('json-view').textContent='No completed output';
  renderRecords();nav();controls();loading=false;await refreshState();
 }
@@ -215,14 +217,15 @@ async function refreshModels(){
 }
 function convert(value){
  if(!value)return [];
+ if(stage==='3'){return value.clause_reviews.map(row=>{const source=reviewSource?.chunks?.find(c=>c.chunk_id===row.chunk_id)||{};return {...source,...row,review:row,reviewRules:value.rule_reviews.filter(r=>row.rule_uids.includes(r.rule_uid)),text:source.text||row.reason};});}
  const rows=stage==='2'?value.traceability.map(t=>{const primary=t.sourceClauses.find(s=>s.relationship==='primary');return {...t,text:primary?.text||'',chunk_id:primary?.chunk_id,clause_id:primary?.clause_id,source:state?.source_locations?.[primary?.chunk_id],context:t.sourceClauses.filter(s=>s.relationship==='context'),rule:findRule(value.odrlPolicy,t.ruleUid)};}):value[stages.find(s=>s[0]===stage)[3]]||[];
  const options=state?.stages[stage==='1.4'?'1.3':stage]?.run?.options;
  return rows.map(row=>({...row,worker:options?.models?.[options?.assignments?.[row.chunk_id]]}));
 }
 function findRule(policy,uid){for(const k of ['permission','prohibition','obligation'])for(const rule of policy[k]||[]){if(rule.uid===uid)return rule;for(const d of [...(rule.duty||[]),...(rule.remedy||[])])if(d.uid===uid)return d;}return null;}
-function filtered(){const search=$('search').value.toLowerCase(),label=$('filter').value;return records.filter(r=>(!label||r.classification?.label===label)&&JSON.stringify(r).toLowerCase().includes(search));}
-function renderRecords(){const values=filtered();const last=Math.max(0,Math.ceil(values.length/40)-1);page=Math.min(page,last);const shown=values.slice(page*40,page*40+40);$('record-list').replaceChildren();$('record-count').textContent=values.length+' records';$('page-label').textContent=values.length?`${page*40+1}-${Math.min(values.length,page*40+40)} of ${values.length}`:'0 records';$('previous').disabled=page===0;$('next').disabled=page>=last;if(!shown.length){$('record-list').append(element('div',output?'No matching records':'No completed output','empty'));$('inspector').replaceChildren();const empty=element('div',undefined,'empty');empty.append(element('strong',output?'No matches':'No output yet'),element('span',output?'Change the search or filter':'Awaiting stage '+stage));$('inspector').append(empty);return;}if(!shown.includes(selected))selected=shown[0];shown.forEach(r=>{const button=element('button',undefined,'record'+(selected===r?' selected':''));button.append(element('span',r.block_id||r.chunk_id||r.ruleUid,'recordid'));const body=element('div');body.append(element('div',r.text,'recordtext'));body.append(element('div',r.classification?.label||r.ruleType||r.heading||r.type||r.clause_id||'Source clause','recordmeta'));button.append(body,element('span',(r.source?.pages||[r.page]).filter(Boolean).join(', '),'page'));button.onclick=()=>{selected=r;renderRecords();};$('record-list').append(button);});inspect(selected);}
-function inspect(r){const panel=$('inspector');panel.replaceChildren();const head=element('div',undefined,'inspecthead');head.append(element('h2',r.heading||r.clause_id||r.block_id||r.chunk_id||r.ruleUid));if(r.classification||r.ruleType)head.append(element('span',r.classification?.label||r.ruleType,'badge'+(r.classification?.label==='NEEDS_CONTEXT'?' draft':'')));panel.append(head);const meta=element('div',undefined,'metadata');const pages=r.source?.pages||[r.page].filter(Boolean);meta.append(element('span',r.ruleUid||r.chunk_id||r.block_id));if(pages.length){const link=element('button','Page '+pages.join(', '),'download');link.onclick=()=>{setView('pdf');$('pdf').src='/api/pdf?contract='+encodeURIComponent(contract())+'#page='+pages[0];};meta.append(link);}if(r.worker)meta.append(element('span',r.worker.url?workerLabel(r.worker):r.worker.model));if(r.parent_clause_id)meta.append(element('span','Parent '+r.parent_clause_id));panel.append(meta);if(r.rule){const block=element('pre',JSON.stringify(r.rule,null,2),'json');block.style.minHeight='0';panel.append(block,element('div','Primary evidence','label'));}panel.append(element('div',r.text,'text'));if(r.classification?.reason)panel.append(element('div',r.classification.reason,'reason'));for(const c of r.context||[]){const detail=element('details',undefined,'context');detail.append(element('summary',(c.relationship||'context')+' / '+(c.clause_id||c.chunk_id)),element('div',c.text,'text'));panel.append(detail);}if(r.source?.block_ids)panel.append(element('div',r.source.block_ids.join(', '),'metadata'));}
+function filtered(){const search=$('search').value.toLowerCase(),label=$('filter').value;return records.filter(r=>(!label||(stage==='3'?(label==='attention'?r.coverage==='MISSING_RULES'||r.coverage==='NEEDS_CONTEXT'||r.classification_disagreement||r.reviewRules.some(rule=>rule.verdict!=='ENTAILED'):label==='disagreement'?r.classification_disagreement:r.coverage===label):r.classification?.label===label))&&JSON.stringify(r).toLowerCase().includes(search));}
+function renderRecords(){const values=filtered();const last=Math.max(0,Math.ceil(values.length/40)-1);page=Math.min(page,last);const shown=values.slice(page*40,page*40+40);$('record-list').replaceChildren();$('record-count').textContent=values.length+' records';$('page-label').textContent=values.length?`${page*40+1}-${Math.min(values.length,page*40+40)} of ${values.length}`:'0 records';$('previous').disabled=page===0;$('next').disabled=page>=last;if(!shown.length){$('record-list').append(element('div',output?'No matching records':'No completed output','empty'));$('inspector').replaceChildren();const empty=element('div',undefined,'empty');empty.append(element('strong',output?'No matches':'No output yet'),element('span',output?'Change the search or filter':'Awaiting stage '+stage));$('inspector').append(empty);return;}if(!shown.includes(selected))selected=shown[0];shown.forEach(r=>{const button=element('button',undefined,'record'+(selected===r?' selected':''));button.append(element('span',r.block_id||r.chunk_id||r.ruleUid,'recordid'));const body=element('div');body.append(element('div',r.text,'recordtext'));body.append(element('div',r.review?r.coverage+(r.classification_disagreement?' / Classification differs':''):r.classification?.label||r.ruleType||r.heading||r.type||r.clause_id||'Source clause','recordmeta'));button.append(body,element('span',(r.source?.pages||[r.page]).filter(Boolean).join(', '),'page'));button.onclick=()=>{selected=r;renderRecords();};$('record-list').append(button);});inspect(selected);}
+function inspect(r){const panel=$('inspector');panel.replaceChildren();const head=element('div',undefined,'inspecthead');head.append(element('h2',r.heading||r.clause_id||r.block_id||r.chunk_id||r.ruleUid));if(r.classification||r.ruleType)head.append(element('span',r.classification?.label||r.ruleType,'badge'+(r.classification?.label==='NEEDS_CONTEXT'?' draft':'')));panel.append(head);const meta=element('div',undefined,'metadata');const pages=r.source?.pages||[r.page].filter(Boolean);meta.append(element('span',r.ruleUid||r.chunk_id||r.block_id));if(pages.length){const link=element('button','Page '+pages.join(', '),'download');link.onclick=()=>{setView('pdf');$('pdf').src='/api/pdf?contract='+encodeURIComponent(contract())+'#page='+pages[0];};meta.append(link);}if(r.worker)meta.append(element('span',r.worker.url?workerLabel(r.worker):r.worker.model));if(r.parent_clause_id)meta.append(element('span','Parent '+r.parent_clause_id));panel.append(meta);if(r.review){meta.append(element('span','Reviewer: '+(r.reviewer?.model||'unknown')));panel.append(element('div',r.coverage,'badge'),element('div',r.reason,'reason'));if(r.classification_disagreement)panel.append(element('div','Classification differs: '+r.classification_label+' → '+r.relevance,'reason'));if(r.same_model_as_generator===true)panel.append(element('div','Same model as generator; use a separate qualified model for stronger review.','reason'));for(const missing of r.unresolved_references||[])panel.append(element('div','Unresolved reference: '+missing,'reason'));for(const missing of r.missing_rules)panel.append(element('div','Missing: '+missing,'reason'));for(const reviewed of r.reviewRules)panel.append(element('div',reviewed.verdict+' / '+reviewed.rule_uid+' / '+(reviewed.reason||''),'reason'));}if(r.rule){const block=element('pre',JSON.stringify(r.rule,null,2),'json');block.style.minHeight='0';panel.append(block,element('div','Primary evidence','label'));}panel.append(element('div',r.text,'text'));if(r.classification?.reason)panel.append(element('div',r.classification.reason,'reason'));for(const c of r.context||[]){const detail=element('details',undefined,'context');detail.append(element('summary',(c.relationship||'context')+' / '+(c.clause_id||c.chunk_id)),element('div',c.text,'text'));panel.append(detail);}if(r.source?.block_ids)panel.append(element('div',r.source.block_ids.join(', '),'metadata'));}
 function setView(next){view=next;document.querySelectorAll('.tab').forEach(b=>{b.classList.toggle('active',b.dataset.view===view);b.setAttribute('aria-selected',String(b.dataset.view===view));});['records','json','pdf'].forEach(v=>$(v+'-view').classList.toggle('hidden',v!==view));if(view==='pdf'&&!$('pdf').getAttribute('src'))$('pdf').src='/api/pdf?contract='+encodeURIComponent(contract());}
 
 function prettyContract(id){return id.replace('contract_','Contract ');}
@@ -232,15 +235,14 @@ let benchmarkReport=null,benchmarkKey='',evaluationReport=null,evaluationKey='';
 function updateJob(job){
  busy=['running','cancelling'].includes(job.status);
  $('job-panel').classList.toggle('hidden',job.status==='idle');
- $('model-runs').replaceChildren(...(job.mode==='unload'?[]:job.workers||[]).map(w=>{
+ $('model-runs').replaceChildren(...(job.mode==='unload'?[]:job.workers||[]).map((w,index)=>{
   let activity='Idle';
   if(job.status==='cancelling')activity='Stopping';
   else if(w.active_request)activity=({'Waiting for Ollama':'Waiting','Generating answer':'Generating','Thinking':'Thinking'})[w.active_request.phase]||'Processing';
   else if(w.active_chunks?.length)activity='Processing';
   else if(job.status!=='running')activity=job.status==='complete'?'Finished':'Stopped';
-  const gpu=w.main_gpu==null?'GPU Auto':'GPU '+w.main_gpu;
-  const row=element('div',[w.model,gpu,w.completed+' completed',w.failed?w.failed+' failed':null,activity].filter(Boolean).join(' · '));
-  row.title=w.main_gpu==null?'Ollama chooses GPU placement.':'Requested GPU '+w.main_gpu+'.';
+  const row=element('div',['Worker '+(index+1),w.model,gpuLabel(w),w.completed+' completed',w.failed?w.failed+' failed':null,activity].filter(Boolean).join(' · '));
+  row.title=[w.url,w.gpu_uuid,w.observed_gpus?.length?'Observed GPUs: '+w.observed_gpus.join(', '):null,w.placement_error].filter(Boolean).join(' / ');
   return row;
  }));
  $('job-badge').textContent=job.status==='complete'?'Complete':job.status==='cancelling'?'Cancelling':job.status==='running'?'Running':job.status==='failed'?'Failed':'Cancelled';
@@ -273,26 +275,58 @@ async function refreshBenchmark(){
   table.append(body);$('benchmark-table').replaceChildren(table);
  }catch(error){showError(error);}
 }
+function evaluationSummary(report){
+ const rows=[],metrics=report.metrics||{};
+ const aggregate=([name,value])=>value.aggregate||/\/(?:all_curated_cases|full_document)$/.test(name);
+ const relevance=Object.values(metrics.classification||{}).filter(value=>!value.aggregate);
+ const policyEntries=Object.entries(metrics.policy||{}),policyCases=policyEntries.filter(entry=>!aggregate(entry));
+ const combined=policyEntries.filter(aggregate),policy=(combined.length?combined:policyCases).map(([,value])=>value);
+ const sum=(groups,read)=>groups.length&&groups.every(value=>Number.isFinite(read(value)))?groups.reduce((total,value)=>total+read(value),0):null;
+ const add=(measure,correct,total,meaning,empty='Not measured')=>rows.push([measure,Number.isFinite(correct)&&Number.isFinite(total)&&total>0?Math.round(correct)+' / '+total+' ('+(correct/total*100).toFixed(1)+'%)':empty,meaning]);
+ if(relevance.length){
+  add('Relevance labels correct',sum(relevance,value=>Number.isFinite(value.accuracy)?value.accuracy*value.n:NaN),sum(relevance,value=>value.n),'Clauses assigned the same relevance label as the reference.');
+  const supported=sum(relevance,value=>value.per_class?.RELEVANT?.support);
+  const missed=sum(relevance,value=>value.routing?.missed_relevant);
+  add('Relevant clauses forwarded',Number.isFinite(supported)&&Number.isFinite(missed)?supported-missed:null,supported,'Relevant reference clauses sent onward as RELEVANT or NEEDS_CONTEXT. Failures and incorrect exclusions remain missed.');
+ }
+ if(policy.length){
+  const matched=sum(policy,value=>value.canonical_rules?.tp),expected=sum(policy,value=>value.canonical_rules?.tp+value.canonical_rules?.fn),generated=sum(policy,value=>value.canonical_rules?.tp+value.canonical_rules?.fp);
+  add('Expected rules recovered',matched,expected,'Rule recall: how much of the required policy was recovered. A missing or non-matching rule lowers this score.',expected===0?'No expected rules':'Not measured');
+  add('Generated rules matching reference',matched,generated,'Rule precision: accepted rules must match type, action, responsible party, asset and conditions after normalization.',generated===0?'No accepted generated rules':'Not measured');
+  const operative=policyCases.filter(([,value])=>value.expected_rules>0).map(([,value])=>value);
+  const controls=policyCases.filter(([,value])=>value.expected_rules===0).map(([,value])=>value);
+  add('Operative clauses fully matched',sum(operative,value=>value.exact_case_accuracy*value.n),sum(operative,value=>value.n),'Every expected rule in a clause matched, with no extra rules. This is stricter than matching individual rules.');
+  add('No-rule clauses handled correctly',sum(controls,value=>value.exact_case_accuracy*value.n),sum(controls,value=>value.n),'Correctly returned no policy where none was expected. This does not measure extraction of required rules.');
+  add('Always-return-no-policy baseline',sum(policy,value=>value.all_abstain_baseline_accuracy*value.n),sum(policy,value=>value.n),'Whole-document accuracy achievable without extracting any rules. Compare extraction using rule precision and recall above.');
+  const targets=report.quality_assessment;
+  if(targets)rows.push(['Reference quality targets',targets.reference_targets_verified?'Met on reviewed reference':targets.point_targets_met?'Point scores met; reference review needed':'Not met','Targets: 99% rule precision and 99% rule recall. This does not establish accuracy on new contracts.']);
+ }
+ const failures=[];
+ if(relevance.length)failures.push('Relevance: '+(sum(relevance,value=>value.errors)??'not reported'));
+ if(policy.length)failures.push('Policy: '+(sum(policy,value=>value.failures)??'not reported'));
+ if(failures.length)rows.push(['Failed evaluations',failures.join('; '),'Requests or outputs that failed processing or validation. Incorrect but valid answers are counted in the scores above.']);
+ return rows;
+}
 async function refreshEvaluation(){
  try{
   const data=await api('/api/evaluation'),counts=data.reference.counts;
-  $('evaluation-reference-note').textContent='Draft references: '+Object.values(counts.classification).reduce((a,b)=>a+b,0)+' classification cases and '+Object.values(counts.policy).reduce((a,b)=>a+b,0)+' policy cases. Review the annotations independently before publication. Development and test use separate contracts.';
+  const sourceNames=Object.keys(data.reference.sources||{}).map(prettyContract).join(', ');
+  $('evaluation-reference-note').textContent=sourceNames+' · '+counts.classification.total+' relevance cases and '+counts.policy.total+' policy cases covering the complete document, including its summary and exhibit. NEEDS_CONTEXT has no natural examples in this agreement; its performance is unmeasured.';
   if(!data.report)return;evaluationReport=data.report;
   const panel=$('evaluation-results');panel.classList.remove('hidden');panel.open=true;
   const scored=Boolean(evaluationReport.metrics);
-  $('evaluation-summary').textContent=evaluationReport.split+' split. '+(scored?'Reference status: '+evaluationReport.reference_status+'. Classification uses three-class macro precision/recall/F1. Policy uses exact canonical rule slots and exact-case accuracy; it does not establish legal equivalence. Cohorts are reported separately.':'Task predictions are available for download; scoring has not completed.');
+  const reportNames=Object.keys(evaluationReport.source_documents||{}).map(prettyContract).join(', ');
+  const caseCounts=Object.entries(evaluationReport.selected_cases||{}).map(([task,cases])=>cases.length+' '+(task==='classification'?'relevance':'policy')+' cases').join(', ');
+  $('evaluation-summary').textContent=(reportNames||'Saved test report')+(caseCounts?' · '+caseCounts:'')+'. Reference: '+(evaluationReport.reference_status||'not scored')+'. '+(scored?(evaluationReport.evaluation_scope||'Policy scores compare structured rules with frozen source context.'):'Task predictions are available for download; scoring has not completed.');
+  if(evaluationReport.reference_sha256!==data.reference.reference_sha256)$('evaluation-summary').textContent+=' Saved report uses a different reference version; rerun for a current comparison.';
   const table=element('table',undefined,'data-table'),head=element('tr');
-  ['Task / cohort','Cases','Accuracy','Precision','Recall','F1','95% Wilson accuracy interval','Failures'].forEach(name=>head.append(element('th',name)));
+  ['Measure','Result','Meaning'].forEach(name=>head.append(element('th',name)));
   const thead=element('thead');thead.append(head);table.append(thead);const body=element('tbody');
-  const percent=value=>value==null?'—':(value*100).toFixed(1)+'%';
-  const cohortNames={real:'Real contracts',synthetic:'Synthetic contract',coverage:'Coverage',context_challenge:'Context challenge',operative:'Operative clauses',abstention_control:'Abstention controls',all_curated_cases:'All curated policy cases'};
-  for(const [task,groups] of Object.entries(evaluationReport.metrics||{}))for(const [name,metrics] of Object.entries(groups)){
-   const policy=task==='policy',scores=policy?metrics.canonical_rules:{precision:metrics.macro_precision,recall:metrics.macro_recall,f1:metrics.macro_f1};
-   const interval=policy?metrics.exact_case_wilson_ci95:metrics.accuracy_wilson_ci95,row=element('tr');
-   [(policy?'Policy':'Classification')+' / '+name.split('/').map(value=>cohortNames[value]||value).join(' / '),metrics.n,percent(policy?metrics.exact_case_accuracy:metrics.accuracy),percent(scores.precision),percent(scores.recall),percent(scores.f1),interval?interval.map(percent).join(' to '):'—',policy?metrics.failures:metrics.errors].forEach(value=>row.append(element('td',String(value))));body.append(row);
+  for(const values of evaluationSummary(evaluationReport)){
+   const row=element('tr');values.forEach(value=>row.append(element('td',value)));body.append(row);
   }
   table.append(body);$('evaluation-table').replaceChildren(table);
-  $('evaluation-details').textContent=JSON.stringify({metrics:evaluationReport.metrics,interval_note:evaluationReport.interval_note,limitations:evaluationReport.metric_notes},null,2);
+  $('evaluation-details').textContent=JSON.stringify({quality_assessment:evaluationReport.quality_assessment,metrics:evaluationReport.metrics,mismatches:evaluationReport.mismatches,interval_note:evaluationReport.interval_note,test_exposure:evaluationReport.test_exposure,run_id:evaluationReport.run_id,reference_sha256:evaluationReport.reference_sha256,limitations:evaluationReport.metric_notes},null,2);
  }catch(error){showError(error);}
 }
 function openContract(id,step){
@@ -323,10 +357,10 @@ function renderContractTable(target,filter=''){
   identity.append(element('strong',prettyContract(c.contract)),element('small',c.contract+' / PDF / '+(c.source_bytes/1048576).toFixed(1)+' MB'));
   const progress=element('td'),track=element('div',undefined,'mini-track');
   stages.forEach(([id,name])=>{const tick=element('i',undefined,c.stages[id]?.ready?'done':'');tick.title=id+' '+name+(c.stages[id]?.ready?' / Complete':' / Not run');track.append(tick);});
-  progress.append(track,element('small',stages.filter(([id])=>c.stages[id]?.ready).length+' / 5 outputs'));
+  progress.append(track,element('small',stages.filter(([id])=>c.stages[id]?.ready).length+' / '+stages.length+' outputs'));
   const count=element('td',c.stages['1.2'].ready?String(c.stages['1.2'].count):'-','number');
   const pending=element('td');pending.append(c.labels.NEEDS_CONTEXT?pill(String(c.labels.NEEDS_CONTEXT),'warning'):element('span',c.stages['1.3'].ready?'0':'-','number'));
-  const policy=element('td');policy.append(c.stages['2'].ready?pill('Draft','warning'):c.report?.status==='no_supported_rules'?pill('No supported rules','warning'):pill('Not generated'));
+  const policy=element('td');policy.append(c.stages['3']?.ready?pill(c.stages['3'].run?.status==='reviewed_no_issues_found'?'Reviewed':'Review issues','warning'):c.stages['2'].ready?pill('Generated','neutral'):c.report?.status==='no_supported_rules'?pill('No supported rules','warning'):pill('Not generated'));
   const action=element('td');const open=element('button','Open pipeline');
   open.onclick=()=>openContract(c.contract,stages.find(([id])=>!c.stages[id].ready)?.[0]||'2');action.append(open);
   row.append(identity,progress,count,pending,policy,action);body.append(row);
@@ -349,8 +383,8 @@ function renderNotices(){
  if(job&&['running','cancelling'].includes(job.status))notices.push({title:job.mode==='unload'?'Model unloading':job.mode==='evaluation'?'Reference evaluation':prettyContract(job.contract)+' / '+stageName(job.stage),message:job.completed+' / '+job.total+' / '+job.status,action:'Open current run',open:openJob});
  for(const c of overview?.contracts||[]){
   if(c.labels.NEEDS_CONTEXT)notices.push({title:prettyContract(c.contract),message:c.labels.NEEDS_CONTEXT+' clauses need context.',action:'Inspect relevance',open:()=>openContract(c.contract,'1.3')});
-  if(c.report?.skipped)notices.push({title:prettyContract(c.contract)+' / Policy draft',message:c.report.skipped+' clauses skipped during generation.',action:'Open generation report',open:()=>{openContract(c.contract,'2');$('report').open=true;}});
-  if(c.report?.warnings)notices.push({title:prettyContract(c.contract)+' / Policy metadata',message:c.report.warnings+' metadata warning(s) need review.',action:'Open generation report',open:()=>{openContract(c.contract,'2');$('report').open=true;}});
+  if(c.report?.skipped)notices.push({title:prettyContract(c.contract)+' / Policy output',message:c.report.skipped+' clauses skipped during generation.',action:'Open generation report',open:()=>{openContract(c.contract,'2');$('report').open=true;}});
+  if(c.report?.warnings)notices.push({title:prettyContract(c.contract)+' / Policy generation',message:c.report.warnings+' generation warning(s)'+(c.report.partial?' / '+c.report.partial+' clauses have incomplete coverage':'')+'.',action:'Open generation report',open:()=>{openContract(c.contract,'2');$('report').open=true;}});
   for(const [id,s] of Object.entries(c.stages))if(s.error)notices.push({title:prettyContract(c.contract)+' / '+id,message:s.error,action:'Inspect output',open:()=>openContract(c.contract,id)});
  }
  $('notice-count').textContent=String(notices.length);$('notices').replaceChildren();
@@ -384,7 +418,7 @@ async function refreshOverview(){
 }
 
 async function refreshState(){
- if(!contract()||loading)return;
+ if(!contract()||loading||resetting)return;
  loading=true;
  const request=++stateRequest, activeContract=contract(), activeStage=stage;
  try{
@@ -399,16 +433,19 @@ async function refreshState(){
   const activeJob=state.job.contract===activeContract&&state.job.stage===activeStage;
   const failed=Boolean(s.error)||(activeJob&&state.job.status==='failed');
   $('total').textContent=s.count;
-  $('stage-badge').textContent=failed?'Failed':activeJob&&busy?'Running':activeStage==='2'&&s.ready?'Unreviewed draft':s.ready?'Complete':s.run?.status==='no_supported_rules'?'No supported rules':'Not run';
-  $('stage-badge').className='badge '+(failed?'danger':activeStage==='2'&&s.ready?'warning':s.ready?'success':'neutral');
+  const reviewIssues=activeStage==='3'&&s.ready&&s.run?.status!=='reviewed_no_issues_found';
+  $('stage-badge').textContent=failed?'Failed':activeJob&&busy?'Running':reviewIssues?'Review needs attention':activeStage==='3'&&s.ready?'Reviewed':activeStage==='2'&&s.ready?'Generated':s.ready?'Complete':s.run?.status==='no_supported_rules'?'No supported rules':'Not run';
+  $('stage-badge').className='badge '+(failed?'danger':reviewIssues?'warning':activeStage==='2'&&s.ready?'warning':s.ready?'success':'neutral');
   $('output-model').textContent=s.run?.model||'';
   $('output-status').textContent=s.ready?(s.run?.time?new Date(s.run.time).toLocaleString():'Saved output'):'No completed output';
-  $('report').classList.toggle('hidden',activeStage!=='2'||!state.report);
-  $('report-text').textContent=state.report?JSON.stringify(state.report,null,2):'';
+  const reportValue=activeStage==='3'?state.review:activeStage==='2'?state.report:null;
+  $('report').classList.toggle('hidden',!reportValue);$('report').querySelector('summary').textContent=activeStage==='3'?'Review summary and evidence issues':'Generation report';
+  $('report-text').textContent=reportValue?JSON.stringify(reportValue,null,2):'';
   const key=JSON.stringify([activeContract,activeStage,s.ready,s.run]);
   if(key!==outputKey){
    const value=s.ready?await api('/api/output?contract='+encodeURIComponent(activeContract)+'&stage='+activeStage):null;
    if(request!==stateRequest)return;
+   if(activeStage==='3'&&value){reviewSource=await api('/api/output?contract='+encodeURIComponent(activeContract)+'&stage=1.3');if(request!==stateRequest)return;}
    outputKey=key;output=value;records=convert(output);
    $('json-view').textContent=output?JSON.stringify(output,null,2):'No completed output';
    renderRecords();
@@ -419,23 +456,41 @@ async function refreshState(){
 }
 async function run(mode){
  clearError();const parallel=$('parallel').checked;
- const nums=[...(parallel?['parallel-model-count','primary-gpu',...[...document.querySelectorAll('.parallel-gpu')].map(input=>input.id)]:[]),'num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_num_ctx','relevance_num_batch','timeout'];
+ const nums=[...(parallel?['worker-count',...[...document.querySelectorAll('.parallel-gpu')].map(input=>input.id)]:[]),'num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_num_ctx','relevance_num_batch','timeout'];
  for(const name of nums)if(!$(name).checkValidity()){document.querySelector('.advanced').open=true;$(name).reportValidity();return;}
  if(Math.max(Number($('num_predict').value),Number($('relevance_num_predict').value))>=Number($('num_ctx').value)){showError('Output tokens must be less than context tokens.');return;}
  const names=parallel?selectedModels():[$('model').value];
- if(names.some(name=>!installedModels.some(model=>model.name===name))||(parallel&&(names.length!==Number($('parallel-model-count').value)||new Set(names).size!==names.length))){showError('Choose a different installed model for each worker.');return;}
+ if(names.some(name=>!installedModels.some(model=>model.name===name))){showError('Choose an installed model.');return;}
+ const gpus=parallel?selectedGpus():null;
+ if(gpus&&new Set(gpus).size!==gpus.length){showError('Choose a different GPU index for each worker, or select Auto.');return;}
  const target=mode==='through'?'2':stage;
- if(mode==='through'){if(!confirm('Run through 2 will delete generated stage outputs, run metadata, and cached model responses for this contract, then regenerate from 1.1. Continue?'))return;}
+ if(mode==='through'){if(!confirm('Run through policy creation will delete generated stage outputs, run metadata, and cached model responses for this contract, then regenerate from 1.1. Continue?'))return;}
  else if(state?.stages[target]?.ready){if(!confirm('Replace this stage and its downstream outputs? Completed model requests can be reused.'))return;}
  try{
   await api('/api/run',{contract:contract(),stage:target,mode,...modelSettings(),reuse:mode==='through'?false:$('reuse').checked});
   await refreshState();
  }catch(error){showError(error);}
 }
-$('benchmark').onclick=async()=>{clearError();benchmarkKey='';$('benchmark-results').classList.add('hidden');try{await api('/api/benchmark',{contract:contract(),model:$('model').value,limit:24,num_ctx:Number($('num_ctx').value),timeout:Number($('timeout').value),think:$('think').value==='default'?null:$('think').value==='on'});await refreshState();}catch(error){showError(error);}};
+$('reset').onclick=async()=>{
+ const name=contract();
+ if(!name||busy||loading||resetting)return;
+ if(!confirm('Reset '+prettyContract(name)+'? This permanently deletes all generated JSON, run history and cached model responses for this contract.'))return;
+ clearError();resetting=true;controls();
+ try{
+  await api('/api/reset',{contract:name});
+  stateRequest++;state=null;output=null;records=[];selected=null;outputKey='';overviewKey='';
+  if(benchmarkReport?.contract===name){benchmarkReport=null;benchmarkKey='';$('benchmark-results').classList.add('hidden');}
+  resetting=false;
+  await selectStage('1.1');
+  await refreshOverview();
+ }catch(error){showError(error);}
+ finally{resetting=false;controls();}
+};
+$('benchmark').onclick=async()=>{clearError();benchmarkKey='';$('benchmark-results').classList.add('hidden');try{await api('/api/benchmark',{contract:contract(),model:$('model').value,limit:24,num_ctx:Number($('num_ctx').value),timeout:Number($('timeout').value),think:$('think').value==='auto'?'auto':$('think').value==='default'?null:$('think').value==='on'});await refreshState();}catch(error){showError(error);}};
 $('benchmark-download').onclick=()=>{if(!benchmarkReport)return;const url=URL.createObjectURL(new Blob([JSON.stringify(benchmarkReport,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=benchmarkReport.contract+'_benchmark.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-$('evaluate').onclick=async()=>{clearError();evaluationKey='';$('evaluation-results').classList.add('hidden');try{await api('/api/evaluation',{...modelSettings(),task:$('evaluation-task').value,split:$('evaluation-split').value,source:$('evaluation-source').value});await refreshState();}catch(error){showError(error);}};
-$('evaluation-download').onclick=()=>{if(!evaluationReport)return;const url=URL.createObjectURL(new Blob([JSON.stringify(evaluationReport,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='xfed_evaluation_'+evaluationReport.split+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('evaluation-task').onchange=()=>{$('evaluation-policy-mode').disabled=$('evaluation-task').value!=='both';};
+$('evaluate').onclick=async()=>{clearError();evaluationKey='';$('evaluation-results').classList.add('hidden');try{await api('/api/evaluation',{...modelSettings(),task:$('evaluation-task').value,policy_mode:$('evaluation-task').value==='both'?$('evaluation-policy-mode').value:'isolated'});await refreshState();}catch(error){showError(error);}};
+$('evaluation-download').onclick=()=>{if(!evaluationReport)return;const url=URL.createObjectURL(new Blob([JSON.stringify(evaluationReport,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='xfed_evaluation_'+'test_'+evaluationReport.run_id+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('unload').onclick=async()=>{
  clearError();$('unload').disabled=true;
  try{
@@ -444,7 +499,7 @@ $('unload').onclick=async()=>{
   if(screen==='pipeline')await refreshState();else await refreshOverview();
  }catch(error){showError(error);controls();}
 };
-$('run-step').onclick=()=>run('step');$('run-through').onclick=()=>run('through');$('cancel').onclick=async()=>{try{await api('/api/cancel',{});if(screen==='pipeline')await refreshState();else await refreshOverview();}catch(error){showError(error);}};$('refresh').onclick=refreshModels;$('model').onchange=renderWorkers;$('parallel').onchange=renderWorkers;$('parallel-model-count').onchange=renderWorkers;$('search').oninput=()=>{page=0;renderRecords();};$('filter').onchange=()=>{page=0;renderRecords();};$('previous').onclick=()=>{page--;renderRecords();};$('next').onclick=()=>{page++;renderRecords();};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('contract').onchange=()=>{clearError();$('pdf').removeAttribute('src');outputKey='';selectStage(stage);if(view==='pdf')setView('pdf');};$('download').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=contract()+'_'+stages.find(s=>s[0]===stage)[2];link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('run-step').onclick=()=>run('step');$('run-through').onclick=()=>run('through');$('cancel').onclick=async()=>{try{await api('/api/cancel',{});if(screen==='pipeline')await refreshState();else await refreshOverview();}catch(error){showError(error);}};$('refresh').onclick=refreshModels;$('model').onchange=renderWorkers;$('parallel').onchange=renderWorkers;$('worker-count').onchange=renderWorkers;$('placement').onchange=renderWorkers;$('search').oninput=()=>{page=0;renderRecords();};$('filter').onchange=()=>{page=0;renderRecords();};$('previous').onclick=()=>{page--;renderRecords();};$('next').onclick=()=>{page++;renderRecords();};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('contract').onchange=()=>{clearError();$('pdf').removeAttribute('src');outputKey='';selectStage(stage);if(view==='pdf')setView('pdf');};$('download').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=contract()+'_'+stages.find(s=>s[0]===stage)[2];link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 $('brand').onclick=()=>showScreen('dashboard');
@@ -455,11 +510,15 @@ $('contract-search').oninput=()=>renderContractTable('contracts-table',$('contra
  try{
   const config=await api('/api/config');
   preferredModel=config.model_defaults?.model||'';
-  gpuSelectionAvailable=config.worker_gpu_selection===true;
+  gpuSelectionAvailable=config.same_model_workers===true;
+  gpuDevices=Array.isArray(config.gpu_devices)?config.gpu_devices:[];
+  maxWorkers=config.max_workers||32;
+  $('placement').querySelector('[value="gpu"]').disabled=gpuDevices.length<2;
+  $('placement').title=config.gpu_detection_error||'GPU indices match nvidia-smi; workers use the corresponding UUIDs.';
   modelUnloadingAvailable=config.model_unloading===true;
   preferredModels=config.preferred_models||[];
   for(const field of ['num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_num_ctx','relevance_num_batch','timeout'])if(config.model_defaults?.[field])$(field).value=config.model_defaults[field];
-  if(typeof config.model_defaults?.think==='boolean')$('think').value=config.model_defaults.think?'on':'off';
+  $('think').value=config.model_defaults?.think==='auto'?'auto':typeof config.model_defaults?.think==='boolean'?(config.model_defaults.think?'on':'off'):'default';
   $('relevance_think').value=config.model_defaults?.relevance_think==='auto'?'auto':typeof config.model_defaults?.relevance_think==='boolean'?(config.model_defaults.relevance_think?'on':'off'):'default';
   if(typeof config.model_defaults?.relevance_compact==='boolean')$('relevance_compact').value=String(config.model_defaults.relevance_compact);
   $('endpoint').textContent=config.ollama_url;

@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 
 
 class OllamaClient:
-    def __init__(self, base_url, model, timeout=300, num_ctx=32768, num_predict=512, think=None, main_gpu=None,
+    def __init__(self, base_url, model, timeout=300, num_ctx=32768, num_predict=512, think='auto', main_gpu=None,
                  relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1, keep_alive='30m',
                  relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None, cancel=None):
         if not isinstance(base_url, str) or urlsplit(base_url).scheme not in ('http', 'https') or not urlsplit(base_url).hostname:
@@ -23,8 +23,8 @@ class OllamaClient:
             raise ValueError('timeout must be positive and num_ctx must exceed 512.')
         if not isinstance(num_predict, int) or not 128 <= num_predict < num_ctx:
             raise ValueError('num_predict must be at least 128 and less than num_ctx.')
-        if think is not None and not isinstance(think, bool):
-            raise ValueError('think must be true, false, or omitted.')
+        if think is not None and not isinstance(think, bool) and think != 'auto':
+            raise ValueError('think must be auto, true, false, or null.')
         if main_gpu is not None and (type(main_gpu) is not int or main_gpu < 0):
             raise ValueError('main_gpu must be a nonnegative integer or omitted.')
         if type(relevance_num_predict) is not int or not 128 <= relevance_num_predict < num_ctx:
@@ -43,7 +43,7 @@ class OllamaClient:
             raise ValueError('relevance_num_batch must be a positive integer or omitted.')
         self.relevance_batch_size = relevance_batch_size
         self.relevance_num_predict, self.relevance_think = relevance_num_predict, relevance_think
-        self.auto_relevance_think = None
+        self.auto_think, self.auto_relevance_think = None, None
         self.relevance_compact = relevance_compact
         self.relevance_num_ctx, self.relevance_num_batch = relevance_num_ctx, relevance_num_batch
         self.keep_alive = keep_alive
@@ -55,6 +55,9 @@ class OllamaClient:
         self.main_gpu = main_gpu
         self.cancel = cancel if cancel is not None else Event()
         self._connections, self._connections_lock = {}, Lock()
+        self.response_format = 'schema'
+        self.schema_grammar_fallbacks = 0
+        self.schema_grammar_error = None
 
     def cancel_requests(self):
         self.cancel.set()
@@ -101,8 +104,10 @@ class OllamaClient:
     def metadata(self):
         result = {key: getattr(self, key, None) for key in
                   ('url', 'model', 'model_digest', 'timeout', 'num_ctx', 'num_predict', 'think',
-                   'main_gpu', 'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
-                   'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch', 'auto_relevance_think')}
+                   'main_gpu', 'gpu', 'gpu_uuid', 'placement_status', 'observed_gpus', 'placement_error',
+                   'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
+                   'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch', 'auto_think', 'auto_relevance_think',
+                   'response_format', 'schema_grammar_fallbacks', 'schema_grammar_error')}
         with self._stats_lock:
             result['performance'] = dict(self.stats, context_requests=dict(self.stats['context_requests']))
             result['active_request'] = None
@@ -120,8 +125,10 @@ class OllamaClient:
         if not model or not model.get('digest'):
             raise ValueError(f'{self.model!r} is not installed at {self.url}.')
         self.model_digest = model['digest']
-        self.auto_relevance_think = None
-        if self.relevance_think == 'auto' and 'thinking' in model.get('capabilities', []):
+        self.auto_think, self.auto_relevance_think = None, None
+        family = model.get('details', {}).get('family', '')
+        if ((self.relevance_think == 'auto' or self.think == 'auto') and
+                ('thinking' in model.get('capabilities', []) or family in ('qwen35', 'qwen35moe'))):
             request = Request(self.url.removesuffix('/api/chat') + '/api/show',
                               data=json.dumps(dict(model=self.model)).encode(),
                               headers={'Content-Type': 'application/json'})
@@ -135,13 +142,34 @@ class OllamaClient:
             # Older Ollama versions lack thinking.values. Qwen3.5 documents its on/off switch;
             # retain the model default for other families without explicit capability metadata.
             if isinstance(values, list):
-                self.auto_relevance_think = False if any(value is False for value in values) else None
+                self.auto_think = False if any(value is False for value in values) else None
             elif family in ('qwen35', 'qwen35moe'):
-                self.auto_relevance_think = False
+                self.auto_think = False
+            self.auto_relevance_think = self.auto_think
         return self.metadata()
 
     def generate(self, system, value, schema, num_predict=None, think=None, num_ctx=None, num_batch=None,
                  truncate=None, compact_json=False):
+        options = dict(num_predict=num_predict, think=think, num_ctx=num_ctx, num_batch=num_batch,
+                       truncate=truncate, compact_json=compact_json)
+        try:
+            return self._generate(system, value, schema, **options)
+        except RuntimeError as error:
+            rejection = error.__cause__
+            if (self.response_format != 'schema' or not isinstance(schema, dict)
+                    or not isinstance(rejection, HTTPError) or rejection.code != 400
+                    or 'failed to parse grammar' not in str(error).lower()):
+                raise
+            # Some Ollama backends reject otherwise valid response schemas.
+            # JSON mode avoids that schema compiler; validation stays unchanged.
+            with self._stats_lock:
+                self.response_format = 'json'
+                self.schema_grammar_fallbacks += 1
+                self.schema_grammar_error = str(error)[:2000]
+        return self._generate(system, value, schema, **options)
+
+    def _generate(self, system, value, schema, num_predict=None, think=None, num_ctx=None, num_batch=None,
+                  truncate=None, compact_json=False):
         from jsonschema import Draft202012Validator
         if self.cancel.is_set():
             raise InterruptedError('Model request cancelled.')
@@ -156,9 +184,16 @@ class OllamaClient:
         if truncate is not None and type(truncate) is not bool:
             raise ValueError('truncate must be true, false, or omitted.')
         effective_think = self.think if think is None else think
+        if effective_think == 'auto':
+            effective_think = self.auto_think
         if effective_think is not None and not isinstance(effective_think, bool):
             raise ValueError('think must be true, false, or omitted.')
-        payload = dict(model=self.model, stream=True, format=schema, keep_alive=self.keep_alive,
+        response_format = schema
+        if self.response_format == 'json':
+            response_format = 'json'
+            system += ('\n\nReturn exactly one JSON object conforming to this JSON schema:\n' +
+                       json.dumps(schema, ensure_ascii=False, separators=(',', ':')))
+        payload = dict(model=self.model, stream=True, format=response_format, keep_alive=self.keep_alive,
                        messages=[dict(role='system', content=system),
                                  dict(role='user', content=json.dumps(value, ensure_ascii=False,
                                       **({'separators': (',', ':')} if compact_json else {})))],
@@ -270,6 +305,8 @@ class OllamaClient:
             raise InterruptedError('Model request cancelled.')
         if not isinstance(result, dict):
             raise ValueError('Ollama response incomplete or truncated; increase output tokens before accepting it.')
+        if verify := getattr(self, 'verify_placement', None):
+            verify()
         with self._stats_lock:
             self.stats['responses'] += 1
             contexts = self.stats['context_requests']
@@ -341,7 +378,7 @@ class OllamaPool:
                 raise ValueError('Choose different GPU indices for parallel models, or leave placement on Auto.')
         self.clients = []
         for url in base_urls:
-            for index, name in enumerate(worker_models if self.parallel_models else [model]):
+            for index, name in enumerate(worker_models if self.parallel_models else [model] * workers_per_endpoint):
                 settings = dict(options)
                 if worker_gpus is not None:
                     settings['main_gpu'] = worker_gpus[index]
@@ -354,16 +391,15 @@ class OllamaPool:
         self.url = first.url
         self.model = ' + '.join(dict.fromkeys(c.model for c in self.clients))
         self.workers_per_endpoint = workers_per_endpoint
-        capacity = len(self.clients) * workers_per_endpoint
+        capacity = len(self.clients)
         if workers is not None and (type(workers) is not int or not 1 <= workers <= capacity):
             raise ValueError(f'workers must be between 1 and {capacity}.')
         self.workers = capacity if workers is None else workers
         self._available = Queue()
         self._lock = Lock()
         self.reset_assignments()
-        for _ in range(workers_per_endpoint):
-            for client in self.clients:
-                self._available.put(client)
+        for client in self.clients:
+            self._available.put(client)
 
     def preflight(self):
         for client in self.clients:
@@ -439,6 +475,9 @@ class OllamaPool:
         for client in self.clients:
             client.cancel_requests()
 
+    def close(self):
+        """Shared endpoints are owned by their administrator, not this pool."""
+
     def unload(self):
         targets = {(client.url, client.model): client for client in self.clients}
         result = dict(unloaded=[], errors=[])
@@ -463,10 +502,17 @@ def load_client(path):
     if not isinstance(execution, dict):
         raise ValueError('execution must be a mapping.')
     urls = execution.get('base_urls', [settings.get('base_url')])
-    return OllamaPool(urls, settings.get('model'),
-                      workers_per_endpoint=execution.get('workers_per_endpoint', 1),
+    service = execution.get('service')
+    pool_options = dict(workers_per_endpoint=execution.get('workers_per_endpoint', 1))
+    pool_type = OllamaPool
+    if service is not None:
+        from .service import OllamaServicePool
+        pool_type = OllamaServicePool
+        pool_options = dict(service=service, worker_count=execution.get('workers', 1),
+                            worker_gpus=execution.get('worker_gpus'))
+    return pool_type(urls, settings.get('model'), **pool_options,
                       timeout=settings.get('timeout', 300), num_ctx=settings.get('num_ctx', 32768),
-                      num_predict=settings.get('num_predict', 512), think=settings.get('think'),
+                      num_predict=settings.get('num_predict', 512), think=settings.get('think', 'auto'),
                       main_gpu=settings.get('main_gpu'),
                       relevance_num_predict=settings.get('relevance_num_predict', 4096),
                       relevance_think=settings.get('relevance_think', 'auto'),

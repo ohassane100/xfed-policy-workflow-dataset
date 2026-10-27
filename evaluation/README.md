@@ -1,114 +1,179 @@
-# Compact XFed evaluation
+# Contract evaluation
 
-`reference.json` freezes source text, source pages, attached evidence, draft labels,
-rule slots, rationales and PDF hashes. Previous pipeline predictions were not used
-as ground truth. All annotations are **assistant-authored drafts**; none has been
-independently reviewed. Initial scores are therefore provisional.
+**Contract 05 is the default test agreement for relevance and policy extraction.**
+Contracts 01–03 are development material. Contract 04 is synthetic and excluded.
+The evaluation covers the complete document, rather than sampling clauses from
+the development contracts. Its predictions have now been inspected; use Contract
+05 as an exposed diagnostic set and reserve new agreements for final validation.
 
-## Contents and split
+## Source and coverage
 
-| Cases | Development: contract 1 | Real test: contracts 2–3 | Synthetic test: contract 4 |
-|---|---:|---:|---:|
-| Classification coverage | 100 | 200 | 100 |
-| Classification context challenge | 14 | 10 | 16 |
-| Policy generation | 20 | 40 | 20 |
+Contract 05 is Equinor's published [Volve data licence](https://cdn.equinor.com/files/h61q9gi9/global/de6532f6134b9a953f6c41bac47a0c055a3712d3.pdf?equinor-hrs-terms-and-conditions-for-licence-to-data-volve.pdf=),
+downloaded on 2026-10-26 from Equinor's CDN. The [Volve data-sharing page](https://www.equinor.com/energy/volve-data-sharing)
+provides the dataset's context. This is a real published licence, not a signed
+bilateral agreement. It governs petroleum data use, derivatives, sharing,
+attribution, resale restrictions, moral rights and licence termination.
 
-There are 440 classification cases and 80 policy cases, including 40 operative
-policy cases, 40 abstention controls and 62 draft reference rules. The 40 context
-challenge cases are 20 paired inputs with and without supporting evidence; they
-are not 40 independent clauses. Contract 4 declares itself fictional and adapts
-concepts from the other contracts, so it is not an independent real-world test.
+The original ten-page PDF is saved as `contracts/contract_05/input/contract.pdf`.
+`reference.json` records the source URLs, PDF and segmentation hashes, exact
+extracted text, pages, context, labels, rule slots and annotation rationales.
+All 76 stage 1.2 chunks appear once in **each** task, in document order. Nothing
+is balanced, deduplicated or selected based on predictions. The non-binding
+summary on page 1, operative terms on pages 2–4 and technical exhibit on pages
+5–10 are retained. The summary cannot independently create policy rules.
 
-Classification coverage uses a fixed seed and three clause-length strata, with
-duplicate primary texts removed within each contract. Sampling details are in
-the JSON. Categories cover use/purpose, disclosure, security, personal data,
-retention, intellectual property, remedies, reporting, business negatives and
-non-operative text. These are coverage-oriented benchmark scores, not estimates
-of real-world class prevalence. Natural NEEDS_CONTEXT support is small; challenge
-results must be reported separately.
+| Split | Contracts | Relevance cases | Policy cases |
+|---|---|---:|---:|
+| Development | 01–03 | 300 | 60 |
+| Default test | 05 only | 76 | 76 |
 
-## Annotation and review
+The reference labels are 38 RELEVANT and 38 NOT_RELEVANT; there are no
+natural NEEDS_CONTEXT examples. The policy reference has seven operative chunks
+with 18 canonical rules and 69 chunks expecting no policy. Relevant definitions,
+asset descriptions and lifecycle declarations do not necessarily create a rule.
+Some extracted quotes/bullets contain replacement glyphs; text is preserved
+verbatim and operative pages were also inspected visually.
 
-Follow `prompts/relevance_classifier.md`: material data rights/obligations are
-RELEVANT; unrelated business terms and standalone headings/commentary are
-NOT_RELEVANT. NEEDS_CONTEXT requires genuinely necessary missing evidence, not
-merely a missing detail. Ordinary invoice/signature administration is negative;
-substantive technical/research reporting and explicit personal-data handling are
-relevant. Do not let related context turn an unrelated primary into a positive.
+## Reference review and independence
 
-For policies, judge only rules supported by the primary and supplied context.
-Preserve the actor, asset, modality, purposes, deadlines, conditions and exceptions.
-A relevant definition can correctly produce no policy. A right to request is
-not a right to receive. Context cannot independently introduce another rule.
+Review source text and supplied evidence before viewing model predictions.
+Record corrections in `gold`, the reviewer in `gold.reviewer`, and completion
+in `gold.review_status`. Use the existing relevance and policy scope. Resolve `requires_adjudication` cases, particularly waiver,
+lifecycle and notice wording. The sharing clause has a predeclared alternative
+for whether its “should” notices impose duties. Do not change aliases or reference
+rules merely to fit predictions. Freeze the reviewed JSON and its reported hash.
 
-Have an independent reviewer inspect the text and evidence **before viewing
-model predictions**, correct `gold`, record their name in `gold.reviewer`, and
-set that annotation's `gold.review_status` to `reviewed`. Resolve disagreements,
-especially `requires_adjudication` cases. For stronger evidence, obtain two blind
-annotations and adjudicate differences; do not invent inter-annotator agreement.
-Tune on development only, then freeze the reviewed JSON and its reported SHA-256
-before running test. Do not tune references or accepted aliases to test outputs.
+Fix prompts, code, settings and model choices on Contracts 01–03. Then compare
+those fixed configurations on Contract 05 and retain every report. If Contract
+05 results guide further tuning, disclose that exposure; it is no longer an
+untouched final test. One agreement cannot establish generalisation to new
+contract populations.
 
 ## Run
 
-After syncing and restarting the dashboard, open **Evaluation against reference
-set**. Choose task, development/test split and real/synthetic sources, then
-**Evaluate reference set**. It uses the model selections, parallelization checkbox
-and generation settings. Saved pipeline outputs and caches are not changed.
-Results include per-cohort tables, per-class metrics, confusion matrices,
-uncertainty, failures, model/digest assignments and a downloadable prediction report.
-
-From the repository root:
+Restart the updated dashboard, open **Independent contract evaluation**, select
+relevance, policy extraction or both, and click **Evaluate Contract 05**. The
+evaluation uses the selected model and generation settings. To compare models,
+run each fixed configuration separately and download its JSON report. Parallel
+mode uses concurrent workers of the selected model.
 
 ```bash
 python -m xfed.evaluation describe
-python -m xfed.evaluation run --task both --split dev --model llama3.1:70b --output /tmp/xfed-dev.json
-python -m xfed.evaluation run --task both --split test --source real --model llama3.1:70b --require-reviewed --output /tmp/xfed-test.json
-python -m xfed.evaluation score --predictions /tmp/xfed-test.json --require-reviewed --output /tmp/xfed-rescored.json
+python -m xfed.evaluation run --split dev --task both --model llama3.1:70b --output /tmp/xfed-dev.json
+python -m xfed.evaluation run --task both --model llama3.1:70b --output /tmp/xfed-contract05.json
+python -m xfed.evaluation run --task both --policy-mode gated --model llama3.1:70b --output /tmp/xfed-gated.json
+python -m xfed.evaluation score --predictions /tmp/xfed-contract05.json --output /tmp/xfed-rescored.json
 ```
 
-Use `--worker-models llama3.1:70b gemma3:27b` for multiple models, or `--config`
-for existing model settings. Use the same reference cases, prompt hashes and
-settings when comparing runs. Mixed-model assignments depend on completion order;
-report assignments and repeat runs rather than attributing their score to one model.
-Runs are uncached, include loading time, and keep task timings and API token totals.
+The CLI defaults to Contract 05; `--split dev` selects Contracts 01–03. Add
+`--require-reviewed` to select only completed reference reviews. `--config` uses existing
+model settings. Mixed-model `--worker-models` assignments depend on completion
+order and should not be reported as the score of a single model.
 
-## Metrics and limits
+Both tasks use the existing inference code with frozen supporting source context.
+Parents, definitions and references come from the existing context index; explicit
+grant limitations/lifecycle evidence and the summary disclaimer are also attached
+where needed. **Policy extraction is scored independently of relevance**, including
+all non-rule controls. These are stage scores, not an end-to-end pipeline score.
+Error patterns from Contract 05 have informed subsequent improvements. Its scores
+must not be presented as untouched holdout performance.
 
-Classification reports accuracy, per-class precision/recall/F1/support, macro and
-weighted F1, balanced accuracy and a confusion matrix with an ERROR column.
-Macro scores use all three labels with undefined contributions set to zero;
-undefined individual precision/recall/F1 values are `null`. Missing/failed
-predictions remain in the denominator. Low-support labels are identified.
+Policy inference now includes a source-backed rule plan, deterministic ODRL
+compilation and a fresh same-model evidence/coverage check with one correction.
+Its plan and check are saved in each prediction's generation report. Strict rule
+scores are unchanged; mismatches list missing and unexpected canonical rules.
+These checks are part of inference, not the gold judge. Compare new runs separately
+from earlier direct-generation runs; do not combine their scores or timings.
 
-Policies report generate/abstain accuracy, canonical rule precision/recall/F1,
-constraint precision/recall/F1 and exact-case accuracy. Rule matching uses
-multisets, retaining duplicate rules as false positives. It checks rule type,
-atomic action, assignee, target and constraints, ignoring arbitrary UIDs,
-rule/constraint order and issuer/assigner. Set-valued operands ignore order;
-other arrays preserve order. Numeric punctuation and comparison signs are preserved.
-Only the frozen explicit aliases and approved alternative
-reference rule sets are accepted. It does **not** infer logical equivalence or
-grade OSDU metadata. Correct paraphrases may need blinded semantic adjudication;
-report canonical scores under that name, not as complete legal correctness.
-Accepted-output schema and source-traceability validation are reported separately.
-Rejected/failed generations never count as correct abstentions.
-The `all_curated_cases` policy rows combine operative and abstention controls
-within each source type, so rules invented on negative controls reduce aggregate
-precision. These balanced curated scores are still not population estimates.
+`--policy-mode gated` routes RELEVANT and NEEDS_CONTEXT clauses to policy
+extraction and scores exclusions and upstream failures against the full policy
+reference. It requires both tasks. The dashboard defaults to this mode when both
+tasks are selected. `isolated` preserves stage comparisons. Neither mode reruns
+PDF extraction or context retrieval; the report states this boundary.
 
-Accuracy and per-class precision/recall have 95% Wilson intervals. Macro F1
-(classification), canonical rule F1 and exact-case accuracy (policy) also have
-500-replicate page-cluster bootstrap intervals,
-resampling pages within the fixed source contracts. These intervals describe
-uncertainty within this benchmark and do not establish generalization to new
-contract populations. Roughly, 200 independent test clauses have a worst-case
-95% margin near ±7 percentage points; 40 policy cases near ±15 points. Correlation
-can make uncertainty greater. This compact set supports initial comparisons;
-small improvements and rare-class claims need more independently reviewed cases
-and more real contracts.
-An interval is `null` when a denominator is absent or too many bootstrap
-replicates have undefined scores.
+## Evaluation method and blind review
 
-Metric definitions follow [scikit-learn's classification evaluation reference](https://scikit-learn.org/stable/modules/model_evaluation.html).
-Wilson intervals follow the [NIST confidence-interval reference](https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm).
+Keep complete-rule precision/recall/F1 as correctness measures, with separate
+operative-clause accuracy, no-rule controls, failures and the all-abstain baseline.
+New aligned field diagnostics report modality, action, assignee, target and
+conditions using maximum-weight one-to-one assignment. They explain partial
+matches without forgiving a wrong complete rule, reusing one reference rule for
+duplicates, or treating a similarity score as legal equivalence. This follows
+[ExtractBench's field-specific evaluation and array alignment](https://arxiv.org/abs/2602.12247).
+
+Report precision together with recall and operative generation coverage. The
+[selective classification literature](https://arxiv.org/abs/1705.08500) makes the
+accuracy/coverage trade-off explicit. Here the reference targets are at least
+99% rule precision and 99% rule recall. Targets cannot be verified using draft
+labels. Wilson lower bounds are also reported: a perfect point estimate on a
+small sample is not evidence of 99% population precision. Rules within a clause
+are dependent, so the rule-level interval is descriptive only.
+
+Create a blind annotation packet with neither model outputs nor draft answers:
+
+```bash
+python -m xfed.evaluation review-export --split test --output /tmp/xfed-review.json
+python -m xfed.evaluation review-apply --annotations /tmp/xfed-review.json --output /tmp/xfed-reviewed-reference.json
+python -m xfed.evaluation run --reference /tmp/xfed-reviewed-reference.json --require-reviewed --task both --policy-mode gated --model llama3.1:70b --output /tmp/xfed-reviewed-run.json
+```
+
+An independent human fills each packet entry's gold label/rules, source-based
+rationale and reviewer, then marks it reviewed. Apply completed entries only;
+unfinished entries stay draft. Source text and IDs are checked against the
+packet's frozen reference hash. The original reference is preserved. Resolve
+disagreements before freezing; allow predeclared equivalent representations,
+never aliases added simply to fit a tested model. Separate model families may
+assist review, but the generator's same-model evidence check is not gold truth.
+Compare fixed models/settings on the same reviewed contract splits; inspect
+recall, failure types and per-contract results alongside precision.
+`contract_macro_f1` gives each contract with supported gold rules equal weight
+instead of letting a long agreement dominate the model comparison.
+
+The extraction response schema now constrains supported operators and atomic
+actions before decoding, and the compiler requires literal actor/asset/issuer
+labels in cited spans. This complements [Ollama's schema-constrained output](https://docs.ollama.com/capabilities/structured-outputs);
+valid JSON still needs semantic review. Partial outputs retain only fully
+entailed parent/duty groups: dropping an unsupported prerequisite must never
+create an unconditional permission. No restricted contract format is required;
+clear definitions and one actor/action/asset/condition per sentence help, but
+changing the input format must be evaluated as a separate cohort.
+
+Runs are uncached and preserve saved pipeline outputs. UI reports are saved under
+ignored `evaluation/runs/` and restored after restart. Each report contains source,
+reference, input, code/schema and prompt hashes; case IDs, gold, predictions,
+mismatches, run times, model digests/settings and assignments. Changed source
+PDFs, missing full-document cases, changed frozen chunks and changed reference
+content are rejected. Changes during inference stop the run. Earlier reports from
+Contracts 02–03 remain identifiable by their source manifest/reference hash.
+
+## Read the scores
+
+The dashboard shows correct relevance labels, expected rules recovered (recall),
+generated rules matching the reference (precision), fully matched operative
+clauses, correct no-rule decisions and failed evaluations. Results include counts
+and plain-language explanations. Zero-denominator scores say why they are not
+applicable rather than displaying an unexplained dash. Detailed scores, mismatches,
+confusion matrices and uncertainty remain available underneath and in the download.
+No-rule success is separate from rule extraction: abstaining on every chunk gets
+69/76 cases right while recovering none of the rules.
+
+Relevance reports accuracy, precision/recall/F1, weighted F1, balanced accuracy
+and a three-label confusion matrix with an ERROR column. Macro scores average
+the fixed labels supported by the selected gold cases; an absent class is
+unmeasured, not a zero. Incorrect NEEDS_CONTEXT predictions still count as errors
+against their actual class. Undefined individual metrics are `null`.
+
+Policies report generate/abstain accuracy, canonical rule and constraint
+precision/recall/F1, and exact-case accuracy. Canonical matching checks rule type,
+atomic action, assignee, target and constraints. It ignores arbitrary UIDs,
+rule/constraint order and issuer/assigner; it retains duplicates as false positives.
+Only frozen aliases and explicit alternative rule sets are accepted. Semantic
+paraphrases are handled through adjudication. OSDU metadata is outside rule
+matching; schema and traceability validation are reported separately. Missing/failed predictions remain in denominators, and rejected
+generations never count as correct abstentions.
+
+Reports include 95% Wilson intervals and 500-replicate page-cluster bootstrap
+intervals. Bootstrap macro labels remain fixed to the original selected gold
+classes. Contract 05 has only ten pages, with operative terms on three pages;
+intervals are exploratory and do not estimate variation across contracts. There
+is no evidence here for NEEDS_CONTEXT performance or small model differences.

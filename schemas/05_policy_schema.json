@@ -63,8 +63,8 @@
           "description": "ODRL JSON-LD context plus IDS namespaces used by IDS Usage Control examples."
         },
         "@type": {
-          "const": "Agreement",
-          "description": "ODRL Agreement: rules granted between assigner and assignee parties."
+          "enum": ["Agreement", "Set"],
+          "description": "Agreement when issuing parties are established; Set for draft rules with unknown issuers."
         },
         "uid": {
           "type": "string",
@@ -82,7 +82,6 @@
             "required": [
               "uid",
               "target",
-              "assigner",
               "assignee",
               "action"
             ],
@@ -246,7 +245,6 @@
             "required": [
               "uid",
               "target",
-              "assigner",
               "assignee",
               "action"
             ],
@@ -484,6 +482,13 @@
           "description": "ODRL policy-level Duty rules referenced through the obligation property."
         }
       },
+      "allOf": [{
+        "if": {"properties": {"@type": {"const": "Agreement"}}},
+        "then": {"properties": {
+          "permission": {"items": {"required": ["assigner"]}},
+          "prohibition": {"items": {"required": ["assigner"]}}
+        }}
+      }],
       "anyOf": [
         {
           "required": [

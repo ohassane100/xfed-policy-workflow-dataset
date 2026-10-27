@@ -19,6 +19,23 @@ inherit its action, actor, conditions or purpose from a parent. Do not discard
 such an item just because it does not repeat words like "data" or "use".
 
 Judge meaning, conditions and exceptions, not the presence of keywords:
+- Read every sentence of a mixed clause. A financial, audit-cost or retention
+  provision can contain a data-security exception or a restriction on retaining
+  raw data. Classify that operative restriction, not just the clause's main topic.
+- Table cells inherit the asset identity, holder and scope from their own row,
+  headers and introduction. Do not substitute parties or assets from another row.
+- Decide whether this primary text has substantive contractual meaning before
+  using the topic of its parent or section. Do not promote a standalone heading
+  merely because that section contains important rules.
+- Relevance is not a grant of permission. Dataset descriptions and definitions
+  can be relevant supporting material without creating an operative policy rule.
+  A catalogue entry identifying which datasets, files or derived results are
+  covered is RELEVANT asset-scope evidence. Pure file-format specifications,
+  coordinate transforms and processing histories without contractual scope
+  information are NOT_RELEVANT. Read the primary entry, not only its heading.
+- An explicitly non-binding summary or explanatory page does not independently
+  establish contractual terms. Use attached disclaimers to distinguish it from
+  the operative licence. Its apparent permissions are not independent terms.
 - Standalone headings, title fragments, table of contents entries, page numbers,
   bibliographic citations and explanatory commentary are NOT_RELEVANT as
   independent contractual clauses. They may support other clauses as context.
@@ -26,6 +43,8 @@ Judge meaning, conditions and exceptions, not the presence of keywords:
 - Missing detail does not automatically mean missing evidence of relevance.
   A requirement to use data only for agreed purposes is RELEVANT even if those
   purposes are unspecified. Do not invent the purposes or fill placeholders.
+  If supplied text already clearly affects data rights or duties, classify it
+  RELEVANT even when a referenced restriction is needed to extract the exact rule.
 - Permitted data-use purposes, switching/export deadlines, surviving
   confidentiality obligations, and liability or remedies for data-related
   breaches can be RELEVANT. A general business or liability label is not a
@@ -42,3 +61,11 @@ On every classification, use the attached context to resolve dependencies. Retur
 RELEVANT or NOT_RELEVANT when justified, otherwise keep NEEDS_CONTEXT and explain
 what is missing. Never invent an absent provision or assume the contents of an
 external legal reference. Do not treat missing evidence as NOT_RELEVANT.
+Keep any reason to one or two specific sentences about this primary clause.
+
+Data-access, export and switching fees or fee exemptions are RELEVANT because
+payment can condition the exercise of those rights. Do not discard such clauses
+as generic pricing. Security-maintenance notification and access-availability
+restrictions are RELEVANT when they govern the shared data service. A clear
+retention, deletion or security rule remains RELEVANT despite an unspecified
+external legal exception; extraction must separately preserve that exception.

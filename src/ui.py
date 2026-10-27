@@ -19,7 +19,9 @@ from xfed.segmentation import segment
 from xfed.relevance import classify
 from xfed.enrichment import enrich
 from xfed.llm import OllamaPool, load_client
+from xfed.llm.service import OllamaServicePool, nvidia_gpus
 from xfed.policy_generation import generate
+# The separate review stage is disabled; generation uses its clause evidence check.
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
 from xfed.evaluation import load_reference, reference_summary, run_evaluation
 
@@ -30,8 +32,9 @@ STAGES = {
     '1.3': ('1 preprocessing/1.3 relevance/classified_chunks.json', 3, 'chunks'),
     '1.4': ('1 preprocessing/1.4 enrichment/enriched_relevance.json', 4, 'items'),
     '2': ('2 policy_generation/policy.json', 5, 'traceability'),
+    # '3': ('3 policy_review/policy_review.json', 6, 'clause_reviews'),
 }
-PREFERRED_MODELS = ['llama3.1:70b', 'deepseek-r1:70b', 'gemma3:27b']
+PREFERRED_MODELS = ['qwen3.5:27b', 'qwen3.5:35b', 'qwen3.5:9b', 'gemma3:27b', 'llama3.1:70b']
 
 
 def read_json(path, default=None):
@@ -75,6 +78,8 @@ class CachedClient:
             raise Cancelled()
         output_limit = self.settings['num_predict'] if num_predict is None else num_predict
         effective_think = self.settings['think'] if think is None else think
+        if effective_think == 'auto':
+            effective_think = getattr(self.client, 'auto_think', None)
         settings = dict(self.settings, num_predict=output_limit, think=effective_think)
         if num_ctx is not None:
             settings['num_ctx'] = num_ctx
@@ -85,6 +90,7 @@ class CachedClient:
             settings['compact_json'] = True
         key = hashlib.sha256(json.dumps([settings, prompt, value, schema],
                                        sort_keys=True).encode()).hexdigest()
+        self.last_cache_key = key
         with self.lock:
             cached = key in self.cache
             result = deepcopy(self.cache[key]) if cached else None
@@ -105,6 +111,15 @@ class CachedClient:
             raise Cancelled()
         return result
 
+    def discard_last_response(self):
+        """A downstream evidence/semantic validation failure must not become a reusable answer."""
+        self.discard_response(getattr(self, 'last_cache_key', None))
+
+    def discard_response(self, key):
+        with self.lock:
+            if self.cache.pop(key, None) is not None:
+                write_json(self.path, self.cache)
+
 
 class Pipeline:
     def __init__(self, root, ollama_url, config=None):
@@ -112,18 +127,22 @@ class Pipeline:
         self.active_client = None
         self.ollama_url = ollama_url.rstrip('/')
         self.worker_config = load_client(config) if config else None
-        self.defaults = dict(model=None, timeout=600, num_ctx=16384, num_predict=4096, think=None,
+        self.service_settings = getattr(self.worker_config, 'service', None)
+        self.defaults = dict(model=None, timeout=600, num_ctx=16384, num_predict=4096, think='auto',
                              relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1,
                              relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None, keep_alive='30m')
         if self.worker_config:
-            self.ollama_url = self.worker_config.clients[0].url.removesuffix('/api/chat')
+            self.ollama_url = (self.worker_config.source_urls[0] if self.service_settings else
+                               self.worker_config.clients[0].url.removesuffix('/api/chat'))
             self.defaults.update({key: getattr(self.worker_config, key) for key in self.defaults})
-        # The dashboard uses one API endpoint and one request per selected model.
+        # The shared service supplies the model list; parallel runs own private workers.
         OllamaPool([self.ollama_url], 'configuration-check')
         self.lock, self.cancel = threading.Lock(), threading.Event()
         self.job = dict(status='idle', stage=None, completed=0, total=0, message='Ready', log=[])
         self.benchmark_report = None
-        self.evaluation_report = None
+        saved = sorted((self.root / 'evaluation/runs').glob('*.json'), key=lambda path: path.stat().st_mtime, reverse=True)
+        self.evaluation_report = next((value for path in saved
+                                       if isinstance(value := read_json(path), dict) and value.get('split') == 'test'), None)
 
     def contracts(self):
         return sorted(p.name for p in (self.root / 'contracts').iterdir()
@@ -148,6 +167,11 @@ class Pipeline:
         if client:
             metadata = client.metadata()
             job['workers'] = [dict(model=member['model'], url=member['url'], main_gpu=member['main_gpu'],
+                                   gpu=member.get('gpu'),
+                                   gpu_uuid=member.get('gpu_uuid'),
+                                   placement_status=member.get('placement_status'),
+                                   observed_gpus=member.get('observed_gpus'),
+                                   placement_error=member.get('placement_error'),
                                    completed=metadata['completed'][index],
                                    assigned=metadata['assigned'][index], failed=metadata['failed'][index],
                                    active_chunks=metadata['active_chunks'][index],
@@ -194,7 +218,7 @@ class Pipeline:
                 labels[label] += 1
         report = self.output(contract) / '2 policy_generation/generation_report.json'
         return dict(contract=contract, stages=stages, labels=labels, source_locations=locations,
-                    report=read_json(report), job=self.snapshot())
+                    report=read_json(report), review=None, job=self.snapshot())
 
     def make_client(self, request):
         available = {m['name']: m for m in self.models()}
@@ -204,19 +228,20 @@ class Pipeline:
         parallel = request.get('parallel', False)
         if type(parallel) is not bool:
             raise ValueError('parallel must be true or false.')
-        worker_models = request.get('worker_models')
+        if request.get('worker_models') is not None:
+            raise ValueError('Select one model and a worker_count; different worker models are no longer supported in the UI.')
+        worker_count = request.get('worker_count', 2 if parallel else 1)
         worker_gpus = request.get('worker_gpus')
         if parallel:
-            if (not isinstance(worker_models, list) or not 2 <= len(worker_models) <= 32 or
-                    any(not isinstance(name, str) or name not in available for name in worker_models) or
-                    len(set(worker_models)) != len(worker_models) or worker_models[0] != model):
-                raise ValueError('Choose 2 to 32 distinct installed models, starting with the primary model.')
+            if type(worker_count) is not int or not 2 <= worker_count <= 32:
+                raise ValueError('Choose 2 to 32 workers for the selected model.')
         else:
-            if worker_models is not None:
-                raise ValueError('Enable parallelization to use multiple models.')
-            if worker_gpus is not None:
-                raise ValueError('Per-model GPU selection is available in parallel mode.')
-        client = OllamaPool([self.ollama_url], model, worker_models=worker_models, worker_gpus=worker_gpus,
+            if type(worker_count) is not int or worker_count != 1 or worker_gpus is not None:
+                raise ValueError('Enable parallelization to configure workers and GPUs.')
+        pool_type = OllamaServicePool if parallel else OllamaPool
+        execution = dict(worker_count=worker_count, worker_gpus=worker_gpus,
+                         service=self.service_settings) if parallel else {}
+        client = pool_type([self.ollama_url], model, **execution,
                             cancel=self.cancel,
                             timeout=request.get('timeout', self.defaults['timeout']),
                             num_ctx=request.get('num_ctx', self.defaults['num_ctx']),
@@ -229,7 +254,6 @@ class Pipeline:
                             relevance_num_ctx=request.get('relevance_num_ctx', self.defaults['relevance_num_ctx']),
                             relevance_num_batch=request.get('relevance_num_batch', self.defaults['relevance_num_batch']),
                             keep_alive=self.defaults['keep_alive'])
-        client.preflight()
         return client
 
     def start(self, request):
@@ -241,7 +265,8 @@ class Pipeline:
         selected = list(STAGES)[:list(STAGES).index(stage) + 1] if mode == 'through' else [stage]
         if mode == 'step' and stage != '1.1':
             previous = list(STAGES)[list(STAGES).index(stage) - 1]
-            if not self.state(contract)['stages'][previous]['ready']:
+            state = self.state(contract)
+            if not state['stages'][previous]['ready']:
                 raise ValueError(f'Run stage {previous} first.')
         client = None
         if any(s in ('1.3', '2') for s in selected):
@@ -268,6 +293,7 @@ class Pipeline:
             if report is not None:
                 report_summary = dict(status=report['status'],
                                       skipped=sum(not c['generated'] for c in report['clauses']),
+                                      partial=report.get('summary', {}).get('partial_needs_review', 0),
                                       unresolved=report.get('unresolved_chunks', 0))
                 if report.get('warnings'):
                     report_summary['warnings'] = len(report['warnings'])
@@ -295,6 +321,7 @@ class Pipeline:
                        think=request.get('think', self.defaults['think']))
         OllamaPool([self.ollama_url], model, num_predict=128, **options)
         options['variants'] = variants
+        options['blocks'] = read_json(self.path(contract, '1.1'), {}).get('blocks', [])
         with self.lock:
             if self.job['status'] in ('running', 'cancelling'):
                 raise ValueError('A job is already running. Wait or cancel it first.')
@@ -336,15 +363,15 @@ class Pipeline:
             return deepcopy(self.benchmark_report)
 
     def start_evaluation(self, request):
-        options = dict(task=request.get('task', 'both'), split=request.get('split', 'dev'),
-                       source=request.get('source', 'all'))
-        if (options['task'] not in ('classification', 'policy', 'both') or options['split'] not in ('dev', 'test')
-                or options['source'] not in ('all', 'real', 'synthetic')):
-            raise ValueError('Choose a supported evaluation task, split and source type.')
+        if request.get('split', 'test') != 'test':
+            raise ValueError('The UI evaluates the test set only. Use the local CLI for development.')
+        options = dict(task=request.get('task', 'both'), split='test',
+                       policy_mode=request.get('policy_mode', 'isolated'))
+        if options['task'] not in ('classification', 'policy', 'both'):
+            raise ValueError('Choose a supported evaluation task.')
+        if options['policy_mode'] not in ('isolated', 'gated') or (options['policy_mode'] == 'gated' and options['task'] != 'both'):
+            raise ValueError('Gated policy evaluation requires both tasks; otherwise choose isolated.')
         data = load_reference(self.root)
-        if not any(case['split'] == options['split'] and (options['source'] == 'all' or case['source_type'] == options['source'])
-                   for name in ('classification', 'policy') if options['task'] in (name, 'both') for case in data[name]):
-            raise ValueError('No reference cases match this evaluation selection.')
         client = self.make_client(request)
         with self.lock:
             if self.job['status'] in ('running', 'cancelling'):
@@ -352,40 +379,62 @@ class Pipeline:
             self.cancel.clear()
             self.active_client = client
             self.evaluation_report = None
-            self.job = dict(status='running', contract='reference set', stage='1.3', mode='evaluation',
+            self.job = dict(status='running', contract='reference set', stage='2' if options['task'] == 'policy' else '1.3', mode='evaluation',
                             completed=0, total=0, message='Evaluating frozen references; pipeline outputs are preserved', log=[])
         threading.Thread(target=self.run_evaluation, args=(data, client, options), daemon=True).start()
         return self.snapshot()
 
     def run_evaluation(self, data, client, options):
+        def progress(done, total, message):
+            if message.startswith(('Policy', 'Starting policy')):
+                self.update(stage='2')
+            elif message.startswith(('Classification', 'Starting classification')):
+                self.update(stage='1.3')
+            self.progress(done, total, message)
+
         def completed(report):
+            write_json(self.root / 'evaluation/runs' / (report['run_id'] + '.json'), report)
             with self.lock:
                 self.evaluation_report = deepcopy(report)
                 self.job['log'].append('Saved ' + ', '.join(report['execution']) + ' evaluation predictions')
         try:
-            report = run_evaluation(data, client, self.root, progress=self.progress,
+            report = run_evaluation(data, client, self.root, progress=progress,
                                     cancel=self.cancel, completed=completed, **options)
+            write_json(self.root / 'evaluation/runs' / (report['run_id'] + '.json'), report)
             with self.lock:
                 self.evaluation_report = report
             errors = sum(value.get('errors', value.get('failures', 0)) for task in report['metrics'].values() for value in task.values() if not value.get('aggregate'))
             self.finish('complete', f"Evaluation complete; {errors} failed cases; references: {report['reference_status']}")
         except (Cancelled, InterruptedError):
-            self.finish('cancelled', 'Evaluation cancelled; completed task predictions are available.')
+            self.mark_evaluation_stopped('cancelled', 'Evaluation cancelled; completed task predictions are available.')
         except Exception as error:
-            self.finish('failed', str(error))
+            self.mark_evaluation_stopped('failed', str(error))
+
+    def mark_evaluation_stopped(self, status, message):
+        with self.lock:
+            report = deepcopy(self.evaluation_report)
+        if report:
+            report.update(status=status, error=message, finished_at=datetime.now(timezone.utc).isoformat())
+            write_json(self.root / 'evaluation/runs' / (report['run_id'] + '.json'), report)
+            with self.lock:
+                self.evaluation_report = report
+        self.finish(status, message)
 
     def evaluation_result(self):
         with self.lock:
             report = deepcopy(self.evaluation_report)
-        return dict(reference=reference_summary(load_reference(self.root)), report=report)
+        return dict(reference=reference_summary(load_reference(self.root), split='test'), report=report)
 
     def invalidate(self, contract, stage):
         stages = list(STAGES)
         for downstream in stages[stages.index(stage):]:
             self.path(contract, downstream).unlink(missing_ok=True)
-        (self.output(contract) / '2 policy_generation/generation_report.json').unlink(missing_ok=True)
+        if stages.index(stage) <= stages.index('2'):
+            (self.output(contract) / '2 policy_generation/generation_report.json').unlink(missing_ok=True)
+        (self.output(contract) / '3 policy_review/policy_review.json').unlink(missing_ok=True)
         metadata = self.output(contract) / '.runs.json'
         runs = read_json(metadata, {})
+        runs.pop('3', None)
         for downstream in stages[stages.index(stage):]:
             runs.pop(downstream, None)
         if runs:
@@ -394,12 +443,37 @@ class Pipeline:
             metadata.unlink(missing_ok=True)
 
     def reset_generated(self, contract):
-        self.invalidate(contract, '1.1')
-        (self.output(contract) / '.llm_cache.json').unlink(missing_ok=True)
+        output = self.output(contract)
+        expected = self.root / 'contracts' / contract / 'output'
+        if output.resolve() != expected:
+            raise ValueError('Reset requires the contract output directory to be inside this repository.')
+        paths = [path for path in output.rglob('*.json') if path.is_file() or path.is_symlink()]
+        if any(not path.resolve().is_relative_to(expected) for path in paths):
+            raise ValueError('Reset cannot remove JSON through a link outside the contract output directory.')
+        for path in paths:
+            path.unlink()
+
+    def reset(self, request):
+        contract = request.get('contract')
+        self.base(contract)
+        with self.lock:
+            if self.job['status'] in ('running', 'cancelling'):
+                raise ValueError('Wait for the current job to stop before resetting records.')
+            self.reset_generated(contract)
+            if self.benchmark_report and self.benchmark_report.get('contract') == contract:
+                self.benchmark_report = None
+            if self.job.get('contract') == contract:
+                self.active_client = None
+                self.job = dict(status='idle', stage=None, completed=0, total=0,
+                                message='Ready', log=[])
+        return self.state(contract)
 
     def run(self, contract, selected, raw_client, reuse, fresh_run=False):
         base = self.base(contract)
         try:
+            if raw_client:
+                self.update(message='Preparing model workers')
+                raw_client.preflight()
             if fresh_run:
                 self.reset_generated(contract)
             client = CachedClient(raw_client, self.output(contract) / '.llm_cache.json', self.cancel, reuse) if raw_client else None
@@ -420,16 +494,21 @@ class Pipeline:
                 elif stage == '1.2':
                     result = segment(source, self.root)
                 elif stage == '1.3':
-                    result = classify(source, client, self.root, self.progress)
+                    blocks = read_json(self.path(contract, '1.1'), {}).get('blocks', [])
+                    result = classify(source, client, self.root, self.progress, blocks=blocks)
                 elif stage == '1.4':
-                    updated, result = enrich(source, self.root, self.progress)
+                    blocks = read_json(self.path(contract, '1.1'), {}).get('blocks', [])
+                    updated, result = enrich(source, self.root, self.progress, blocks=blocks)
                     self.progress(len(updated['chunks']), len(updated['chunks']), 'Saving enrichment')
                     write_output(self.path(contract, '1.3'), updated, 3, self.root)
-                else:
-                    result, report = generate(source, client, self.root, self.progress)
+                elif stage == '2':
+                    result, report = generate(source, client, self.root, self.progress,
+                                             classified=read_json(self.path(contract, '1.3')))
                     report['unresolved_chunks'] = self.state(contract)['labels']['NEEDS_CONTEXT']
-                    self.progress(len(source['items']), len(source['items']), 'Saving policy draft')
+                    self.progress(len(source['items']), len(source['items']), 'Saving policy')
                     write_json(self.output(contract) / '2 policy_generation/generation_report.json', report)
+                else:
+                    raise ValueError('Automated policy review is disabled.')
                 self.progress(self.snapshot()['completed'], self.snapshot()['total'], 'Saving stage ' + stage)
                 if result is not None:
                     write_output(self.path(contract, stage), result, STAGES[stage][1], self.root)
@@ -442,7 +521,7 @@ class Pipeline:
                                    status=report['status'] if stage == '2' else 'complete')
                 write_json(meta_path, meta)
                 with self.lock:
-                    self.job['log'].append(f'{stage}: ' + (report['status'] if stage == '2' else 'saved')
+                    self.job['log'].append(f'{stage}: ' + meta[stage]['status']
                                            + f" ({meta[stage]['duration_seconds']:.3f}s)")
                 if stage == '2' and report['status'] == 'generation_rejected':
                     self.finish('failed', 'No policy generated. Inspect the rejected clauses in the generation report.')
@@ -468,22 +547,28 @@ class Pipeline:
     def finish(self, status, message):
         with self.lock:
             cancelled = self.cancel.is_set() or status == 'cancelled'
-            if not cancelled:
-                self.job.update(status=status, message=message)
-                return
             client = self.active_client
-            self.job.update(status='cancelling', message='Stopping requests and unloading run models')
+            self.job.update(status='cancelling' if cancelled else 'running', message='Cleaning up model workers')
         detail = ''
         if client:
             try:
-                client.cancel_requests()
-                _, detail = self.unload_models(client)
+                if cancelled:
+                    client.cancel_requests()
+                if isinstance(client, OllamaServicePool):
+                    client.close()
+                elif cancelled:
+                    _, detail = self.unload_models(client)
             except Exception as error:
-                detail = 'Could not finish unloading models: ' + str(error)
+                detail = 'Could not finish worker cleanup: ' + str(error)
+                if not cancelled:
+                    status = 'failed'
                 with self.lock:
                     self.job['log'].append(detail)
-        message = message if status == 'cancelled' else 'Cancelled. Completed requests are saved.'
-        self.update(status='cancelled', message=(message + ' ' + detail).strip())
+        with self.lock:
+            cancelled = cancelled or self.cancel.is_set()
+            if cancelled:
+                message = message if status == 'cancelled' else 'Cancelled. Completed requests are saved.'
+            self.job.update(status='cancelled' if cancelled else status, message=(message + ' ' + detail).strip())
 
     def start_unload(self, request):
         names = request.get('models')
@@ -555,9 +640,15 @@ def handler(pipeline):
                 if route.path == '/':
                     self.send(Path(__file__).with_name('ui.html').read_bytes(), content_type='text/html; charset=utf-8')
                 elif route.path == '/api/config':
+                    try:
+                        devices, gpu_error = nvidia_gpus(), None
+                    except RuntimeError as error:
+                        devices, gpu_error = [], str(error)
                     self.send(dict(contracts=pipeline.contracts(), ollama_url=pipeline.ollama_url,
                                    model_defaults=pipeline.defaults,
+                                   gpu_devices=devices, gpu_detection_error=gpu_error, max_workers=32,
                                    worker_gpu_selection=True,
+                                   same_model_workers=True,
                                    model_unloading=True,
                                    preferred_models=PREFERRED_MODELS))
                 elif route.path == '/api/models':
@@ -601,6 +692,8 @@ def handler(pipeline):
                     raise ValueError('Expected a JSON object.')
                 if self.path == '/api/run':
                     self.send(pipeline.start(request), 202)
+                elif self.path == '/api/reset':
+                    self.send(pipeline.reset(request))
                 elif self.path == '/api/benchmark':
                     self.send(pipeline.start_benchmark(request), 202)
                 elif self.path == '/api/evaluation':
@@ -638,6 +731,9 @@ def main():
     except KeyboardInterrupt:
         pipeline.stop()
     finally:
+        pipeline.stop()
+        if pipeline.active_client:
+            pipeline.active_client.close()
         server.server_close()
 
 

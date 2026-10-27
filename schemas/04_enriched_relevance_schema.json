@@ -71,6 +71,11 @@
             },
             "additionalProperties": false
           },
+          "unresolved_references": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Missing or ambiguous source references; never assume their contents."
+          },
           "context": {
             "type": "array",
             "description": "Supporting context. Empty when self-contained. Supports deterministic context now and retrieved context later.",

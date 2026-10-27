@@ -8,10 +8,11 @@ from xfed.relevance import classify
 from xfed.enrichment import enrich
 from xfed.llm import load_client
 from xfed.policy_generation import generate
+# Generation uses a clause evidence check; the separate review stage is disabled.
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description='XFed preprocessing and draft policy generation')
+    parser = argparse.ArgumentParser(description='XFed preprocessing, policy generation and evidence review')
     parser.add_argument('contract', choices=['contract_01', 'contract_02', 'contract_03', 'contract_04', 'all'])
     parser.add_argument('--through', choices=['1.1', '1.2', '1.3', '1.4', '2'], default='1.2')
     parser.add_argument('--root', type=Path, default=Path.cwd(), help='Repository root (default: current directory)')
@@ -32,6 +33,7 @@ def main(argv=None):
                 'classified_chunks.json': '1 preprocessing/1.3 relevance',
                 'enriched_relevance.json': '1 preprocessing/1.4 enrichment',
                 'policy.json': '2 policy_generation',
+                'policy_review.json': '3 policy_review',
             }
             paths = {name: output / folder / name for name, folder in stages.items()}
             for folder in (*stages.values(), '2 policy_generation', '3 policy_review'):
@@ -39,7 +41,7 @@ def main(argv=None):
             print(f'{contract}: extraction', flush=True)
             document = extract_document(base / 'input/contract.pdf', contract, args.root)
             # Downstream files from earlier runs must not appear current after a partial rerun.
-            for name in ('contract_chunks.json', 'classified_chunks.json', 'enriched_relevance.json', 'policy.json'):
+            for name in ('contract_chunks.json', 'classified_chunks.json', 'enriched_relevance.json', 'policy.json', 'policy_review.json'):
                 paths[name].unlink(missing_ok=True)
                 (output / name).unlink(missing_ok=True)
             (output / '2 policy_generation/generation_report.json').unlink(missing_ok=True)
@@ -52,17 +54,17 @@ def main(argv=None):
             print(f"{contract}: {len(document['blocks'])} blocks, {len(chunks['chunks'])} chunks", flush=True)
             if args.through == '1.2':
                 continue
-            classified = classify(chunks, client, args.root)
+            classified = classify(chunks, client, args.root, blocks=document['blocks'])
             write_output(paths['classified_chunks.json'], classified, 3, args.root)
             if args.through == '1.3':
                 continue
-            classified, enriched = enrich(classified, args.root)
+            classified, enriched = enrich(classified, args.root, blocks=document['blocks'])
             write_output(paths['classified_chunks.json'], classified, 3, args.root)
             write_output(paths['enriched_relevance.json'], enriched, 4, args.root)
             pending = sum(c['classification']['label'] == 'NEEDS_CONTEXT' for c in classified['chunks'])
             print(f"{contract}: {len(enriched['items'])} relevant, {pending} still need context", flush=True)
             if args.through == '2':
-                policy, report = generate(enriched, client, args.root)
+                policy, report = generate(enriched, client, args.root, classified=classified)
                 report['unresolved_chunks'] = pending
                 write_json(output / '2 policy_generation/generation_report.json', report)
                 if policy is not None:
@@ -72,6 +74,9 @@ def main(argv=None):
                     raise ValueError('No policy generated. Inspect rejected clauses in generation_report.json.')
     except Exception as error:
         parser.exit(1, f'XFed: {error}\n')
+    finally:
+        if client:
+            client.close()
 
 
 if __name__ == '__main__':
