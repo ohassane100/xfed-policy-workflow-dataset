@@ -327,7 +327,7 @@ def response_schema(root=Path('.')):
                 required=['evidence', 'reason'], properties=dict(evidence=evidence, reason=text)))))
 
 
-def compile_plan(answer, contract, item):
+def compile_plan(answer, contract, item, rejected=None):
     """Resolve source IDs, check legacy quotes and deterministically build ODRL."""
     def sources(entries):
         result, seen = [], set()
@@ -403,16 +403,25 @@ def compile_plan(answer, contract, item):
         if value['conditions']:
             rule['constraint'] = value['conditions']
         return rule
-    for value in answer['rules']:
+    for index, value in enumerate(answer['rules']):
         kind = value['kind']
-        if (value['duties'] and kind != 'permission') or (value['remedies'] and kind != 'prohibition'):
-            raise ValueError('Only permissions have prerequisite duties; only prohibitions have remedies.')
-        rule = compile_rule(value, kind)
-        if value.get('issuer'):
-            rule['assigner'] = value['issuer']
-        for field, planned in (('duty', 'duties'), ('remedy', 'remedies')):
-            if value[planned]:
-                rule[field] = [compile_rule(child, 'duty') for child in value[planned]]
+        start = len(traces)
+        try:
+            if (value['duties'] and kind != 'permission') or (value['remedies'] and kind != 'prohibition'):
+                raise ValueError('Only permissions have prerequisite duties; only prohibitions have remedies.')
+            rule = compile_rule(value, kind)
+            if value.get('issuer'):
+                rule['assigner'] = value['issuer']
+            for field, planned in (('duty', 'duties'), ('remedy', 'remedies')):
+                if value[planned]:
+                    rule[field] = [compile_rule(child, 'duty') for child in value[planned]]
+        except ValueError as error:
+            if rejected is None:
+                raise
+            # Never retain a parent with a rejected prerequisite or remedy.
+            del traces[start:]
+            rejected.append(dict(plan_index=index, reason=str(error)))
+            continue
         policy.setdefault(kind, []).append(rule)
     if not traces:
         return None
@@ -504,6 +513,7 @@ def generate_item(item, client, prompt, contract, request_schema, root):
         try:
             diagnostics.pop('semantic_check', None)
             diagnostics.pop('withheld_rule_uids', None)
+            diagnostics.pop('withheld_plan_groups', None)
             answer, supplied, retry_count, output_retry_count = generate_answer(
                 client, correction, contract, item, request_schema, feedback=feedback)
             draft_cache_key = getattr(client, 'last_cache_key', None)
@@ -517,7 +527,15 @@ def generate_item(item, client, prompt, contract, request_schema, root):
                 compile_plan(dict(answer, rules=[]), contract, supplied)
             except ValueError as error:
                 diagnostics['unrepresented_evidence_error'] = str(error)
-            fragment = compile_plan(dict(answer, unrepresented=[]), contract, supplied)
+            # First request a full repair. If a later plan still mixes invalid
+            # groups into sound rules, withhold them and review the remainder.
+            rejected = []
+            fragment = compile_plan(dict(answer, unrepresented=[]), contract, supplied,
+                                    rejected=rejected if attempt else None)
+            if rejected:
+                diagnostics['withheld_plan_groups'] = rejected
+                if fragment is None:
+                    raise ValueError('No valid source-grounded rule groups remain after withholding invalid groups.')
             if fragment is not None:
                 validate_fragment(fragment, contract, supplied, root)
             candidates = []
@@ -533,12 +551,12 @@ def generate_item(item, client, prompt, contract, request_schema, root):
             complete = checked['coverage'] == ('COMPLETE' if fragment else 'NO_RULES_NEEDED')
             if fragment is None and entailed and checked['coverage'] == 'NO_RULES_NEEDED':
                 return result(None, answer['reason'], outcome='abstained_needs_review')
-            if entailed and complete and not answer['unrepresented']:
+            if entailed and complete and not answer['unrepresented'] and not rejected:
                 return result(fragment, answer['reason'], outcome='generated' if fragment else 'abstained_needs_review')
             # Keep sound rules after a repair rather than discarding them solely for
             # incomplete coverage. Never accept a contradicted or unverifiable rule.
             if attempt and fragment and entailed and (checked['coverage'] in ('MISSING_RULES', 'NEEDS_CONTEXT')
-                                                      or answer['unrepresented']):
+                                                      or answer['unrepresented'] or rejected):
                 return result(fragment, 'Partial extraction: ' + checked['reason'], outcome='partial_needs_review')
             supported, removed = entailed_groups(fragment, checked)
             if supported:

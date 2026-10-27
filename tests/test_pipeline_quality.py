@@ -1347,6 +1347,62 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(len(output['traceability']), 1)
         self.assertIn('repair_error', entry)
 
+    def test_failed_plan_repair_withholds_context_only_groups_before_source_review(self):
+        item = dict(self.item, context=[dict(chunk('c2', 'Provider may publish supplied data.'), relationship='other')])
+        answer = plan(item)
+        extra = plan(item, 'permission', action='publish', conditions=[], evidence=[dict(chunk_id='c2')])['rules'][0]
+        answer['rules'].append(extra)
+        with self.assertRaisesRegex(ValueError, 'primary'):
+            compile_plan(answer, 'contract', item)
+        output, entry, failed = generate_item(item, PlanClient(answer), 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertEqual(entry['generation_attempts'], 2)
+        self.assertEqual(entry['outcome'], 'partial_needs_review')
+        self.assertEqual(entry['withheld_plan_groups'][0]['plan_index'], 1)
+        self.assertEqual(output['odrlPolicy']['obligation'][0]['action'], 'delete')
+        self.assertNotIn('permission', output['odrlPolicy'])
+        self.assertEqual(len(output['traceability']), 1)
+        self.assertEqual(entry['semantic_check']['rule_reviews'][0]['verdict'], 'ENTAILED')
+        validate_fragment(output, 'contract', item, ROOT)
+        def contradicted(value):
+            result = reviewed(value)
+            for row in result['rule_reviews']:
+                row.update(verdict='CONTRADICTED', reason='Simulated contradiction.')
+            return result
+        output, entry, failed = generate_item(item, PlanClient(answer, contradicted), 'prompt',
+                                             'contract', response_schema(ROOT), ROOT)
+        self.assertIsNone(output)
+        self.assertTrue(failed)
+
+    def test_invalid_nested_plan_evidence_withholds_its_whole_parent_group(self):
+        item = dict(self.item, text=self.item['text'] + ' Provider may use supplied data after notification.',
+                    context=[dict(chunk('c2', 'Provider must notify Customer of supplied data.'), relationship='other')])
+        answer = plan(item)
+        permission = plan(item, 'permission', action='use', conditions=[])['rules'][0]
+        permission['duties'] = [dict(actor='Provider', action='notify', asset='supplied data',
+            conditions=[dict(leftOperand='recipient', operator='eq', rightOperand='Customer')],
+            evidence=[dict(chunk_id='c2')])]
+        answer['rules'].append(permission)
+        # A later valid group must not inherit traces or IDs from the failed duty.
+        answer['rules'].append(plan(item, 'permission', action='use', conditions=[])['rules'][0])
+        output, entry, failed = generate_item(item, PlanClient(answer), 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertEqual(entry['outcome'], 'partial_needs_review')
+        self.assertEqual(entry['withheld_plan_groups'][0]['plan_index'], 1)
+        self.assertEqual([row['ruleUid'] for row in output['traceability']], ['r1', 'r2'])
+        self.assertNotIn('duty', output['odrlPolicy']['permission'][0])
+        validate_fragment(output, 'contract', item, ROOT)
+
+    def test_all_invalid_plan_groups_remain_a_failure_instead_of_an_abstention(self):
+        answer = plan(self.item, evidence=[dict(chunk_id='missing')])
+        output, entry, failed = generate_item(self.item, PlanClient(answer), 'prompt',
+                                             'contract', response_schema(ROOT), ROOT)
+        self.assertIsNone(output)
+        self.assertTrue(failed)
+        self.assertIn('No valid source-grounded', entry['reason'])
+        self.assertEqual(len(entry['withheld_plan_groups']), 1)
+        self.assertNotIn('semantic_check', entry)
+
     def test_summary_disclaimer_is_attached_on_its_own_page_without_spreading_to_operative_pages(self):
         disclaimer = chunk('c1', 'This summary is not a substitute for the license.')
         summary = chunk('c2', 'Recipient may share Data.')
