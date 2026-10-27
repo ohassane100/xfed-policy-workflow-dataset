@@ -29,6 +29,13 @@ Judge meaning, conditions and exceptions, not the presence of keywords:
   merely because that section contains important rules.
 - Relevance is not a grant of permission. Dataset descriptions and definitions
   can be relevant supporting material without creating an operative policy rule.
+  A catalogue entry identifying which datasets, files or derived results are
+  covered is RELEVANT asset-scope evidence. Pure file-format specifications,
+  coordinate transforms and processing histories without contractual scope
+  information are NOT_RELEVANT. Read the primary entry, not only its heading.
+- An explicitly non-binding summary or explanatory page does not independently
+  establish contractual terms. Use attached disclaimers to distinguish it from
+  the operative licence. Its apparent permissions are not independent terms.
 - Standalone headings, title fragments, table of contents entries, page numbers,
   bibliographic citations and explanatory commentary are NOT_RELEVANT as
   independent contractual clauses. They may support other clauses as context.

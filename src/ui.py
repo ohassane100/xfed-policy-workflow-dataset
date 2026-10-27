@@ -365,9 +365,12 @@ class Pipeline:
     def start_evaluation(self, request):
         if request.get('split', 'test') != 'test':
             raise ValueError('The UI evaluates the test set only. Use the local CLI for development.')
-        options = dict(task=request.get('task', 'both'), split='test')
+        options = dict(task=request.get('task', 'both'), split='test',
+                       policy_mode=request.get('policy_mode', 'isolated'))
         if options['task'] not in ('classification', 'policy', 'both'):
             raise ValueError('Choose a supported evaluation task.')
+        if options['policy_mode'] not in ('isolated', 'gated') or (options['policy_mode'] == 'gated' and options['task'] != 'both'):
+            raise ValueError('Gated policy evaluation requires both tasks; otherwise choose isolated.')
         data = load_reference(self.root)
         client = self.make_client(request)
         with self.lock:

@@ -1,9 +1,10 @@
-# Independent Contract 05 evaluation
+# Contract evaluation
 
 **Contract 05 is the default test agreement for relevance and policy extraction.**
 Contracts 01–03 are development material. Contract 04 is synthetic and excluded.
-The test covers the complete independent document, rather than sampling clauses
-from the development contracts.
+The evaluation covers the complete document, rather than sampling clauses from
+the development contracts. Its predictions have now been inspected; use Contract
+05 as an exposed diagnostic set and reserve new agreements for final validation.
 
 ## Source and coverage
 
@@ -37,7 +38,7 @@ verbatim and operative pages were also inspected visually.
 
 Review source text and supplied evidence before viewing model predictions.
 Record corrections in `gold`, the reviewer in `gold.reviewer`, and completion
-in `gold.review_status`. Use the existing relevance and policy prompts. Resolve `requires_adjudication` cases, particularly waiver,
+in `gold.review_status`. Use the existing relevance and policy scope. Resolve `requires_adjudication` cases, particularly waiver,
 lifecycle and notice wording. The sharing clause has a predeclared alternative
 for whether its “should” notices impose duties. Do not change aliases or reference
 rules merely to fit predictions. Freeze the reviewed JSON and its reported hash.
@@ -60,6 +61,7 @@ mode uses concurrent workers of the selected model.
 python -m xfed.evaluation describe
 python -m xfed.evaluation run --split dev --task both --model llama3.1:70b --output /tmp/xfed-dev.json
 python -m xfed.evaluation run --task both --model llama3.1:70b --output /tmp/xfed-contract05.json
+python -m xfed.evaluation run --task both --policy-mode gated --model llama3.1:70b --output /tmp/xfed-gated.json
 python -m xfed.evaluation score --predictions /tmp/xfed-contract05.json --output /tmp/xfed-rescored.json
 ```
 
@@ -73,7 +75,8 @@ Parents, definitions and references come from the existing context index; explic
 grant limitations/lifecycle evidence and the summary disclaimer are also attached
 where needed. **Policy extraction is scored independently of relevance**, including
 all non-rule controls. These are stage scores, not an end-to-end pipeline score.
-Production prompts and pipeline stages have not been tuned on Contract 05.
+Error patterns from Contract 05 have informed subsequent improvements. Its scores
+must not be presented as untouched holdout performance.
 
 Policy inference now includes a source-backed rule plan, deterministic ODRL
 compilation and a fresh same-model evidence/coverage check with one correction.
@@ -81,6 +84,59 @@ Its plan and check are saved in each prediction's generation report. Strict rule
 scores are unchanged; mismatches list missing and unexpected canonical rules.
 These checks are part of inference, not the gold judge. Compare new runs separately
 from earlier direct-generation runs; do not combine their scores or timings.
+
+`--policy-mode gated` routes RELEVANT and NEEDS_CONTEXT clauses to policy
+extraction and scores exclusions and upstream failures against the full policy
+reference. It requires both tasks. The dashboard defaults to this mode when both
+tasks are selected. `isolated` preserves stage comparisons. Neither mode reruns
+PDF extraction or context retrieval; the report states this boundary.
+
+## Evaluation method and blind review
+
+Keep complete-rule precision/recall/F1 as correctness measures, with separate
+operative-clause accuracy, no-rule controls, failures and the all-abstain baseline.
+New aligned field diagnostics report modality, action, assignee, target and
+conditions using maximum-weight one-to-one assignment. They explain partial
+matches without forgiving a wrong complete rule, reusing one reference rule for
+duplicates, or treating a similarity score as legal equivalence. This follows
+[ExtractBench's field-specific evaluation and array alignment](https://arxiv.org/abs/2602.12247).
+
+Report precision together with recall and operative generation coverage. The
+[selective classification literature](https://arxiv.org/abs/1705.08500) makes the
+accuracy/coverage trade-off explicit. Here the reference targets are at least
+99% rule precision and 99% rule recall. Targets cannot be verified using draft
+labels. Wilson lower bounds are also reported: a perfect point estimate on a
+small sample is not evidence of 99% population precision. Rules within a clause
+are dependent, so the rule-level interval is descriptive only.
+
+Create a blind annotation packet with neither model outputs nor draft answers:
+
+```bash
+python -m xfed.evaluation review-export --split test --output /tmp/xfed-review.json
+python -m xfed.evaluation review-apply --annotations /tmp/xfed-review.json --output /tmp/xfed-reviewed-reference.json
+python -m xfed.evaluation run --reference /tmp/xfed-reviewed-reference.json --require-reviewed --task both --policy-mode gated --model llama3.1:70b --output /tmp/xfed-reviewed-run.json
+```
+
+An independent human fills each packet entry's gold label/rules, source-based
+rationale and reviewer, then marks it reviewed. Apply completed entries only;
+unfinished entries stay draft. Source text and IDs are checked against the
+packet's frozen reference hash. The original reference is preserved. Resolve
+disagreements before freezing; allow predeclared equivalent representations,
+never aliases added simply to fit a tested model. Separate model families may
+assist review, but the generator's same-model evidence check is not gold truth.
+Compare fixed models/settings on the same reviewed contract splits; inspect
+recall, failure types and per-contract results alongside precision.
+`contract_macro_f1` gives each contract with supported gold rules equal weight
+instead of letting a long agreement dominate the model comparison.
+
+The extraction response schema now constrains supported operators and atomic
+actions before decoding, and the compiler requires literal actor/asset/issuer
+labels in cited spans. This complements [Ollama's schema-constrained output](https://docs.ollama.com/capabilities/structured-outputs);
+valid JSON still needs semantic review. Partial outputs retain only fully
+entailed parent/duty groups: dropping an unsupported prerequisite must never
+create an unconditional permission. No restricted contract format is required;
+clear definitions and one actor/action/asset/condition per sentence help, but
+changing the input format must be evaluated as a separate cohort.
 
 Runs are uncached and preserve saved pipeline outputs. UI reports are saved under
 ignored `evaluation/runs/` and restored after restart. Each report contains source,

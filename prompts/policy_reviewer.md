@@ -27,6 +27,12 @@ CONTRADICTED means the evidence states a materially conflicting term.
 UNSUPPORTED means a rule or material detail is invented or not established.
 AMBIGUOUS means supplied evidence is insufficient to decide. Explain specifically.
 Schema validity and exact citations alone do not establish entailment.
+Check literal actor/asset labels against the cited source, and check their roles
+against the meaning of the entire clause. Do not accept a generic use permission,
+notification duty or remedy merely because related words occur in the text.
+An explicitly non-binding summary creates no independent rules. Provider rights
+and data-related indemnification duties must not be omitted just because they
+are not recipient access restrictions.
 Challenge the candidate rather than accepting a plausible summary. In particular,
 check the direction of elapsed-time comparisons: within/no later than is an upper
 bound, while at least is a lower bound with its stated before/after event intact.

@@ -1211,6 +1211,147 @@ class QualityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'not marked reviewed'):
             score_report(data, report, ROOT, require_reviewed=True)
 
+    def test_rule_fields_are_diagnostics_and_duplicates_do_not_earn_extra_credit(self):
+        from xfed.evaluation import align_rules, policy_counts
+        data = dict(inputs={'i': dict(contract_id='contract', clause=chunk(), policy_context=[], context=[])},
+                    contexts={}, value_aliases={}, contract_aliases={}, action_aliases={})
+        gold = dict(kind='obligation', action='delete', target='supplied data', assignee='Provider',
+                    constraint=[dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT12H')])
+        counts = policy_counts(dict(input_id='i', gold=dict(rules=[gold])),
+                               dict(policy=fragment(self.item)), data, ROOT)
+        self.assertEqual((counts['tp'], counts['fp'], counts['fn']), (0, 1, 1))
+        self.assertEqual(counts['field_slots']['action']['tp'], 1)
+        self.assertEqual(counts['field_alignment'][0]['differing_fields'], ['constraint'])
+        slots, aligned = align_rules([gold], [gold, gold])
+        self.assertEqual(len(aligned), 1)
+        self.assertTrue(all(value == dict(tp=1, fp=1, fn=0) for value in slots.values()))
+        other = dict(gold, action='share', assignee='Recipient')
+        slots, aligned = align_rules([gold, other], [other, gold])
+        self.assertEqual([(row['expected'], row['predicted']) for row in aligned], [(0, 1), (1, 0)])
+        self.assertTrue(all(value['tp'] == 2 for value in slots.values()))
+        self.assertEqual(align_rules([], [gold])[0]['action'], dict(tp=0, fp=1, fn=0))
+
+    def test_blind_review_packets_preserve_evidence_and_require_completed_human_annotations(self):
+        from xfed.evaluation import apply_reviews, digest, load_reference, review_packet
+        data = load_reference(ROOT)
+        before = digest(data)
+        packet = review_packet(data, task='classification')
+        self.assertEqual(len(packet['cases']), 76)
+        self.assertTrue(all(entry['gold']['label'] is None for entry in packet['cases']))
+        self.assertNotIn('predictions', packet)
+        with self.assertRaisesRegex(ValueError, 'No completed reviews'):
+            apply_reviews(data, packet)
+        entry = packet['cases'][0]
+        entry['gold'].update(label='NOT_RELEVANT', review_status='reviewed', reviewer='Test annotator',
+                             rationale='A standalone title has no independent contractual meaning.')
+        result = apply_reviews(data, packet)
+        self.assertEqual(digest(data), before)
+        self.assertEqual(digest(data['inputs']), digest(result['inputs']))
+        reviewed_case = next(case for case in result['classification'] if case['case_id'] == entry['case_id'])
+        self.assertEqual(reviewed_case['gold']['reviewer'], 'Test annotator')
+        entry['gold']['requires_adjudication'] = True
+        with self.assertRaisesRegex(ValueError, 'Resolve requires_adjudication'):
+            apply_reviews(data, packet)
+        entry['gold'].pop('requires_adjudication')
+        entry['input']['clause']['text'] += ' invented'
+        with self.assertRaisesRegex(ValueError, 'evidence changed'):
+            apply_reviews(data, packet)
+
+    def test_gated_evaluation_counts_excluded_rules_and_never_calls_policy_on_negatives(self):
+        from xfed.evaluation import load_reference, run_evaluation
+        class Runner(Client):
+            num_ctx = 131072
+            def preflight(self): pass
+            def reset_assignments(self): pass
+            def metadata(self): return dict(model=self.model)
+        def answer(value):
+            self.assertNotIn('contract_id', value)
+            return dict(label='NOT_RELEVANT')
+        client = Runner(answer)
+        report = run_evaluation(load_reference(ROOT), client, ROOT, policy_mode='gated')
+        metrics = report['metrics']['policy']['real/full_document']
+        self.assertEqual(metrics['outcomes'], dict(skipped_by_relevance=76))
+        self.assertEqual(metrics['canonical_rules']['recall'], 0)
+        self.assertEqual(metrics['operative']['generation_coverage'], 0)
+        self.assertEqual(metrics['all_abstain_baseline_accuracy'], 69 / 76)
+        self.assertIsNone(metrics['canonical_rules']['precision'])
+        self.assertFalse(report['quality_assessment']['reference_targets_verified'])
+        self.assertIn('does not re-evaluate PDF', report['evaluation_scope'])
+        with self.assertRaisesRegex(ValueError, 'requires both tasks'):
+            run_evaluation(load_reference(ROOT), client, ROOT, task='policy', policy_mode='gated')
+
+    def test_routing_metrics_distinguish_uncertainty_from_lost_relevant_clauses(self):
+        from xfed.evaluation import classification_metrics
+        rows = [dict(gold='RELEVANT', label='NEEDS_CONTEXT'),
+                dict(gold='RELEVANT', label='NOT_RELEVANT'),
+                dict(gold='RELEVANT', label='RELEVANT', error='Transport failure')]
+        scores = classification_metrics(rows)
+        self.assertEqual(scores['routing']['relevant_recall'], 1 / 3)
+        self.assertEqual(scores['routing']['missed_relevant'], 2)
+        self.assertEqual(scores['accuracy'], 0)
+
+    def test_plan_schema_constrains_operators_and_source_labels_cannot_be_invented(self):
+        answer = plan(self.item)
+        answer['rules'][0]['conditions'][0]['operator'] = 'isPermittedByMandatoryLaw'
+        with self.assertRaises(ValidationError):
+            Draft202012Validator(response_schema(ROOT)).validate(answer)
+        for field, value in [('actor', 'Unmentioned Controller'), ('asset', 'All Company Data'),
+                             ('issuer', 'Unmentioned Licensor')]:
+            answer = plan(self.item, **{field: value})
+            with self.assertRaisesRegex(ValueError, 'literal label'):
+                compile_plan(answer, 'contract', self.item)
+        # A definition can establish a literal label without broadening scope.
+        item = dict(self.item, context=[dict(chunk('c2', 'Recipient means Provider.'), relationship='definition')])
+        answer = plan(item, actor='Recipient')
+        answer['rules'][0]['evidence'].append(dict(chunk_id='c2', quote='Recipient means Provider.'))
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+
+    def test_partial_rule_groups_keep_sound_rules_without_dropping_failed_prerequisites(self):
+        item = dict(self.item, text='Provider must delete supplied data. Provider may use supplied data after notification.')
+        answer = plan(item, conditions=[])
+        permission = deepcopy(answer['rules'][0])
+        permission.update(kind='permission', action='use', duties=[dict(
+            actor='Provider', action='notify', asset='supplied data', conditions=[],
+            evidence=[dict(chunk_id='c1', quote=item['text'])])])
+        answer['rules'].append(permission)
+        def check(value):
+            result = reviewed(value)
+            for row in result['rule_reviews']:
+                if row['rule_type'] == 'duty':
+                    row.update(verdict='UNSUPPORTED', reason='Notification recipient not established.')
+            return result
+        output, report = generate(dict(contract_id='contract', items=[item]), PlanClient(answer, check), ROOT)
+        self.assertEqual(len(output['traceability']), 1)
+        self.assertEqual(output['odrlPolicy']['obligation'][0]['action'], 'delete')
+        self.assertFalse(output['odrlPolicy'].get('permission'))
+        self.assertEqual(report['summary']['partial_needs_review'], 1)
+        entry = report['clauses'][0]
+        self.assertEqual(len(entry['withheld_rule_uids']), 2)
+        self.assertTrue(all(':withheld:' in uid for uid in entry['withheld_rule_uids']))
+        attempts = []
+        def interrupted_repair(value):
+            attempts.append(value)
+            if len(attempts) > 1:
+                raise ValueError('Ollama output token limit reached')
+            return answer
+        client = PlanClient(interrupted_repair, check)
+        client.last_request = dict(thinking_chars=10, answer_chars=0)
+        output, entry, failed = generate_item(item, client, 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertEqual(entry['outcome'], 'partial_needs_review')
+        self.assertEqual(len(output['traceability']), 1)
+        self.assertIn('repair_error', entry)
+
+    def test_summary_disclaimer_is_attached_on_its_own_page_without_spreading_to_operative_pages(self):
+        disclaimer = chunk('c1', 'This summary is not a substitute for the license.')
+        summary = chunk('c2', 'Recipient may share Data.')
+        operative = dict(chunk('c3', 'Recipient may share Data.'), source=dict(pages=[2], block_ids=['b3']))
+        index = ContextIndex([disclaimer, summary, operative])
+        context, _ = index.context_for(summary)
+        self.assertIn(disclaimer['text'], [value['text'] for value in context])
+        context, _ = index.context_for(operative)
+        self.assertNotIn(disclaimer['text'], [value['text'] for value in context])
+
 
 if __name__ == '__main__':
     unittest.main()

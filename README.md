@@ -34,6 +34,9 @@ Stage 2 extracts atomic rules with literal evidence, compiles ODRL locally, then
 checks each clause for unsupported rules and omissions with a fresh model request.
 One correction is allowed; rejected and partial clauses remain in the generation
 report. The check uses the same model.
+Actor/asset labels must appear in cited evidence. Unsupported rule groups are
+withheld together with their prerequisites; supported groups can remain as an
+explicit partial draft.
 Relevant and uncertain clauses reach generation; classification exclusions are
 recorded. Rules with missing issuers use an ODRL Set. Context overflow fails
 explicitly. Rerun through policy creation after updating to rebuild extraction

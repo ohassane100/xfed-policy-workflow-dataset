@@ -2,12 +2,17 @@
 
 import json
 import re
+import unicodedata
 from copy import deepcopy
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, ValidationError
 
 from xfed.common import map_chunks, schema, validate
+
+
+OPERATORS = ('eq', 'neq', 'lt', 'lteq', 'gt', 'gteq', 'isA', 'hasPart',
+             'isPartOf', 'isAllOf', 'isAnyOf', 'isNoneOf')
 
 
 def rules(policy):
@@ -109,8 +114,6 @@ def check_grounding(fragment, evidence):
                     raise ValueError('Unverified calendar date ' + date + '; preserve source wording instead of inventing a date.')
 
     grounded_identifiers(fragment['odrlPolicy'])
-    allowed_operators = {'eq', 'neq', 'lt', 'lteq', 'gt', 'gteq', 'isA', 'hasPart',
-                         'isPartOf', 'isAllOf', 'isAnyOf', 'isNoneOf'}
     for _, rule in rules(fragment['odrlPolicy']):
         for field in ('assigner', 'assignee'):
             if rule.get(field, '').strip().casefold() in {'data', 'personal data', 'project data', 'use', 'modify', 'any', '*'}:
@@ -126,7 +129,7 @@ def check_grounding(fragment, evidence):
             if constraint['leftOperand'].casefold() in {'clause_id', 'clauseid', 'referenceclause', 'business day'}:
                 raise ValueError('A clause citation or definition is evidence, not an executable condition; represent its actual restriction.')
             operator = constraint['operator'].rsplit('/', 1)[-1].removeprefix('odrl:')
-            if operator not in allowed_operators:
+            if operator not in OPERATORS:
                 raise ValueError('Unsupported constraint operator: ' + constraint['operator'])
     for tag in fragment.get('osdu', {}).get('legal', {}).get('legaltags', []):
         if tag not in evidence:
@@ -192,7 +195,8 @@ def generate_answer(client, prompt, contract, item, output_schema, feedback=None
         if feedback is not None:
             value['correction'] = feedback
         try:
-            answer = client.generate(prompt, value, output_schema, num_predict=output_limit, truncate=False)
+            answer = client.generate(prompt, value, output_schema, num_predict=output_limit,
+                                     truncate=False, compact_json=True)
             return answer, supplied_clause, context_retries, output_retries
         except ValueError as error:
             message = str(error).lower()
@@ -299,7 +303,11 @@ def response_schema(root=Path('.')):
     constraint = deepcopy(original['properties']['odrlPolicy']['properties']['obligation']
                           ['items']['properties']['constraint'])
     constraint['items']['properties'].pop('uid', None)
-    properties = dict(actor=text, action=text, asset=text, conditions=constraint, evidence=evidence)
+    constraint['items']['properties']['operator'] = dict(type='string', enum=list(OPERATORS))
+    # Keep the decoding grammar simple (no regex lookahead); semantic atomicity
+    # is checked after compilation. Source actions such as "stop distributing" remain possible.
+    action = dict(type='string', minLength=1, pattern=r'^[^,;\r\n]+$')
+    properties = dict(actor=text, action=action, asset=text, conditions=constraint, evidence=evidence)
     duty = dict(type='object', additionalProperties=False, required=list(properties), properties=properties)
     rule = dict(type='object', additionalProperties=False,
         required=[*properties, 'kind', 'duties', 'remedies'], properties=dict(properties,
@@ -307,7 +315,7 @@ def response_schema(root=Path('.')):
             issuer=text,
             duties=dict(type='array', items=duty), remedies=dict(type='array', items=duty)))
     return dict(type='object', additionalProperties=False, required=['rules', 'unrepresented', 'reason'],
-        properties=dict(rules=dict(type='array', items=rule), reason=text, osdu=metadata,
+        properties=dict(rules=dict(type='array', items=rule), reason=dict(text, maxLength=600), osdu=metadata,
             unrepresented=dict(type='array', items=dict(type='object', additionalProperties=False,
                 required=['evidence', 'reason'], properties=dict(evidence=evidence, reason=text)))))
 
@@ -335,6 +343,16 @@ def compile_plan(answer, contract, item):
         sources(omitted['evidence'])
     policy, traces = {}, []
     def compile_rule(value, kind):
+        # A correct citation does not ground an invented party or asset. Require
+        # literal labels in the rule's own cited spans, including definitions.
+        def normalized(text):
+            return re.sub(r'\s+', ' ', unicodedata.normalize('NFKC', text).casefold()).strip()
+        cited = [normalized(entry['quote']) for entry in value['evidence']]
+        for field in ('actor', 'asset', 'issuer'):
+            if field in value and not any(re.search(r'(?<!\w)' + re.escape(normalized(value[field])) + r'(?!\w)', span)
+                                          for span in cited):
+                raise ValueError('Rule ' + field + ' must use a literal label from its cited evidence; '
+                                 'cite the supplied definition instead of inventing a label.')
         uid = f'r{len(traces) + 1}'
         traces.append(dict(ruleUid=uid, ruleType=kind, sourceClauses=sources(value['evidence'])))
         rule = dict(uid=uid, assignee=value['actor'], action=value['action'], target=value['asset'])
@@ -402,6 +420,29 @@ def complete_fragment(fragment, contract, item):
     return fragment
 
 
+def entailed_groups(fragment, checked):
+    """Keep whole rule groups only; withholding a duty also withholds its parent."""
+    if not fragment or checked.get('error'):
+        return None, []
+    verdicts = {row['rule_uid']: row['verdict'] for row in checked['rule_reviews']}
+    output, retained, removed = deepcopy(fragment), set(), []
+    for kind in ('permission', 'prohibition', 'obligation'):
+        accepted = []
+        for rule in output['odrlPolicy'].get(kind, []):
+            identifiers = {child['uid'] for _, child in rules({kind: [rule]})}
+            if all(verdicts.get(uid) == 'ENTAILED' for uid in identifiers):
+                accepted.append(rule)
+                retained.update(identifiers)
+            else:
+                removed.extend(sorted(identifiers))
+        if accepted:
+            output['odrlPolicy'][kind] = accepted
+        else:
+            output['odrlPolicy'].pop(kind, None)
+    output['traceability'] = [trace for trace in output['traceability'] if trace['ruleUid'] in retained]
+    return (output if retained else None), removed
+
+
 def generate_item(item, client, prompt, contract, request_schema, root):
     from xfed.policy_review import review_item
 
@@ -418,6 +459,7 @@ def generate_item(item, client, prompt, contract, request_schema, root):
     for attempt in range(2):
         try:
             diagnostics.pop('semantic_check', None)
+            diagnostics.pop('withheld_rule_uids', None)
             answer, supplied, retry_count, output_retry_count = generate_answer(
                 client, correction, contract, item, request_schema, feedback=feedback)
             draft_cache_key = getattr(client, 'last_cache_key', None)
@@ -443,10 +485,18 @@ def generate_item(item, client, prompt, contract, request_schema, root):
                 return result(fragment, answer['reason'], outcome='generated' if fragment else 'abstained_needs_review')
             # Keep sound rules after a repair rather than discarding them solely for
             # incomplete coverage. Never accept a contradicted or unverifiable rule.
-            if attempt and fragment and entailed and checked['coverage'] in ('MISSING_RULES', 'NEEDS_CONTEXT'):
+            if attempt and fragment and entailed and (checked['coverage'] in ('MISSING_RULES', 'NEEDS_CONTEXT')
+                                                      or answer['unrepresented']):
                 return result(fragment, 'Partial extraction: ' + checked['reason'], outcome='partial_needs_review')
-            if fragment and entailed and checked['coverage'] in ('MISSING_RULES', 'NEEDS_CONTEXT'):
-                partial = fragment, deepcopy(diagnostics)
+            supported, removed = entailed_groups(fragment, checked)
+            if supported:
+                validate_fragment(supported, contract, supplied, root)
+                if removed:
+                    diagnostics['withheld_rule_uids'] = removed
+                partial = supported, deepcopy(diagnostics)
+                if attempt:
+                    return result(supported, 'Partial extraction; unsupported rule groups withheld. ' + checked['reason'],
+                                  outcome='partial_needs_review')
             if attempt and fragment is None and not checked.get('error') and checked['coverage'] == 'NEEDS_CONTEXT':
                 return result(None, 'Insufficient evidence or representation: ' + checked['reason'],
                               outcome='abstained_needs_review')
@@ -491,7 +541,7 @@ def generate(document, client, root=Path('.'), progress=None, classified=None):
         'profile': 'http://www.w3.org/ns/odrl/2/core',
     }, traceability=[])
     report = dict(contract_id=contract, status='draft', clauses=[],
-                  generation_strategy='source_backed_plan_with_same_model_check_v1')
+                  generation_strategy='source_backed_plan_with_same_model_check_v2')
     if classified is not None:
         validate(classified, 3, root)
         originals = {chunk['chunk_id']: chunk for chunk in classified['chunks']}
@@ -537,7 +587,11 @@ def generate(document, client, root=Path('.'), progress=None, classified=None):
         for trace in fragment['traceability']:
             trace['ruleUid'] = id_map[trace['ruleUid']]
         for checked in entry.get('semantic_check', {}).get('rule_reviews', []):
-            checked['rule_uid'] = id_map[checked['rule_uid']]
+            checked['rule_uid'] = id_map.get(checked['rule_uid'],
+                f"urn:xfed:{contract}:{item['chunk_id']}:withheld:{checked['rule_uid']}")
+        if entry.get('withheld_rule_uids'):
+            entry['withheld_rule_uids'] = [f"urn:xfed:{contract}:{item['chunk_id']}:withheld:{uid}"
+                                           for uid in entry['withheld_rule_uids']]
         for kind in ('permission', 'prohibition', 'obligation'):
             if fragment['odrlPolicy'].get(kind):
                 output['odrlPolicy'].setdefault(kind, []).extend(fragment['odrlPolicy'][kind])

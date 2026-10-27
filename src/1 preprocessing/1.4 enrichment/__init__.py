@@ -19,10 +19,16 @@ class ContextIndex:
         self.children = defaultdict(list)
         self.main_scopes = {}
         self.table_context = defaultdict(list)
+        self.page_disclaimers = defaultdict(list)
         by_block = defaultdict(list)
         for chunk in chunks:
             for identifier in chunk['source']['block_ids']:
                 by_block[identifier].append(chunk)
+            if re.search(r'\b(?:not\s+a\s+substitute\s+for\s+(?:the\s+)?(?:licen[cs]e|agreement|contract)'
+                         r'|non[- ]binding\s+summary|for\s+information(?:al\s+purposes)?\s+only)\b',
+                         chunk['text'], re.I):
+                for page in chunk['source']['pages']:
+                    self.page_disclaimers[page].append(chunk)
         # Preserve table row identity without rewriting the original chunks.
         # PDF text blocks commonly split the asset, holder and restriction cells.
         groups, current, preceding = [], [], None
@@ -121,6 +127,9 @@ class ContextIndex:
 
         for target in self.table_context.get(chunk['chunk_id'], []):
             attach(target, 'other')
+        for page in chunk['source']['pages']:
+            for target in self.page_disclaimers.get(page, []):
+                attach(target, 'other')
 
         parent = chunk.get('parent_clause_id')
         visited_parents = set()

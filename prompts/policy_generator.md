@@ -15,7 +15,9 @@ For each distinct rule return:
   (shall/must/required). A procedural requirement is an obligation, never a generic
   permission to use data. A prohibition is not permission to do the prohibited act.
 - actor: the party exercising the right or bearing the duty. Use a short label
-  from the source or its supplied definition, consistently. The recipient of a
+  appearing literally in your cited evidence, consistently. Cite a supplied
+  definition if it resolves that label. Do not invent aliases such as Licensee
+  when the source only says "you". The recipient of a
   notification is NOT the actor who must send it. Do not substitute an issuer,
   owner or beneficiary for the responsible party. Data is an asset, not a party.
   An optional issuer identifies the evidenced party issuing the rule. Omit it
@@ -26,7 +28,8 @@ For each distinct rule return:
   document, encrypt or authenticate when their meanings fit. Preserve a more
   specific source action when necessary; do not convert every action to use.
 - asset: the affected information/asset, scoped as in the source. Use the defined
-  name consistently. Do not widen a named dataset to all Data, or invent an asset.
+  name literally from the cited evidence, consistently. Do not widen a named
+  dataset to all Data, or invent an asset. An issuer also needs a cited literal label.
 - conditions: every purpose, recipient, trigger, deadline, exception and limit,
   expressed as constraints with leftOperand/operator/rightOperand and optional
   unit/dataType. Empty only when the source rule really is unconditional.
@@ -34,6 +37,8 @@ For each distinct rule return:
   Include the primary operative span with its negation/modality and qualifications.
   Also cite supporting actor/asset definitions or table cells when needed. Do not
   paraphrase quotations, use ellipses, or cite context-only rules as primary rules.
+  Quote the shortest sufficient spans, including qualifications; do not repeat
+  the whole clause for every rule. Keep the overall reason under 600 characters.
 - duties: prerequisites to exercising THIS permission, each with its own actor,
   action, asset, conditions and evidence. Empty for other rule kinds. A standalone
   shall/must duty belongs in an obligation, not repeated under unrelated permissions.
@@ -66,6 +71,13 @@ Include every distinct supported requirement, including security, incident,
 assistance, audit, retention and deletion duties. Do not duplicate the same rule.
 Definitions, headings, signatures, commentary and unselected options create no
 independent rule. Do not derive rights from silence or from mere legal references.
+Explicitly non-binding summaries create no independent rules; use their attached
+disclaimers. A clause denying endorsement does not grant a generic use permission
+or impose notification duties. Preserve the action on names/trademarks when those
+are the affected assets; do not substitute sharing data for using a name.
+An explicit provider right or data-related indemnification duty can be operative
+even if it is not a recipient use restriction. Source-specific atomic actions
+are allowed; never invent a constraint operator to express them.
 An unresolved reference blocks only rules whose meaning depends on it; preserve
 unaffected supported rules. Never invent the contents of an external provision.
 
