@@ -37,6 +37,8 @@ For each distinct rule return:
 - asset: the affected information/asset, scoped as in the source. Use the defined
   name literally from the cited evidence, consistently. Do not widen a named
   dataset to all Data, or invent an asset. An issuer also needs a cited literal label.
+  For notification duties preserve the subject being notified, including its
+  plan/error/incident qualification, rather than only naming the underlying dataset.
 - conditions: every purpose, recipient, trigger, deadline, exception and limit,
   expressed as constraints with leftOperand/operator/rightOperand and optional
   unit/dataType. Empty only when the source rule really is unconditional.
@@ -60,6 +62,14 @@ For each distinct rule return:
 An exception qualifies its existing rule. Do not turn a possibly shorter legal
 deadline into a second unconditional duty. Preserve the trigger, recipient and
 exception together, and record an unknown shorter deadline using source wording.
+For a notification deadline qualified by a mandatory shorter period, include that
+qualification in timing/exception conditions on the notification rule itself.
+Do not leave it only in the overall reason or invent the unknown shorter duration.
+An exception field in a flat conditions array is still an AND condition. For a
+shorter notification deadline, preserve a timing qualification rather than making
+the duty apply only when the exception is true. For 'purpose A or as agreed',
+represent separate supported alternatives or mark insufficient representation;
+do not require purpose A AND a separate agreement to exercise the right.
 For pronouns such as 'such records', cite the primary antecedent as well as the
 operative sentence. Avoid unnecessary definition quotations when the primary
 clause already identifies the actor and asset.
@@ -76,6 +86,8 @@ days as business days; do not replace them with calendar days or invent dates.
 Use timing eq for qualitative requirements such as 'without undue delay'. They
 are not elapsedTime numeric bounds. Preserve the named notification recipient
 as a recipient condition; including its name in the asset label is insufficient.
+Use XML Schema duration syntax for elapsedTime, for example P3D or PT72H; place
+hours/minutes/seconds after T. Do not attach a redundant unit to a duration string.
 Use valid operators eq, neq, lt, lteq, gt, gteq, isA, hasPart, isPartOf, isAllOf,
 isAnyOf, isNoneOf. A constraint array is conjunctive. Do not flatten OR alternatives
 into mandatory AND conditions. Preserve choices and exceptions on the applicable

@@ -19,7 +19,7 @@ import unittest
 
 from xfed.common import map_chunks, write_json
 from xfed.enrichment import ContextIndex, enrich
-from xfed.llm import OllamaClient, OllamaPool
+from xfed.llm import OllamaClient, OllamaConnectionError, OllamaPool
 from xfed.llm.service import OllamaServicePool, nvidia_gpus
 from xfed.policy_generation import (compile_plan, complete_fragment, generate, generate_answer, generate_item,
                                     response_schema, summarize_error, validate_fragment)
@@ -1236,6 +1236,29 @@ class QualityTests(unittest.TestCase):
         self.assertTrue(all(value['tp'] == 2 for value in slots.values()))
         self.assertEqual(align_rules([], [gold])[0]['action'], dict(tp=0, fp=1, fn=0))
 
+    def test_duration_equivalence_preserves_units_calendar_scope_and_comparison_direction(self):
+        from xfed.evaluation import canonical_rule
+        data = dict(value_aliases={}, contract_aliases={}, action_aliases={})
+        rule = dict(kind='obligation', action='inform', assignee='Provider', target='Data')
+        def scored(value, unit=None, operator='lteq', event='discovery'):
+            condition = dict(leftOperand='elapsedTime', operator=operator, rightOperand=value)
+            if unit:
+                condition['unit'] = unit
+            return canonical_rule(dict(rule, constraint=[condition,
+                dict(leftOperand='event', operator='eq', rightOperand=event)]), data, 'contract')
+        self.assertEqual(scored('P3D'), scored('PT72H'))
+        self.assertEqual(scored('PT72H'), scored(72, 'hours'))
+        self.assertEqual(scored('PT72H'), scored('PT72H', 'hour'))
+        self.assertEqual(scored('PT1M0.5S'), scored('PT60.5S'))
+        self.assertEqual(scored(1.5, 'hours'), scored('PT90M'))
+        self.assertEqual(scored(1.0000004, 'hours'), scored('PT3600.00144S'))
+        self.assertNotEqual(scored(1.0000004, 'hours'), scored('PT1H'))
+        self.assertNotEqual(scored('PT72H'), scored('PT72H', 'day'))
+        self.assertNotEqual(scored('P1M'), scored('P30D'))
+        self.assertNotEqual(scored('P1Y'), scored('P365D'))
+        self.assertNotEqual(scored('PT72H'), scored('PT72H', operator='gteq'))
+        self.assertNotEqual(scored('PT72H'), scored('PT72H', event='notification sent'))
+
     def test_blind_review_packets_preserve_evidence_and_require_completed_human_annotations(self):
         from xfed.evaluation import apply_reviews, digest, load_reference, review_packet
         data = load_reference(ROOT)
@@ -1284,6 +1307,40 @@ class QualityTests(unittest.TestCase):
         self.assertIn('does not re-evaluate PDF', report['evaluation_scope'])
         with self.assertRaisesRegex(ValueError, 'requires both tasks'):
             run_evaluation(load_reference(ROOT), client, ROOT, task='policy', policy_mode='gated')
+
+    def test_gated_policy_inputs_outside_the_classification_sample_receive_unscored_decisions(self):
+        from xfed.evaluation import load_reference, run_evaluation
+        class Runner(Client):
+            def preflight(self): pass
+            def reset_assignments(self): pass
+            def metadata(self): return dict(model=self.model)
+        data = load_reference(ROOT)
+        heading = next(case for case in data['classification'] if case['split'] == 'dev')
+        controls = next(case for case in data['policy'] if case['input_id'] == heading['input_id'])
+        uncovered = next(case for case in data['policy'] if case['case_id'] == 'contract_01:c000281')
+        data['classification'] = [case for case in data['classification'] if case['split'] == 'test'] + [heading]
+        data['policy'] = [case for case in data['policy'] if case['split'] == 'test'] + [controls, uncovered]
+        with TemporaryDirectory() as directory:
+            reference = Path(directory) / 'reference.json'
+            write_json(reference, data)
+            client = Runner(dict(label='NOT_RELEVANT'))
+            report = run_evaluation(data, client, ROOT, split='dev', policy_mode='gated', reference_path=reference)
+            self.assertEqual(report['progress']['classification']['completed'], 1)
+            self.assertEqual(report['progress']['policy']['completed'], 2)
+            routed = report['predictions']['policy'][uncovered['case_id']]
+            self.assertTrue(routed['skipped_by_relevance'])
+            self.assertNotIn('error', routed)
+            self.assertIsNone(routed['routing_classification']['benchmark_case_id'])
+            self.assertEqual(len(client.calls), 1)
+            self.assertEqual(report['metrics']['policy']['real/all_curated_cases']['failures'], 0)
+            with patch('xfed.policy_generation.generate_item', return_value=(None,
+                       dict(reason='Simulated missing rule.', outcome='abstained'), False)) as generate_item_mock:
+                report = run_evaluation(data, Runner(dict(label='RELEVANT')), ROOT,
+                                       split='dev', policy_mode='gated', reference_path=reference)
+            self.assertEqual(generate_item_mock.call_count, 1)
+            self.assertEqual(report['predictions']['policy'][uncovered['case_id']][
+                             'routing_classification']['prediction']['label'], 'RELEVANT')
+            self.assertEqual(report['metrics']['policy']['real/all_curated_cases']['canonical_rules']['recall'], 0)
 
     def test_routing_metrics_distinguish_uncertainty_from_lost_relevant_clauses(self):
         from xfed.evaluation import classification_metrics
@@ -1519,6 +1576,53 @@ class QualityTests(unittest.TestCase):
         self.assertNotIn('metrics', snapshot)
         self.assertEqual(snapshots[0]['progress']['classification']['completed'], 0)
 
+    def test_evaluation_stops_on_lost_connection_and_preserves_completed_predictions(self):
+        from xfed.evaluation import load_reference, run_evaluation, score_report
+        class Runner(Client):
+            def preflight(self): pass
+            def reset_assignments(self): pass
+            def metadata(self): return dict(model=self.model)
+        calls = []
+        def answer(value):
+            calls.append(value)
+            if len(calls) == 2:
+                raise OllamaConnectionError('Forwarded endpoint disconnected.')
+            return dict(label='RELEVANT', reason='Simulated classification.')
+        data, saved = load_reference(ROOT), []
+        with self.assertRaisesRegex(OllamaConnectionError, 'disconnected'):
+            run_evaluation(data, Runner(answer), ROOT, task='classification', completed=saved.append)
+        report = saved[-1]
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(report['status'], 'failed')
+        self.assertTrue(report['infrastructure_error'])
+        count = report['progress']['classification']['completed']
+        self.assertGreater(count, 0)
+        self.assertLess(count, 76)
+        self.assertEqual(count, len(report['predictions']['classification']))
+        self.assertEqual(report['live_metrics']['classification']['completed']['n'], count)
+        self.assertNotIn('metrics', report)
+        rescored = score_report(data, report, ROOT)
+        self.assertEqual(rescored['metrics']['classification']['real/full_document']['errors'], 76 - count)
+        class Unavailable(Runner):
+            def preflight(self): raise OllamaConnectionError('Not connected.')
+        saved.clear()
+        with self.assertRaises(OllamaConnectionError):
+            run_evaluation(data, Unavailable(dict(label='RELEVANT')), ROOT,
+                           task='classification', completed=saved.append)
+        self.assertTrue(saved[-1]['infrastructure_error'])
+        self.assertEqual(saved[-1]['progress']['classification']['completed'], 0)
+
+    def test_review_connection_failure_propagates_instead_of_becoming_a_model_verdict(self):
+        from xfed.policy_review import review_item
+        item = dict(self.item, candidate_rules=[dict(rule_type='obligation',
+                    rule=fragment(self.item)['odrlPolicy']['obligation'][0], source_chunk_ids=['c1'])])
+        def disconnected(value):
+            raise OllamaConnectionError('Forwarded endpoint disconnected.')
+        client = Client(disconnected)
+        with self.assertRaises(OllamaConnectionError):
+            review_item(item, client, 'prompt', 'contract', ROOT)
+        self.assertEqual(len(client.calls), 1)
+
     def test_notification_recipient_and_qualitative_timing_are_not_lost(self):
         item = dict(self.item, text='Provider must notify Customer of incidents without undue delay.')
         answer = plan(item, action='notify', asset='incidents', conditions=[])
@@ -1530,6 +1634,69 @@ class QualityTests(unittest.TestCase):
             compile_plan(answer, 'contract', item)
         answer['rules'][0]['conditions'][1] = dict(leftOperand='timing', operator='eq', rightOperand='without undue delay')
         self.assertIsNotNone(compile_plan(answer, 'contract', item))
+
+    def test_duration_syntax_rejects_invalid_component_order_and_missing_time_separator(self):
+        for value in ['P1H', 'P1DT', 'PT', 'P1D2D', 'PT1.5H', 'P1W', 'P1YH']:
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'duration'):
+                compile_plan(plan(self.item, conditions=[dict(leftOperand='elapsedTime', operator='lteq', rightOperand=value)]),
+                             'contract', self.item)
+        for value in ['P3Y', 'P1Y2M3DT4H5M6.5S', 'PT0S', 'P30D', 'PT72H']:
+            self.assertIsNotNone(compile_plan(plan(self.item, conditions=[dict(
+                leftOperand='elapsedTime', operator='lteq', rightOperand=value)]), 'contract', self.item))
+
+    def test_notification_shorter_deadline_exception_cannot_be_omitted(self):
+        item = dict(self.item, text='Provider must notify Customer of incidents within 72 hours of discovery, '
+                    'unless mandatory rules require notification within a shorter period.')
+        answer = plan(item, action='notify', asset='incidents', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Customer'),
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT72H'),
+            dict(leftOperand='event', operator='eq', rightOperand='discovery')])
+        with self.assertRaisesRegex(ValueError, 'shorter-period exception'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'].append(dict(leftOperand='timing', operator='eq',
+                                                   rightOperand='subject to any mandatory shorter deadline'))
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+        answer['rules'][0]['conditions'][-1] = dict(leftOperand='exception', operator='eq',
+            rightOperand='mandatory rules require a shorter period')
+        with self.assertRaisesRegex(ValueError, 'AND condition'):
+            compile_plan(answer, 'contract', item)
+
+    def test_source_or_authorisation_cannot_be_a_conjunctive_exception(self):
+        item = dict(self.item, text='Provider may use supplied data for research or as agreed by Customer.')
+        answer = plan(item, 'permission', action='use', conditions=[
+            dict(leftOperand='purpose', operator='eq', rightOperand='research'),
+            dict(leftOperand='exception', operator='eq', rightOperand='agreed by Customer')])
+        with self.assertRaisesRegex(ValueError, 'AND exception'):
+            compile_plan(answer, 'contract', item)
+        # Distinct branches retain the source's choice instead of conjoining it.
+        alternative = deepcopy(answer['rules'][0])
+        alternative['conditions'] = [dict(leftOperand='approval', operator='eq', rightOperand='agreed by Customer')]
+        answer['rules'][0]['conditions'] = [dict(leftOperand='purpose', operator='eq', rightOperand='research')]
+        answer['rules'].append(alternative)
+        self.assertEqual(len(compile_plan(answer, 'contract', item)['odrlPolicy']['permission']), 2)
+
+    def test_example_rule_is_withheld_only_when_the_same_general_rule_already_covers_it(self):
+        item = dict(self.item, text='Provider may implement protection measures, such as a software update, '
+                    'if they do not negatively affect Customer.')
+        answer = plan(item, 'permission', action='implement', asset='protection measures', conditions=[
+            dict(leftOperand='impact', operator='neq', rightOperand='negative effect on Customer')])
+        example = deepcopy(answer['rules'][0])
+        example['asset'] = 'software update'
+        answer['rules'].append(example)
+        with self.assertRaisesRegex(ValueError, 'Illustrative example'):
+            compile_plan(answer, 'contract', item)
+        output, entry, failed = generate_item(item, PlanClient(answer), 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertEqual(entry['outcome'], 'partial_needs_review')
+        self.assertEqual(len(output['odrlPolicy']['permission']), 1)
+        self.assertEqual(entry['withheld_plan_groups'][0]['plan_index'], 1)
+        validate_fragment(output, 'contract', item, ROOT)
+        # Independently qualified examples and other actions are distinct rules.
+        example['conditions'] = [dict(leftOperand='purpose', operator='eq', rightOperand='security')]
+        self.assertEqual(len(compile_plan(answer, 'contract', item)['odrlPolicy']['permission']), 2)
+        example['conditions'] = deepcopy(answer['rules'][0]['conditions'])
+        example['action'] = 'modify'
+        self.assertEqual(len(compile_plan(answer, 'contract', item)['odrlPolicy']['permission']), 2)
 
     def test_unused_osdu_does_not_break_the_model_decoder_but_explicit_metadata_is_supported(self):
         captured = []

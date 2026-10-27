@@ -10,6 +10,9 @@ NUMBER = r"\d{1,3}(?:\.\d{1,3})*(?:\([a-z0-9]+\))*"
 CLAUSE = re.compile(rf"^\s*(?:(?:Article|Section|Clause)\s+)?(?P<id>{NUMBER})[.):]?(?=\s|$)", re.I)
 SCOPE = re.compile(r"^(ANNEX|APPENDIX|EXHIBIT)\s+([IVXLCDM]+|[A-Z]|\d+)\b", re.I)
 DEFINITION = re.compile(r'(?m)^\s*["\u201c\u2018]?([A-Z][\w &/\-]{1,70}?)["\u201d\u2019]?\s*(?::|\bmeans\b|\bshall mean\b|\bhas the meaning\b)')
+DURATION = re.compile(r'P(?=\d|T\d)(?:(?P<years>\d+)Y)?(?:(?P<months>\d+)M)?'
+                      r'(?:(?P<days>\d+)D)?(?:T(?=\d)(?:(?P<hours>\d+)H)?'
+                      r'(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+(?:\.\d+)?)S)?)?', re.I)
 
 
 def clause_number(text):

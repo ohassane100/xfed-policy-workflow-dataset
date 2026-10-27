@@ -8,7 +8,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator, ValidationError
 
-from xfed.common import map_chunks, schema, validate
+from xfed.common import DURATION, map_chunks, schema, validate
 
 
 OPERATORS = ('eq', 'neq', 'lt', 'lteq', 'gt', 'gteq', 'isA', 'hasPart',
@@ -329,6 +329,9 @@ def response_schema(root=Path('.')):
 
 def compile_plan(answer, contract, item, rejected=None):
     """Resolve source IDs, check legacy quotes and deterministically build ODRL."""
+    def normalized(text):
+        return re.sub(r'\s+', ' ', unicodedata.normalize('NFKC', text).casefold()).strip()
+
     def sources(entries):
         result, seen = [], set()
         for entry in entries:
@@ -356,8 +359,6 @@ def compile_plan(answer, contract, item, rejected=None):
     def compile_rule(value, kind):
         # A correct citation does not ground an invented party or asset. Require
         # literal labels in the rule's own cited clauses, including definitions.
-        def normalized(text):
-            return re.sub(r'\s+', ' ', unicodedata.normalize('NFKC', text).casefold()).strip()
         source_refs = sources(value['evidence'])
         cited_ids = {entry['chunk_id'] for entry in source_refs}
         # Resolve antecedents such as "such records" inside a cited clause.
@@ -375,10 +376,27 @@ def compile_plan(answer, contract, item, rejected=None):
             if named_recipient and not any(condition['leftOperand'].casefold() == 'recipient' for condition in value['conditions']):
                 raise ValueError('Notification recipient is explicit in the source but missing from conditions; '
                                  'encode the notified party as recipient, not as actor or target.')
+            if (re.search(r'\bunless\b[^.]*\bshorter\b', item['text'], re.I)
+                    and not re.search(r'\b(?:shorter|earlier)\b', json.dumps(value['conditions']), re.I)):
+                raise ValueError('Notification deadline omits an explicit shorter-period exception; '
+                                 'preserve that qualification on this duty using source wording.')
+            if (re.search(r'\bunless\b[^.]*\bshorter\b', item['text'], re.I) and any(
+                    condition['leftOperand'].casefold() == 'exception'
+                    and condition['operator'] in ('eq', 'isAnyOf', 'isA') for condition in value['conditions'])):
+                raise ValueError('A shorter-period exception changes the deadline, not whether notification is owed. '
+                                 'Keep the duty applicable normally and preserve its shorter timing qualification; '
+                                 'do not require the exception to be true as an AND condition.')
+        if (kind in ('permission', 'obligation') and re.search(r'\bor\s+as\s+(?:agreed|authori[sz]ed|permitted)\b',
+                item['text'], re.I) and len(value['conditions']) > 1 and any(
+                    condition['leftOperand'].casefold() == 'exception'
+                    and condition['operator'] in ('eq', 'isAnyOf', 'isA') for condition in value['conditions'])):
+            raise ValueError('Alternative authorisation is encoded as an AND exception condition. '
+                             'Split the source-supported alternatives into separate rule branches or mark the '
+                             'unrepresentable qualification for review; do not require both alternatives.')
         for condition in value['conditions']:
             if (condition['leftOperand'].casefold() == 'elapsedtime'
                     and isinstance(condition['rightOperand'], str)
-                    and not re.fullmatch(r'P(?=\d|T\d)[\dYMWDTHS.]+', condition['rightOperand'], re.I)):
+                    and not DURATION.fullmatch(condition['rightOperand'])):
                 raise ValueError('elapsedTime requires an ISO 8601 duration or a number with units; '
                                  'preserve qualitative wording such as without undue delay in a timing constraint.')
         if kind == 'prohibition':
@@ -407,6 +425,18 @@ def compile_plan(answer, contract, item, rejected=None):
         kind = value['kind']
         start = len(traces)
         try:
+            # A named example is already covered by an otherwise identical rule
+            # on its general asset. Do not turn it into a second independent rule.
+            for other in answer['rules']:
+                if (other is not value and other['asset'] != value['asset'] and all(
+                        other.get(key) == value.get(key) for key in
+                        ('kind', 'actor', 'action', 'conditions', 'issuer', 'duties', 'remedies'))
+                        and any(entry['chunk_id'] == item['chunk_id'] for entry in other['evidence'])
+                        and re.search(r'(?<!\w)' + re.escape(normalized(other['asset']))
+                            + r'\s*,?\s*(?:such as|for example|including)\s+(?:(?:a|an|the)\s+)?'
+                            + re.escape(normalized(value['asset'])) + r'(?!\w)', normalized(item['text']))):
+                    raise ValueError('Illustrative example duplicates a general rule with the same scope; '
+                                     'keep the general asset rule once instead of a separate example rule.')
             if (value['duties'] and kind != 'permission') or (value['remedies'] and kind != 'prohibition'):
                 raise ValueError('Only permissions have prerequisite duties; only prohibitions have remedies.')
             rule = compile_rule(value, kind)

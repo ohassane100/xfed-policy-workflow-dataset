@@ -95,6 +95,9 @@ extraction and scores exclusions and upstream failures against the full policy
 reference. It requires both tasks. The dashboard defaults to this mode when both
 tasks are selected. `isolated` preserves stage comparisons. Neither mode reruns
 PDF extraction or context retrieval; the report states this boundary.
+Policy inputs absent from the relevance benchmark receive extra unscored
+classification decisions, saved with each policy prediction. They do not change
+the relevance benchmark denominator. Scored reports also record the scorer hash.
 
 Predictions and `live_metrics` are checkpointed after each completed request, so
 the dashboard and downloaded JSON expose early results and cancellation retains
@@ -102,6 +105,9 @@ completed work. Interim metrics cover completed cases only; `progress` retains
 the full selected-case denominator. Final `metrics` still count every case,
 including missing predictions and failures. Keep each run's code/prompts frozen;
 use a separate local snapshot while editing the next version.
+Connection failures stop the run and retain completed predictions with an
+infrastructure-error marker. Restore the endpoint before starting another run;
+an interrupted run is not a completed model-quality comparison.
 
 For an existing approved model service forwarded to the local computer, no remote
 scripts, installations or private model services are needed:
@@ -123,6 +129,9 @@ conditions using maximum-weight one-to-one assignment. They explain partial
 matches without forgiving a wrong complete rule, reusing one reference rule for
 duplicates, or treating a similarity score as legal equivalence. This follows
 [ExtractBench's field-specific evaluation and array alignment](https://arxiv.org/abs/2602.12247).
+Fixed-length `elapsedTime` durations compare quantitatively (for example, `P3D`
+equals `PT72H`); calendar months/years, trigger events and comparison direction
+remain distinct. Only a consistent redundant duration unit is ignored.
 
 Report precision together with recall and operative generation coverage. The
 [selective classification literature](https://arxiv.org/abs/1705.08500) makes the

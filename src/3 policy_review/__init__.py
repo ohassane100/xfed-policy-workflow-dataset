@@ -10,6 +10,7 @@ from jsonschema import Draft202012Validator, ValidationError
 
 from xfed.common import map_chunks, schema, validate
 from xfed.enrichment import ContextIndex
+from xfed.llm import OllamaConnectionError
 from xfed.policy_generation import check_grounding, context_char_budget, request_value, rules, summarize_error
 
 
@@ -84,6 +85,8 @@ def review_item(item, worker, prompt, contract, root, require_resolved=True):
                 answer['reason'] += ' Unresolved references: ' + '; '.join(item['unresolved_references'])
             return dict(answer, chunk_id=item['chunk_id'], reviewer=reviewer,
                         unresolved_references=item.get('unresolved_references', []))
+        except OllamaConnectionError:
+            raise
         except (ValueError, ValidationError, RuntimeError) as error:
             if hasattr(worker, 'discard_last_response'):
                 worker.discard_last_response()

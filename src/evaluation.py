@@ -4,6 +4,7 @@ import argparse
 from collections import Counter, defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
+from decimal import Decimal, localcontext
 from uuid import uuid4
 import hashlib
 import json
@@ -14,7 +15,7 @@ import re
 from time import perf_counter
 import unicodedata
 
-from xfed.common import map_chunks, write_json
+from xfed.common import DURATION, map_chunks, write_json
 
 
 LABELS = ('RELEVANT', 'NOT_RELEVANT', 'NEEDS_CONTEXT')
@@ -253,16 +254,34 @@ def canonical_rule(rule, data, contract):
             return [value(part) for part in item]
         normalized = normal(item)
         return aliases.get(normalized, normalized) if isinstance(normalized, str) else normalized
+    factors = dict(days=86400, hours=3600, minutes=60, seconds=1)
+    def fixed_duration(parts):
+        with localcontext() as context:
+            context.prec = max(28, sum(len(str(part or '')) for part in parts.values()) + 20)
+            seconds = sum(Decimal(parts.get(key) or '0') * factor for key, factor in factors.items())
+            text = format(seconds, 'f')
+            return 'pt' + (text.rstrip('0').rstrip('.') if '.' in text else text) + 's'
     constraints = []
     for entry in rule.get('constraint', []):
         part = {key: value(item) for key, item in entry.items() if key != 'uid'}
         if part.get('operator') in ('isanyof','isallof','isnoneof') and isinstance(part.get('rightOperand'),list):
             part['rightOperand'] = sorted(part['rightOperand'],key=lambda item:json.dumps(item,sort_keys=True))
         duration_unit = normal(entry.get('unit', ''))
-        if isinstance(entry.get('rightOperand'), (int, float)) and duration_unit in ('hour', 'hours', 'day', 'days'):
-            number = f"{entry['rightOperand']:g}"
-            part['rightOperand'] = normal(('PT' + number + 'H') if duration_unit.startswith('hour') else ('P' + number + 'D'))
+        unit_key = duration_unit.rstrip('s') + 's'
+        if (normal(entry['leftOperand']) == 'elapsedtime' and type(entry.get('rightOperand')) in (int, float)
+                and unit_key in factors and Decimal(str(entry['rightOperand'])).is_finite()):
+            part['rightOperand'] = fixed_duration({unit_key: str(entry['rightOperand'])})
             part.pop('unit', None)
+        # Fixed-length durations are quantitative values, not free-text labels.
+        # Calendar months/years have no fixed conversion to days or seconds.
+        if normal(entry['leftOperand']) == 'elapsedtime' and isinstance(part.get('rightOperand'), str):
+            parsed = DURATION.fullmatch(part['rightOperand'])
+            if parsed and not (parsed['years'] or parsed['months']):
+                part['rightOperand'] = fixed_duration(parsed.groupdict())
+                # An explicit unit is redundant only for the matching single component.
+                if unit_key in factors and parsed[unit_key] is not None and all(
+                        not Decimal(parsed[key] or '0') for key in factors if key != unit_key):
+                    part.pop('unit', None)
         constraints.append(json.dumps(part, sort_keys=True))
     return dict(kind=rule['kind'], action=actions.get(normal(rule['action']), normal(rule['action'])),
                 target=value(rule.get('target', '')), assignee=value(rule.get('assignee', '')),
@@ -442,6 +461,7 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
     if report.get('split') not in ('dev', 'test'):
         raise ValueError('Reports must declare dev or test.')
     output = deepcopy(report)
+    output['scoring_sha256'] = hashlib.sha256((Path(root) / 'src/evaluation.py').read_bytes()).hexdigest()
     metrics, mismatches = {}, []
     for task, operation in [('classification', classification_metrics), ('policy', policy_metrics)]:
         predictions = report.get('predictions', {}).get(task, {})
@@ -539,6 +559,7 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
 
 def run_evaluation(data, client, root=Path('.'), task='both', split='test', progress=None, cancel=None, completed=None,
                    policy_mode='isolated', reference_path=None):
+    from xfed.llm import OllamaConnectionError
     from xfed.relevance import classify_batch, fits
     from xfed.policy_generation import generate_item, response_schema
     if task not in ('classification', 'policy', 'both'):
@@ -592,8 +613,22 @@ def run_evaluation(data, client, root=Path('.'), task='both', split='test', prog
     def save_checkpoint():
         if completed:
             completed(deepcopy(report))
+    def connection_stopped(error):
+        report.update(status='failed', error=str(error), infrastructure_error=True,
+                      finished_at=datetime.now(timezone.utc).isoformat())
+        save_checkpoint()
+    def run_work(work, operation, progress, completed):
+        try:
+            return map_chunks(work, operation, client, progress, completed=completed)
+        except OllamaConnectionError as error:
+            connection_stopped(error)
+            raise
     save_checkpoint()
-    client.preflight()
+    try:
+        client.preflight()
+    except (OSError, OllamaConnectionError) as error:
+        connection_stopped(error)
+        raise
     for name, cases in selected.items():
         if not cases:
             continue
@@ -626,45 +661,58 @@ def run_evaluation(data, client, root=Path('.'), task='both', split='test', prog
                     return values
                 except InterruptedError:
                     raise
+                except OllamaConnectionError:
+                    raise
                 except Exception as error:
                     return [dict(error=str(error)) for _ in group['group']]
             def classification_completed(group, values):
                 for (case, item), value in zip(group['group'], values):
                     record(name, case, item, value)
                 save_checkpoint()
-            map_chunks(work,classify,client,lambda done,total,message:checkpoint(done,total,'Classification requests'),
-                       completed=classification_completed)
+            run_work(work,classify,lambda done,total,message:checkpoint(done,total,'Classification requests'),
+                     classification_completed)
         else:
             prompt=(Path(root)/'prompts/policy_generator.md').read_text(encoding='utf-8')
             output_schema=response_schema(root)
             def policy(case,worker):
                 checkpoint()
                 item=input_for(data,case,True)
-                if policy_mode == 'gated':
-                    # Classification and policy IDs need not be identical in a
-                    # curated development set. Join by frozen input identity.
-                    classification_case = next((entry for entry in selected['classification']
-                                                if entry['input_id'] == case['input_id']), None)
-                    decision = report['predictions']['classification'].get(
-                        classification_case['case_id'] if classification_case else '', {})
-                    if decision.get('error') or decision.get('label') not in LABELS:
-                        return dict(policy=None, error='Upstream classification failed or is missing.',
-                                    input_sha256=digest(item))
-                    if decision['label'] == 'NOT_RELEVANT':
-                        return dict(policy=None, skipped_by_relevance=True, input_sha256=digest(item))
+                routing = None
+                def result(**prediction):
+                    if routing is not None:
+                        prediction['routing_classification'] = routing
+                    return prediction
                 try:
+                    if policy_mode == 'gated':
+                        classification_case = next((entry for entry in selected['classification']
+                                                    if entry['input_id'] == case['input_id']), None)
+                        routing_input = input_for(data, case)
+                        if classification_case:
+                            decision = report['predictions']['classification'].get(classification_case['case_id'], {})
+                        else:
+                            # Policy and classification samples need not overlap.
+                            # Classify uncovered inputs without inventing relevance gold.
+                            decision = classify_batch([routing_input], worker, root)[0]
+                        routing = dict(prediction=deepcopy(decision), input_sha256=digest(routing_input),
+                                       benchmark_case_id=classification_case['case_id'] if classification_case else None)
+                        if decision.get('error') or decision.get('label') not in LABELS:
+                            return result(policy=None, error='Upstream classification failed or is missing.')
+                        if decision['label'] == 'NOT_RELEVANT':
+                            return result(policy=None, skipped_by_relevance=True)
                     fragment,entry,failed=generate_item(item,worker,prompt,data['inputs'][case['input_id']]['contract_id'],output_schema,root)
-                    return dict(policy=fragment,generation_report=entry,failed=failed,input_sha256=digest(item))
+                    return result(policy=fragment,generation_report=entry,failed=failed)
                 except InterruptedError:
                     raise
+                except OllamaConnectionError:
+                    raise
                 except Exception as error:
-                    return dict(policy=None,error=str(error),input_sha256=digest(item))
+                    return result(policy=None,error=str(error))
             work=[dict(case,chunk_id=case['case_id']) for case in cases]
             def policy_completed(case, value):
                 record(name, case, input_for(data, case, True), value)
                 save_checkpoint()
-            map_chunks(work,policy,client,lambda done,total,message:checkpoint(done,total,'Policy cases'),
-                       completed=policy_completed)
+            run_work(work,policy,lambda done,total,message:checkpoint(done,total,'Policy cases'),
+                     policy_completed)
         if inference_files(root) != report['inference_sha256'] or digest(load_reference(root, reference_path)) != report['reference_sha256']:
             raise ValueError('Code, prompts, schemas or references changed during evaluation; restart with frozen inputs.')
         report['execution'][name]=dict(duration_seconds=perf_counter()-started,options=client.metadata())

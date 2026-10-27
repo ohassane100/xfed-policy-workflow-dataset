@@ -11,6 +11,10 @@ from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 
+class OllamaConnectionError(RuntimeError):
+    """The endpoint could not complete a connection, rather than a model answer."""
+
+
 class OllamaClient:
     def __init__(self, base_url, model, timeout=300, num_ctx=32768, num_predict=512, think='auto', main_gpu=None,
                  relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1, keep_alive='30m',
@@ -283,7 +287,7 @@ class OllamaClient:
         except (URLError, TimeoutError, OSError, HTTPException) as error:
             if self.cancel.is_set():
                 raise InterruptedError('Model request cancelled.') from error
-            raise RuntimeError(f'Ollama request failed at {self.url}: {error}') from error
+            raise OllamaConnectionError(f'Ollama request failed at {self.url}: {error}') from error
         except (ValueError, UnicodeError) as error:
             if self.cancel.is_set():
                 raise InterruptedError('Model request cancelled.') from error
