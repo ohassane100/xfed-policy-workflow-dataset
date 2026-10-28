@@ -77,3 +77,60 @@ incident, approval, flow-down, audit and deletion duties are part of coverage.
 For listed unresolved references, identify which candidate or omitted requirement
 actually depends on the unknown content. Unaffected standalone rules can still be
 entailed; do not invent the missing restriction or silently ignore a dependency.
+
+Audit every field rather than trusting the candidate's reason. In particular:
+- 'may grant at its sole discretion' explicitly creates a permission to grant;
+  lack of a duty to grant is not evidence against that permission.
+- A security prerequisite is a condition of the grant, not an independent duty
+  unless an operative sentence expressly imposes that duty.
+- Free/no-charge access requires an encoded price of zero. Do not report it as
+  preserved when the candidate has no price constraint.
+- Work Plan compliance and an own-work purpose apply together. An isAnyOf list
+  containing these as alternatives is a broader grant and must be rejected.
+- Logical and/or/xone objects preserve their operator. Alternatives cannot be
+  judged as cumulative conditions, or cumulative requirements as alternatives.
+- A negative exception on a notice duty cannot replace a deadline override:
+  notification is still owed when a shorter regulatory deadline applies.
+
+The input parameter_bindings lists explicit UNRESOLVED source-backed values.
+A rightOperandReference denotes that parameter, not an invented duration. Review
+symbolic extraction fidelity separately from deployment readiness: a correctly
+preserved unknown shorter deadline can be ENTAILED and still require binding.
+For a notice duty, the OR branches (no shorter regulatory requirement OR the
+shorter upper bound when required) keep notice mandatory on both branches. The
+ordinary 72-hour bound may coexist with a strictly shorter applicable bound.
+Do not reject such logic simply because the parameter value is unresolved.
+Check temporal scope on each confidentiality/storage rule independently. Both
+must retain any common stated duration. A use restriction is not automatically
+subject to a duration whose grammar scopes only the earlier protection duties.
+
+The party_bindings input describes unresolved functional roles, not asserted
+party identities. A requester may bear the duty to submit an access request in
+writing even if the passive source does not name that person. An access_provider
+is the unresolved grantor in a passive 'access rights shall be granted' duty.
+Check role/action meaning and source scope; do not infer a named legal entity.
+These drafts require party binding before use even if symbolic fidelity is entailed.
+Do not accept an unresolved role as a substitute for an explicit source actor.
+
+XFed convention: for notify/inform/report the target is the incident, error or
+other information being reported; recipient identifies the notified party.
+A target containing only the recipient does not retain the notification subject.
+The encoded_meaning field is a deterministic reading of actual candidate fields,
+not the generator's explanation. Inspect actor, bounds, triggers and missing
+fields there; do not substitute source words for absent encoded qualifications.
+
+Every missing_rules entry must be an object with requirement and primary_quote.
+Quote the operative words of the PRIMARY clause exactly (whitespace may wrap).
+Do not list a parent's notification duty as missing when PRIMARY concerns a
+publication-delay right. Context qualifies the current rule, not its own separate
+requirements. If you cannot cite an operative PRIMARY span, do not invent a missing
+rule. Existing candidate qualification gaps still need specific explanation.
+
+Distinguish a requested publication-delay length/end from a deadline to MAKE the
+request. After-period publication also retains the objections-addressed condition.
+A relative clock can be faithfully extracted without knowing an absolute date;
+an unrelated ambiguous definition of 'date' does not itself invalidate that clock.
+An explicit ONLY-use restriction may be represented by a prohibition outside the
+allowed purposes AND absence of the source's alternative authorisation. Do not
+reject this solely for its negative purpose operator: it differs from reversing
+a direct prohibition ON a named purpose. Inspect the entire Boolean expression.

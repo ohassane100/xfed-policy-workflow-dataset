@@ -15,6 +15,42 @@ DURATION = re.compile(r'P(?=\d|T\d)(?:(?P<years>\d+)Y)?(?:(?P<months>\d+)M)?'
                       r'(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+(?:\.\d+)?)S)?)?', re.I)
 
 
+def constraint_leaves(constraints):
+    """Visit comparison leaves without discarding their containing logic."""
+    for entry in constraints:
+        groups = [key for key in ('and', 'or', 'xone') if key in entry]
+        if groups:
+            if len(groups) != 1 or len(entry) != 1 or len(entry[groups[0]]) < 2:
+                raise ValueError('A logical constraint needs one operator and at least two operands.')
+            yield from constraint_leaves(entry[groups[0]])
+        else:
+            if (not all(key in entry for key in ('leftOperand', 'operator'))
+                    or ('rightOperand' in entry) == ('rightOperandReference' in entry)):
+                raise ValueError('An atomic constraint needs leftOperand, operator and exactly one right operand.')
+            yield entry
+
+
+def constraint_branches(constraints):
+    """Conservative alternative paths for mandatory-qualification checks only.
+
+    This is not a policy execution engine. XOR paths are alternatives here;
+    preserving XOR's truth semantics remains the evaluator's responsibility.
+    """
+    result = [[]]
+    for entry in constraints:
+        operator = next((key for key in ('and', 'or', 'xone') if key in entry), None)
+        if operator == 'and':
+            paths = constraint_branches(entry[operator])
+        elif operator:
+            paths = [path for child in entry[operator] for path in constraint_branches([child])]
+        else:
+            paths = [[entry]]
+        if len(result) * len(paths) > 128:
+            raise ValueError('Too many logical branches for safe qualification validation.')
+        result = [left + right for left in result for right in paths]
+    return result
+
+
 def clause_number(text):
     match = CLAUSE.match(text)
     if not match:
@@ -62,6 +98,15 @@ def standalone_heading(chunk):
     return bool((text == heading or numbered_title) and len(text.split()) <= 14
                 and not re.search(r'\b(?:shall|must|may|means|is|are|will|can|only|not|no|without|'
                                   r'delete|retain|notify|disclose|provide|return|process)\b|[;:]\s*\S', text, re.I))
+
+
+def explicit_information_duty(chunk):
+    """A primary duty to deliver information is in this pipeline's scope."""
+    if re.search(r'\b(?:non[- ]binding|illustrative|example)\b', chunk['text'], re.I):
+        return False
+    return bool(re.search(r'\b(?:shall|must)\s+(?:provide|supply|deliver|submit)\s+'
+                          r'(?:(?:the|all|any|relevant|necessary|complete|detailed)\s+){0,3}'
+                          r'(?:information|documentation|records|reports|data)\b', chunk['text'], re.I))
 
 
 def scoped_chunks(chunks):

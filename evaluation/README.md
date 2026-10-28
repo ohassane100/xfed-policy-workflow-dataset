@@ -188,6 +188,38 @@ Contracts 02–03 remain identifiable by their source manifest/reference hash.
 
 ## Read the scores
 
+For source-first semantic diagnostics, freeze an inventory before exposing policy
+predictions to the auditor, then compare versions against that same inventory:
+
+```powershell
+python -m xfed.policy_evaluation inventory --predictions run.json --output inventory.json --model MODEL --base-url URL --workers 3
+python -m xfed.policy_evaluation audit --predictions run.json --inventory inventory.json --output audit.json --model MODEL --base-url URL --workers 3
+```
+
+This reports whole-rule support, fully covered source requirements, complete
+operative clauses, controls and unresolved bindings separately. Missing outputs
+remain omissions; equivalent wording does not automatically become an error.
+Source excerpts and actual rule UIDs are checked locally. Inventories and model
+judgments are provisional and require independent adjudication; these diagnostics
+do not replace reviewed gold or establish a rating. The canonical benchmark is
+retained unchanged for comparison. Use mutation controls to check the auditor
+detects missing exceptions, swapped actors, reversed operators and invented rules.
+
+Policy constraints support explicit AND/OR/XOR and source-backed unresolved
+right-operand references. `parameterBindings` is XFed draft metadata outside ODRL;
+an unresolved parameter is not a supplied value or an enforceable policy. The
+compiler flags these drafts for resolution. Custom source predicates still need
+a deployment profile; schema validity alone does not establish executability.
+Missing-rule reviews select literal primary spans, so an independent context duty
+cannot be justified with a quotation from its parent. Explanatory FAQ notes are
+withheld for review when their source status is uncertain.
+
+Optional `relevance_classifier.sampling` settings configure the shared client's
+runtime sampler (temperature, top_p/top_k/min_p, penalties and seed). They are
+recorded in request metadata and cache identity; they cannot override resources
+or services. Defaults remain unchanged. Qwen's [model-specific guidance](https://huggingface.co/Qwen/Qwen3.5-122B-A10B)
+is a starting point for controlled comparisons, not proof of better extraction.
+
 The dashboard shows correct relevance labels, expected rules recovered (recall),
 generated rules matching the reference (precision), fully matched operative
 clauses, correct no-rule decisions and failed evaluations. Results include counts

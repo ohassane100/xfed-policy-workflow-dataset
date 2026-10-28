@@ -1,4 +1,5 @@
 import json
+import math
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 from http.client import HTTPConnection, HTTPSConnection, HTTPException
@@ -18,7 +19,7 @@ class OllamaConnectionError(RuntimeError):
 class OllamaClient:
     def __init__(self, base_url, model, timeout=300, num_ctx=32768, num_predict=512, think='auto', main_gpu=None,
                  relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1, keep_alive='30m',
-                 relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None, cancel=None):
+                 relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None, cancel=None, sampling=None):
         if not isinstance(base_url, str) or urlsplit(base_url).scheme not in ('http', 'https') or not urlsplit(base_url).hostname:
             raise ValueError('Set a valid HTTP(S) Ollama base_url.')
         if not isinstance(model, str) or not model.strip() or model == 'PLACEHOLDER':
@@ -45,6 +46,16 @@ class OllamaClient:
             raise ValueError('relevance_num_ctx must be 0 (run context), or between 1024 and num_ctx.')
         if relevance_num_batch is not None and (type(relevance_num_batch) is not int or relevance_num_batch < 1):
             raise ValueError('relevance_num_batch must be a positive integer or omitted.')
+        if sampling is not None and not isinstance(sampling, dict):
+            raise ValueError('sampling must be a JSON object of generation options.')
+        self.sampling = dict(sampling or {})
+        bounds = dict(temperature=(0, 2), top_p=(0, 1), min_p=(0, 1), presence_penalty=(-2, 2), repeat_penalty=(0, 3))
+        for key, value in self.sampling.items():
+            if key in ('top_k', 'seed'):
+                if type(value) is not int or not (0 <= value <= 1000 if key == 'top_k' else -1 <= value < 2**63):
+                    raise ValueError('Invalid sampling option: ' + key)
+            elif key not in bounds or type(value) not in (int, float) or not math.isfinite(value) or not bounds[key][0] <= value <= bounds[key][1]:
+                raise ValueError('Invalid sampling option: ' + key)
         self.relevance_batch_size = relevance_batch_size
         self.relevance_num_predict, self.relevance_think = relevance_num_predict, relevance_think
         self.auto_think, self.auto_relevance_think = None, None
@@ -111,7 +122,8 @@ class OllamaClient:
                    'main_gpu', 'gpu', 'gpu_uuid', 'placement_status', 'observed_gpus', 'placement_error',
                    'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
                    'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch', 'auto_think', 'auto_relevance_think',
-                   'response_format', 'schema_grammar_fallbacks', 'schema_grammar_error')}
+                   'response_format', 'schema_grammar_fallbacks', 'schema_grammar_error', 'sampling')}
+        result['sampling'] = dict(self.sampling)
         with self._stats_lock:
             result['performance'] = dict(self.stats, context_requests=dict(self.stats['context_requests']))
             result['active_request'] = None
@@ -195,13 +207,15 @@ class OllamaClient:
         response_format = schema
         if self.response_format == 'json':
             response_format = 'json'
-            system += ('\n\nReturn exactly one JSON object conforming to this JSON schema:\n' +
-                       json.dumps(schema, ensure_ascii=False, separators=(',', ':')))
+        # A decoding grammar constrains syntax but does not teach the model the
+        # fields' meanings. Ground the prompt in the same schema we validate.
+        system += ('\n\nReturn exactly one JSON object conforming to this JSON schema:\n' +
+                   json.dumps(schema, ensure_ascii=False, separators=(',', ':')))
         payload = dict(model=self.model, stream=True, format=response_format, keep_alive=self.keep_alive,
                        messages=[dict(role='system', content=system),
                                  dict(role='user', content=json.dumps(value, ensure_ascii=False,
                                       **({'separators': (',', ':')} if compact_json else {})))],
-                       options=dict(temperature=0, num_ctx=context_limit, num_predict=output_limit))
+                       options={'temperature': 0, 'num_ctx': context_limit, 'num_predict': output_limit, **self.sampling})
         if num_batch is not None:
             payload['options']['num_batch'] = num_batch
         if truncate is not None:
@@ -302,7 +316,8 @@ class OllamaClient:
                 self.last_request = dict(duration_seconds=round(perf_counter() - started, 3),
                                          context_tokens=context_limit, output_limit=output_limit,
                                          thinking_chars=thinking_chars, answer_chars=sum(map(len, content)),
-                                         output_tokens=result.get('eval_count'), done_reason=result.get('done_reason'))
+                                         output_tokens=result.get('eval_count'), done_reason=result.get('done_reason'),
+                                         sampling={'temperature': 0, **self.sampling})
                 if self.active_request is activity:
                     self.active_request = None
         if self.cancel.is_set():
@@ -390,7 +405,7 @@ class OllamaPool:
         first = self.clients[0]
         for key in ('model', 'timeout', 'num_ctx', 'num_predict', 'think', 'main_gpu',
                     'relevance_num_predict', 'relevance_think', 'relevance_batch_size', 'keep_alive',
-                    'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch'):
+                    'relevance_compact', 'relevance_num_ctx', 'relevance_num_batch', 'sampling'):
             setattr(self, key, getattr(first, key))
         self.url = first.url
         self.model = ' + '.join(dict.fromkeys(c.model for c in self.clients))
@@ -524,4 +539,5 @@ def load_client(path):
                       relevance_compact=settings.get('relevance_compact', False),
                       relevance_num_ctx=settings.get('relevance_num_ctx', 0),
                       relevance_num_batch=settings.get('relevance_num_batch'),
+                      sampling=settings.get('sampling'),
                       keep_alive=settings.get('keep_alive', '30m'))

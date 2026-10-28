@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 import re
 
-from xfed.common import map_chunks, schema, standalone_heading, validate
+from xfed.common import explicit_information_duty, map_chunks, schema, standalone_heading, validate
 
 
 def classification_request(items, client, root=Path('.')):
@@ -105,6 +105,12 @@ def classify_batch(items, client, root=Path('.'), num_ctx=None):
                                         client, root, num_ctx))
         return [dict(label='NOT_RELEVANT', reason='Standalone heading; retained as supporting context.')
                 if heading else next(remaining) for heading in headings]
+    information_duties = [explicit_information_duty(item['clause']) for item in items]
+    if any(information_duties):
+        remaining = iter(classify_batch([item for item, duty in zip(items, information_duties) if not duty],
+                                        client, root, num_ctx))
+        return [dict(label='RELEVANT', reason='Primary clause explicitly requires delivery of information or records.')
+                if duty else next(remaining) for duty in information_duties]
     options_without_parent = [not item['context'] and not item['clause'].get('heading')
         and bool(re.match(r'^\s*[\u2610\u2611\u2612\u25a1\uf0a8]', item['clause']['text']))
         and len(item['clause']['text'].split()) <= 14

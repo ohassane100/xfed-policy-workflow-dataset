@@ -60,6 +60,7 @@
           "coverage": {"enum": ["COMPLETE", "MISSING_RULES", "NO_RULES_NEEDED", "NEEDS_CONTEXT"]},
           "reason": {"type": "string"},
           "missing_rules": {"type": "array", "items": {"type": "string"}},
+          "missing_rule_evidence": {"type": "array", "items": {"type": "object", "required": ["requirement", "primary_quote"], "properties": {"requirement": {"type": "string"}, "primary_quote": {"type": "string"}}, "additionalProperties": false}},
           "unresolved_references": {"type": "array", "items": {"type": "string"}},
           "error": {"type": "string"}
         },

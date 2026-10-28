@@ -52,7 +52,7 @@ class CachedClient:
     def __init__(self, client, path, cancel, reuse, cache=None, lock=None):
         self.client, self.path, self.cancel = client, path, cancel
         self.settings = {key: getattr(client, key, None) for key in
-                         ('model', 'num_ctx', 'num_predict', 'think', 'model_digest')}
+                         ('model', 'num_ctx', 'num_predict', 'think', 'model_digest', 'sampling')}
         # Cache identity follows the model digest, not endpoint/GPU placement.
         if not self.settings['model_digest']:
             self.settings['url'] = getattr(client, 'url', None)
@@ -80,7 +80,8 @@ class CachedClient:
         effective_think = self.settings['think'] if think is None else think
         if effective_think == 'auto':
             effective_think = getattr(self.client, 'auto_think', None)
-        settings = dict(self.settings, num_predict=output_limit, think=effective_think)
+        settings = dict(self.settings, num_predict=output_limit, think=effective_think,
+                        sampling=deepcopy(getattr(self.client, 'sampling', None)))
         if num_ctx is not None:
             settings['num_ctx'] = num_ctx
         for key, value_setting in (('num_batch', num_batch), ('truncate', truncate)):

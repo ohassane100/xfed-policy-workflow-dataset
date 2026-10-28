@@ -15,7 +15,7 @@ import re
 from time import perf_counter
 import unicodedata
 
-from xfed.common import DURATION, map_chunks, write_json
+from xfed.common import DURATION, constraint_leaves, map_chunks, write_json
 
 
 LABELS = ('RELEVANT', 'NOT_RELEVANT', 'NEEDS_CONTEXT')
@@ -47,8 +47,7 @@ def validate_gold(task, gold):
                 raise ValueError('Unknown reference rule type.')
             if not all(isinstance(rule.get(key), str) and rule[key].strip() for key in ('action', 'target', 'assignee')):
                 raise ValueError('Reference rules need action, target, and assignee strings.')
-            if any(not all(key in value for key in ('leftOperand', 'operator', 'rightOperand')) for value in rule.get('constraint', [])):
-                raise ValueError('Reference constraints need leftOperand, operator and rightOperand.')
+            list(constraint_leaves(rule.get('constraint', [])))
 
 
 def load_reference(root=Path('.'), reference_path=None):
@@ -261,8 +260,16 @@ def canonical_rule(rule, data, contract):
             seconds = sum(Decimal(parts.get(key) or '0') * factor for key, factor in factors.items())
             text = format(seconds, 'f')
             return 'pt' + (text.rstrip('0').rstrip('.') if '.' in text else text) + 's'
-    constraints = []
-    for entry in rule.get('constraint', []):
+    def constraint(entry):
+        for operator in ('and', 'or', 'xone'):
+            if operator in entry:
+                children = [constraint(child) for child in entry[operator]]
+                # AND/OR are associative; XOR with more than two inputs means
+                # exactly one, so nested XOR must not be flattened.
+                if operator in ('and', 'or'):
+                    children = [part for child in children for part in
+                                (child[operator] if operator in child else [child])]
+                return {operator: sorted(children, key=lambda child: json.dumps(child, sort_keys=True))}
         part = {key: value(item) for key, item in entry.items() if key != 'uid'}
         if part.get('operator') in ('isanyof','isallof','isnoneof') and isinstance(part.get('rightOperand'),list):
             part['rightOperand'] = sorted(part['rightOperand'],key=lambda item:json.dumps(item,sort_keys=True))
@@ -282,7 +289,9 @@ def canonical_rule(rule, data, contract):
                 if unit_key in factors and parsed[unit_key] is not None and all(
                         not Decimal(parsed[key] or '0') for key in factors if key != unit_key):
                     part.pop('unit', None)
-        constraints.append(json.dumps(part, sort_keys=True))
+        return part
+    conjunction = constraint({'and': rule.get('constraint', [])})['and']
+    constraints = [json.dumps(part, sort_keys=True) for part in conjunction]
     return dict(kind=rule['kind'], action=actions.get(normal(rule['action']), normal(rule['action'])),
                 target=value(rule.get('target', '')), assignee=value(rule.get('assignee', '')),
                 constraint=sorted(constraints))
