@@ -44,10 +44,11 @@ recorded. Rules with missing issuers use an ODRL Set. Context overflow fails
 explicitly. Rerun through policy creation after updating to rebuild extraction
 metadata and context.
 
-The **UCT & node review** tab provides a 16-section structured drafting template,
+The **UCT drafting** tab provides a 16-section structured drafting template,
 stable clause IDs and declared context dependencies. It uses the existing relevance
 and policy extractor; no automatic conversion of existing agreements is performed.
-Node decisions can be scripted or requested from already running Ollama endpoints
+The separate **Policy review** tab shows advisory node decisions and amendment
+proposals. Node decisions can be scripted or requested from already running Ollama endpoints
 (for example, one per Mac mini). Source amendments require central approval, then
 **Generate / update affected clauses** reuses unchanged fragments and regenerates
 changed clauses and their declared dependents. Undeclared prose dependencies cannot

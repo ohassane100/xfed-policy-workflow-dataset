@@ -22,7 +22,8 @@
     <button data-screen="dashboard" class="active" aria-current="page">Dashboard</button>
     <button data-screen="contracts">Contracts</button>
     <button data-screen="pipeline">Pipeline</button>
-    <button data-screen="uct">UCT &amp; node review</button>
+    <button data-screen="uct">UCT drafting</button>
+    <button data-screen="policy-review">Policy review</button>
   </nav>
   <div class="top-actions"><div class="connection"><span id="connection-dot" class="dot"></span><span id="connection">Checking Ollama</span></div><div id="model-chip" class="model-chip pending"><span id="model-label">Local model: checking</span></div></div>
 </header>
@@ -62,15 +63,19 @@
     <pre id="json-view" class="json hidden"></pre><div id="pdf-view" class="hidden"><iframe id="pdf" title="Source contract PDF"></iframe></div><details id="report" class="report hidden"><summary>Generation report</summary><pre id="report-text"></pre></details><div class="outputfoot"><span id="output-status">No completed output</span><span id="output-model"></span></div></section>
   </section>
   <section id="uct-screen" class="screen hidden">
-    <div class="pagehead"><div><div class="eyebrow">Structured drafting · central coordinator demo</div><h1>UCT &amp; node review</h1><p>Draft a readable agreement, extract policies, and review clause amendments from local nodes.</p></div><span id="uct-revision" class="badge neutral">Revision 1</span></div>
+    <div class="pagehead"><div><div class="eyebrow">Structured drafting · central coordinator demo</div><h1>UCT drafting</h1><p>Draft a readable agreement, extract policies, and evaluate structured contract variants.</p></div><span id="uct-revision" class="badge neutral">Revision 1</span></div>
     <div class="uct-layout">
       <section class="surface uct-card"><h2>1. Contract draft</h2><p>Illustrative template inspired by Contracts 01–03. Sections include general commercial terms as well as data collaboration. Every clause still passes through relevance classification. Edit the draft rather than silently rewriting an existing agreement.</p><label for="uct-title">Agreement title</label><input id="uct-title"><div class="uct-actions"><button id="uct-save" class="primary">Save changes</button><button id="uct-reload">Reload saved draft</button><button id="uct-contract-download">Download readable contract</button></div><p id="uct-dirty" role="status"></p><details><summary>Clauses and dependencies</summary><p>Keep IDs stable. Name every dependency, including definitions and schedules. Use one action per clause when practical, explicit AND/OR, and complete exceptions and deadline triggers. Text changes in a dependency invalidate its dependents. Undeclared prose references cannot be tracked automatically.</p><div id="uct-clauses"></div><button id="uct-add">Add clause</button></details></section>
       <section class="surface uct-card"><h2>2. Extract or update policy</h2><label for="uct-model">Installed central model</label><select id="uct-model"><option value="">Choose an installed model</option></select><label for="uct-context">UCT context tokens</label><input id="uct-context" type="number" min="4096" max="262144" step="1024" value="32768"><p class="uct-note">Uses the existing extractor and other generation settings from Pipeline. Requests use the configured Ollama API; this demo starts no services. Edits regenerate changed clauses and declared dependents. Unchanged fragments are reused only with the same source, model and pipeline identity.</p><div class="uct-actions"><button id="uct-generate" class="primary">Generate / update affected clauses</button><button id="uct-policy-download">Download policy.json</button><button id="uct-human-download">Download readable policy</button></div><p id="uct-generation-note">No policy generated.</p><details><summary>Human-readable policy</summary><pre id="uct-policy-text" class="uct-pre"></pre></details><details><summary>Policy JSON and extraction diagnostics</summary><pre id="uct-policy-json" class="uct-pre"></pre></details></section>
     </div>
-    <section class="surface uct-card"><h2>3. Local-node review</h2><p>Three logical nodes receive the same policy.json and readable policy. Scripted simulation illustrates accept, modify and reject; it makes no model calls. LLM review sends requests to the endpoints configured below. These are advisory decisions, not legal approval.</p><div class="uct-actions"><button id="uct-simulate">Simulate three node decisions</button><button id="uct-llm-review">Ask configured node LLMs</button></div><details><summary>Node Ollama connections (future Mac mini setup)</summary><p>Use an already running Ollama API and installed model on each Mac. Empty fields use the central endpoint and selected model, so they are logical roles sharing one model. No remote commands, model downloads or service changes are performed.</p><div id="uct-node-settings"></div></details><div class="uct-center"><strong>Central coordinator</strong><p id="uct-consensus">Awaiting policy</p></div><div class="uct-spoke"></div><div id="uct-nodes" class="uct-nodes"></div>
+    <section class="surface uct-card"><h2>3. Separate UCT evaluation</h2><p>Synthetic, assistant-authored cases with frozen expectations for actors, actions, assets and conditions. Includes irrelevant sections, incident deadlines and access qualifications. Related template variants test this structured task; they do not establish accuracy on unseen real contracts. Node acceptance is not extraction accuracy.</p><div class="uct-actions"><select id="uct-eval-split" aria-label="UCT benchmark split"><option value="dev">Development variants</option><option value="test">Reserved template variant</option></select><button id="uct-eval-smoke">Run 6-case smoke test</button><button id="uct-eval-full">Run complete selected cohort</button><button id="uct-eval-download">Download UCT evaluation</button></div><p id="uct-eval-summary">No UCT evaluation completed.</p><div id="uct-eval-table" class="table-scroll"></div><details><summary>Evaluation mismatches and evidence</summary><pre id="uct-eval-details" class="uct-pre"></pre></details></section>
+  </section>
+  <section id="policy-review-screen" class="screen hidden">
+    <div class="pagehead"><div><div class="eyebrow">Central coordinator · advisory review</div><h1>Policy review</h1><p>Review the current UCT policy draft, compare node proposals, and approve or dismiss source amendments.</p></div><span class="badge warning">Advisory decisions</span></div>
+    <section class="surface uct-card"><h2>Draft under review</h2><p id="review-draft-summary">Generate a policy in UCT drafting first.</p><p>Node decisions express proposed acceptance or requested changes. Agreement between nodes does not certify extraction accuracy. Central approval records a draft amendment; it does not deploy a policy or sign an agreement.</p><div class="settings"><div class="field"><label for="review-model">Default node review model</label><select id="review-model"><option value="">Choose an installed model</option></select></div><div class="field"><label for="review-context">Review context tokens</label><input id="review-context" type="number" min="4096" max="262144" step="1024" value="32768"></div></div><div class="uct-actions"><button id="review-open-draft">Open UCT drafting</button></div><details><summary>Human-readable policy under review</summary><pre id="review-policy-text" class="uct-pre"></pre></details><details><summary>Policy JSON under review</summary><pre id="review-policy-json" class="uct-pre"></pre></details></section>
+    <section class="surface uct-card"><h2>Local-node decisions</h2><p>Three logical nodes receive the same policy.json and readable policy. Scripted simulation illustrates accept, modify and reject; it makes no model calls. LLM review sends requests to the endpoints configured below. These are advisory decisions, not legal approval.</p><div class="uct-actions"><button id="uct-simulate">Simulate three node decisions</button><button id="uct-llm-review">Ask configured node LLMs</button></div><details><summary>Node Ollama connections (future Mac mini setup)</summary><p>Use an already running Ollama API and installed model on each Mac. Empty fields use the central endpoint and selected model, so they are logical roles sharing one model. No remote commands, model downloads or service changes are performed.</p><div id="uct-node-settings"></div></details><div class="uct-center"><strong>Central coordinator</strong><p id="uct-consensus">Awaiting policy</p></div><div class="uct-spoke"></div><div id="uct-nodes" class="uct-nodes"></div>
       <details><summary>Submit a node's manual decision or policy edit</summary><div class="settings"><div class="field"><label for="uct-manual-node">Local node</label><select id="uct-manual-node"></select></div><div class="field"><label for="uct-manual-decision">Decision</label><select id="uct-manual-decision"><option>ACCEPT</option><option>MODIFY</option><option>REJECT</option></select></div></div><label for="uct-manual-reason">Review reason</label><input id="uct-manual-reason" placeholder="Explain the decision"><div id="uct-amendment-fields" class="hidden"><label for="uct-amendment-clause">Source clause to amend</label><select id="uct-amendment-clause"></select><label for="uct-amendment-text">Complete proposed replacement text</label><textarea id="uct-amendment-text"></textarea><p>A change in policy meaning needs an explicit proposed source amendment. Central approval updates that clause; the next extraction recomputes affected sections. The suggested policy below is an advisory preview, not evidence-backed output.</p><button id="uct-load-preview">Load policy JSON for local editing</button><label for="uct-policy-preview">Optional edited policy.json preview</label><textarea id="uct-policy-preview" placeholder="Optional JSON preview; generated policy remains separate"></textarea></div><button id="uct-submit">Submit node decision</button></details>
     </section>
-    <section class="surface uct-card"><h2>4. Separate UCT evaluation</h2><p>Synthetic, assistant-authored cases with frozen expectations for actors, actions, assets and conditions. Includes irrelevant sections, incident deadlines and access qualifications. Related template variants test this structured task; they do not establish accuracy on unseen real contracts. Node acceptance is not extraction accuracy.</p><div class="uct-actions"><select id="uct-eval-split" aria-label="UCT benchmark split"><option value="dev">Development variants</option><option value="test">Reserved template variant</option></select><button id="uct-eval-smoke">Run 6-case smoke test</button><button id="uct-eval-full">Run complete selected cohort</button><button id="uct-eval-download">Download UCT evaluation</button></div><p id="uct-eval-summary">No UCT evaluation completed.</p><div id="uct-eval-table" class="table-scroll"></div><details><summary>Evaluation mismatches and evidence</summary><pre id="uct-eval-details" class="uct-pre"></pre></details></section>
     <details class="surface uct-card"><summary>Revision and decision history</summary><pre id="uct-events" class="uct-pre"></pre></details>
   </section>
   <footer class="footer"><span>XFed &middot; Contract-to-policy workspace</span><span>Policy extraction with source traceability</span></footer>
@@ -184,7 +189,7 @@ function controls(){
  $('unload').disabled=locked||!ready||!modelUnloadingAvailable;
  $('reset').disabled=!contract()||locked||loading;
  $('unload').title=modelUnloadingAvailable?'Unload selected models from memory; keep downloaded files':'Restart the updated UI server to enable model unloading';
- const currentJob=screen==='uct'?uctState?.job:screen==='pipeline'?state?.job:overview?.job;
+ const currentJob=['uct','policy-review'].includes(screen)?uctState?.job:screen==='pipeline'?state?.job:overview?.job;
  $('cancel').classList.toggle('hidden',!busy||currentJob?.mode==='unload');
  $('cancel').disabled=currentJob?.status==='cancelling';
  ['model','num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_compact','relevance_num_ctx','relevance_num_batch','relevance_think','think','timeout','reuse','contract'].forEach(id=>$(id).disabled=locked);
@@ -356,12 +361,12 @@ function openContract(id,step){
  if(view==='pdf')setView('pdf');
 }
 function showScreen(next,refresh=true){
- if(!['dashboard','contracts','pipeline','uct'].includes(next))next='dashboard';
+ if(!['dashboard','contracts','pipeline','uct','policy-review'].includes(next))next='dashboard';
  screen=next;
  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('hidden',s.id!==next+'-screen'));
  document.querySelectorAll('[data-screen]').forEach(b=>{b.classList.toggle('active',b.dataset.screen===next);b.setAttribute('aria-current',b.dataset.screen===next?'page':'false');});
  if(location.hash!=='#'+next)history.replaceState(null,'','#'+next);
- if(refresh){if(next==='pipeline')refreshState();else if(next==='uct')refreshUct();else refreshOverview();}
+ if(refresh){if(next==='pipeline')refreshState();else if(['uct','policy-review'].includes(next))refreshUct();else refreshOverview();}
 }
 function savedResults(){
  return (overview?.contracts||[]).flatMap(c=>stages.filter(([id])=>c.stages[id]?.run).map(([id,name])=>({
@@ -552,19 +557,23 @@ async function refreshUct(){
  if(uctLoading)return;uctLoading=true;
  try{
   uctState=await api('/api/uct');updateJob(uctState.job);
-  const names=installedModels.map(m=>m.name),prior=$('uct-model').value;
-  if(JSON.stringify(names)!==JSON.stringify([...$('uct-model').options].map(o=>o.value))){$('uct-model').replaceChildren(...names.map(name=>new Option(name,name)));if(names.includes(prior))$('uct-model').value=prior;else if(names.includes('qwen3.5:122b-a10b'))$('uct-model').value='qwen3.5:122b-a10b';}
-  $('model-label').textContent='UCT model: '+($('uct-model').value||'choose an installed model');
+  const names=installedModels.map(m=>m.name);
+  for(const id of ['uct-model','review-model']){const select=$(id),prior=select.value;
+   if(JSON.stringify(names)!==JSON.stringify([...select.options].map(o=>o.value))){select.replaceChildren(...names.map(name=>new Option(name,name)));if(names.includes(prior))select.value=prior;else if(names.includes('qwen3.5:122b-a10b'))select.value='qwen3.5:122b-a10b';}
+  }
+  $('model-label').textContent=(screen==='policy-review'?'Review model: ':'UCT model: ')+($(screen==='policy-review'?'review-model':'uct-model').value||'choose an installed model');
   if(!uctDirty&&uctEditorRevision!==uctState.revision){uctDraft=structuredClone(uctState.document);uctEditorRevision=uctState.revision;editUct();$('uct-dirty').textContent='Saved draft.';}
   $('uct-revision').textContent='Revision '+uctState.revision;
   const generation=uctState.generation,hasPolicy=Boolean(generation?.policy);
+  $('review-draft-summary').textContent=uctState.document.title+' · revision '+uctState.revision+' · '+(hasPolicy?generation.policy.traceability.length+' retained rules in the draft.':'No current policy; generate in UCT drafting first.')+(uctDirty?' Save pending UCT edits before starting review.':'');
   $('uct-generation-note').textContent=generation?'Draft: '+generation.regenerated.length+' clauses recomputed; '+generation.reused.length+' reused; '+generation.deleted.length+' deleted. '+Object.values(generation.clauses).filter(c=>c.failed).length+' failed. Source and coverage diagnostics still require review.':'No current policy. Generate after saving amendments.';
   $('uct-policy-text').textContent=uctState.policy_text;$('uct-policy-json').textContent=JSON.stringify(generation,null,2);
+  $('review-policy-text').textContent=uctState.policy_text;$('review-policy-json').textContent=JSON.stringify(generation?.policy||null,null,2);
   $('uct-consensus').textContent=uctState.consensus;
   const jobBusy=['running','cancelling'].includes(uctState.job.status)||uctState.running;
   ['uct-save','uct-reload','uct-add','uct-submit'].forEach(id=>$(id).disabled=jobBusy);
   ['uct-generate','uct-eval-smoke','uct-eval-full'].forEach(id=>$(id).disabled=jobBusy||uctDirty||!$('uct-model').value);
-  ['uct-simulate','uct-llm-review'].forEach(id=>$(id).disabled=jobBusy||!hasPolicy||uctDirty||(id==='uct-llm-review'&&!$('uct-model').value));
+  ['uct-simulate','uct-llm-review'].forEach(id=>$(id).disabled=jobBusy||!hasPolicy||uctDirty||(id==='uct-llm-review'&&!$('review-model').value));
   ['uct-policy-download','uct-human-download','uct-load-preview'].forEach(id=>$(id).disabled=!hasPolicy);
   if(!$('uct-manual-node').options.length){
    $('uct-manual-node').replaceChildren(...uctState.profiles.map(n=>new Option(n.name,n.id)));
@@ -594,12 +603,14 @@ async function refreshUct(){
   }
  }catch(error){showError(error);}finally{uctLoading=false;}
 }
-async function runUct(action,extra={}){if(uctDirty){showError('Save draft changes first.');return;}await uctRequest('/api/uct/run',{...modelSettings(),num_ctx:Number($('uct-context').value),model:$('uct-model').value,action,...extra});}
+async function runUct(action,extra={}){if(uctDirty){showError('Save draft changes first.');return;}const review=action==='review';await uctRequest('/api/uct/run',{...modelSettings(),num_ctx:Number($(review?'review-context':'uct-context').value),model:$(review?'review-model':'uct-model').value,action,...extra});}
 $('uct-title').oninput=()=>{if(uctDraft){uctDraft.title=$('uct-title').value;dirtyUct();}};
 $('uct-save').onclick=()=>uctRequest('/api/uct/save',{document:uctDraft,revision:uctEditorRevision}).then(()=>{if(uctState&&JSON.stringify(uctState.document)===JSON.stringify(uctDraft)){uctDirty=false;$('uct-dirty').textContent='Saved draft.';refreshUct();}});
 $('uct-reload').onclick=()=>{uctDirty=false;uctEditorRevision=null;refreshUct();};
 $('uct-add').onclick=()=>{if(!uctDraft)return;let n=1;while(uctDraft.clauses.some(c=>c.id==='UCT-custom-'+n))n++;uctDraft.clauses.push({id:'UCT-custom-'+n,section:uctDraft.sections[0].id,text:'Draft clause to be completed.',depends_on:[]});dirtyUct();editUct();};
 $('uct-model').onchange=refreshUct;
+$('review-model').onchange=refreshUct;
+$('review-open-draft').onclick=()=>showScreen('uct');
 $('uct-generate').onclick=()=>runUct('generate');
 $('uct-simulate').onclick=()=>runUct('review',{review_mode:'simulated'});
 $('uct-llm-review').onclick=()=>{const nodes={};for(const n of uctState.profiles)nodes[n.id]={url:$('uct-url-'+n.id).value.trim(),model:$('uct-model-'+n.id).value.trim()};runUct('review',{review_mode:'ollama',nodes});};
@@ -641,7 +652,7 @@ $('contract-search').oninput=()=>renderContractTable('contracts-table',$('contra
   refreshModels();
   await refreshOverview();
   refreshEvaluation();
-  setInterval(()=>screen==='pipeline'?refreshState():screen==='uct'?refreshUct():refreshOverview(),2000);
+  setInterval(()=>screen==='pipeline'?refreshState():['uct','policy-review'].includes(screen)?refreshUct():refreshOverview(),2000);
  }catch(error){showError(error);}
 })();
 </script>
