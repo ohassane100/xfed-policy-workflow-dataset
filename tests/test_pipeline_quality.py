@@ -1675,6 +1675,41 @@ class QualityTests(unittest.TestCase):
             self.assertIsNotNone(compile_plan(plan(self.item, conditions=[dict(
                 leftOperand='elapsedTime', operator='lteq', rightOperand=value)]), 'contract', self.item))
 
+    def test_clause_decoder_does_not_invent_an_issuer_but_legacy_explicit_metadata_still_compiles(self):
+        shape = response_schema(ROOT)
+        self.assertNotIn('issuer', shape['properties']['rules']['items']['properties'])
+        output, entry, failed = generate_item(self.item, PlanClient(plan(self.item)), 'prompt',
+                                             'contract', shape, ROOT)
+        self.assertFalse(failed)
+        self.assertEqual(output['odrlPolicy']['@type'], 'Set')
+        self.assertNotIn('assigner', output['odrlPolicy']['obligation'][0])
+        explicit = plan(self.item, issuer='Provider')
+        self.assertEqual(compile_plan(explicit, 'contract', self.item)['odrlPolicy']['@type'], 'Agreement')
+
+    def test_access_permission_keeps_security_prerequisite_in_its_own_rule(self):
+        item = dict(self.item, text='Provider may grant Recipient access to Registry. '
+                    'Such access depends on Recipient meeting all security requirements.')
+        answer = plan(item, 'permission', action='provideAccess', asset='Registry', conditions=[])
+        with self.assertRaisesRegex(ValueError, 'security prerequisite'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'].append(plan(item, 'obligation', actor='Recipient', action='meet',
+                                  asset='security requirements', conditions=[])['rules'][0])
+        with self.assertRaisesRegex(ValueError, 'security prerequisite'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'] = [dict(leftOperand='security', operator='eq',
+            rightOperand='Recipient meeting all security requirements')]
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+
+    def test_access_scope_does_not_drop_necessity_while_preserving_purpose(self):
+        item = dict(self.item, text='Provider may read Data necessary for research.')
+        answer = plan(item, 'permission', action='read', asset='Data', conditions=[
+            dict(leftOperand='purpose', operator='eq', rightOperand='research')])
+        with self.assertRaisesRegex(ValueError, 'necessity restriction'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'].append(dict(leftOperand='scope', operator='eq',
+            rightOperand='necessary for research'))
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+
     def test_notification_shorter_deadline_exception_cannot_be_omitted(self):
         item = dict(self.item, text='Provider must notify Customer of incidents within 72 hours of discovery, '
                     'unless mandatory rules require notification within a shorter period.')

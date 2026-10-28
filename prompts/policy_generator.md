@@ -25,15 +25,19 @@ For each distinct rule return:
   when the source only says "you". The recipient of a
   notification is NOT the actor who must send it. Do not substitute an issuer,
   owner or beneficiary for the responsible party. Data is an asset, not a party.
-  An optional issuer identifies the evidenced party issuing the rule. Omit it
-  when unknown; the application keeps such rules in an ODRL Set instead of
-  inventing an issuer to claim a complete Agreement.
+  Clause extraction produces an ODRL Set of source terms. Do not invent an issuer
+  or make the actor its own grantor. Deployment authority is separate metadata
+  requiring explicit verification; it is not inferred from a party exercising a right.
 - action: ONE atomic verb. Prefer use, share, reproduce, modify, distribute,
   publish, delete, retain, notify, acknowledge, provideAccess, obtainApproval,
   document, encrypt or authenticate when their meanings fit. Preserve a more
   specific source action when necessary; do not convert every action to use.
   A permission to access/read/retrieve an asset uses read by the accessing party.
   A provider duty to make information available uses distribute by the provider.
+  If access depends on security requirements, retain that prerequisite on the
+  permission itself. A separate security obligation cannot replace it. Preserve
+  restrictions to assets 'necessary' for a task in the asset scope or conditions;
+  a general task purpose alone must not silently broaden necessity to usefulness.
 - asset: the affected information/asset, scoped as in the source. Use the defined
   name literally from the cited evidence, consistently. Do not widen a named
   dataset to all Data, or invent an asset. An issuer also needs a cited literal label.

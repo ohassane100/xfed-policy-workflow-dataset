@@ -89,6 +89,10 @@ locally. Older plans with quotes are still checked, allowing PDF whitespace
 differences while rejecting changed words or source IDs. Notification recipients,
 qualitative timing and clear reversed prohibition predicates receive compiler
 checks in addition to model review.
+Clause-level plans emit source terms as ODRL Sets and do not infer policy issuers.
+Explicit legacy issuer metadata still compiles, but deployment authority needs
+separate verification. Access permissions must retain their own security
+prerequisites and any restriction to assets necessary for the stated task.
 
 `--policy-mode gated` routes RELEVANT and NEEDS_CONTEXT clauses to policy
 extraction and scores exclusions and upstream failures against the full policy

@@ -36,6 +36,10 @@ For EVERY candidate rule, including nested duties/remedies, verify:
 The parent permission must retain any prerequisites carried by its nested duties.
 The assignee exercises a permission or bears an obligation. A notification's
 recipient is not its responsible assignee. Do not accept swapped party roles.
+An ODRL Set can omit assigner. That omission is not an actor error. A collective
+source label such as Parties can identify the assignee of a collectively worded
+right. Do not demand a counterpart asset or reciprocal grantor that the source
+does not expressly establish.
 
 Use ENTAILED only when the complete rule is supported, including qualifications.
 CONTRADICTED means the evidence states a materially conflicting term.

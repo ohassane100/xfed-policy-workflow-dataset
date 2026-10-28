@@ -319,7 +319,6 @@ def response_schema(root=Path('.')):
     rule = dict(type='object', additionalProperties=False,
         required=[*properties, 'kind', 'duties', 'remedies'], properties=dict(properties,
             kind=dict(type='string', enum=['permission', 'prohibition', 'obligation']),
-            issuer=text,
             duties=dict(type='array', items=duty), remedies=dict(type='array', items=duty)))
     return dict(type='object', additionalProperties=False, required=['rules', 'unrepresented', 'reason'],
         properties=dict(rules=dict(type='array', items=rule), reason=dict(text, maxLength=600), osdu=metadata,
@@ -370,6 +369,21 @@ def compile_plan(answer, contract, item, rejected=None):
                                           for span in cited):
                 raise ValueError('Rule ' + field + ' must use a literal label from its cited evidence; '
                                  'cite the supplied definition instead of inventing a label.')
+        if kind == 'permission':
+            primary = normalized(item['text'])
+            qualifications = normalized(json.dumps([value['conditions'], value.get('duties', [])], ensure_ascii=False))
+            if (value['action'].casefold() in ('read', 'access', 'retrieve', 'provideaccess', 'grantaccess', 'allowaccess', 'grant')
+                    and re.search(r'\baccess\b.{0,100}\b(?:depends on|subject to|only if|conditional on)\b'
+                                  r'.{0,240}\bsecurity requirements\b', primary)
+                    and 'security' not in qualifications):
+                raise ValueError('Access permission omits its security prerequisite. Keep that prerequisite on '
+                                 'the permission itself; a separate security obligation does not restrict this grant.')
+            if (value['action'].casefold() in ('read', 'access', 'retrieve', 'use')
+                    and re.search(r'(?<!\w)' + re.escape(normalized(value['asset']))
+                                  + r'\s+(?:that\s+(?:is|are)\s+)?necessary\b', primary)
+                    and not re.search(r'\bnecessary\b', qualifications)):
+                raise ValueError('Permission broadens an asset restricted to what is necessary. Preserve that '
+                                 'necessity restriction in this rule, separately from its general purpose.')
         if value['action'].casefold() in ('notify', 'inform', 'report'):
             named_recipient = re.search(r'\b(?:notify|inform)\s+(?:(?:the|all|each)\s+)?'
                 r'[A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,3}\s+(?:of|about|without|within|regarding|that)\b', item['text'])
