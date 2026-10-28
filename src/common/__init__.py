@@ -10,6 +10,45 @@ NUMBER = r"\d{1,3}(?:\.\d{1,3})*(?:\([a-z0-9]+\))*"
 CLAUSE = re.compile(rf"^\s*(?:(?:Article|Section|Clause)\s+)?(?P<id>{NUMBER})[.):]?(?=\s|$)", re.I)
 SCOPE = re.compile(r"^(ANNEX|APPENDIX|EXHIBIT)\s+([IVXLCDM]+|[A-Z]|\d+)\b", re.I)
 DEFINITION = re.compile(r'(?m)^\s*["\u201c\u2018]?([A-Z][\w &/\-]{1,70}?)["\u201d\u2019]?\s*(?::|\bmeans\b|\bshall mean\b|\bhas the meaning\b)')
+DURATION = re.compile(r'P(?=\d|T\d)(?:(?P<years>\d+)Y)?(?:(?P<months>\d+)M)?'
+                      r'(?:(?P<days>\d+)D)?(?:T(?=\d)(?:(?P<hours>\d+)H)?'
+                      r'(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+(?:\.\d+)?)S)?)?', re.I)
+
+
+def constraint_leaves(constraints):
+    """Visit comparison leaves without discarding their containing logic."""
+    for entry in constraints:
+        groups = [key for key in ('and', 'or', 'xone') if key in entry]
+        if groups:
+            if len(groups) != 1 or len(entry) != 1 or len(entry[groups[0]]) < 2:
+                raise ValueError('A logical constraint needs one operator and at least two operands.')
+            yield from constraint_leaves(entry[groups[0]])
+        else:
+            if (not all(key in entry for key in ('leftOperand', 'operator'))
+                    or ('rightOperand' in entry) == ('rightOperandReference' in entry)):
+                raise ValueError('An atomic constraint needs leftOperand, operator and exactly one right operand.')
+            yield entry
+
+
+def constraint_branches(constraints):
+    """Conservative alternative paths for mandatory-qualification checks only.
+
+    This is not a policy execution engine. XOR paths are alternatives here;
+    preserving XOR's truth semantics remains the evaluator's responsibility.
+    """
+    result = [[]]
+    for entry in constraints:
+        operator = next((key for key in ('and', 'or', 'xone') if key in entry), None)
+        if operator == 'and':
+            paths = constraint_branches(entry[operator])
+        elif operator:
+            paths = [path for child in entry[operator] for path in constraint_branches([child])]
+        else:
+            paths = [[entry]]
+        if len(result) * len(paths) > 128:
+            raise ValueError('Too many logical branches for safe qualification validation.')
+        result = [left + right for left in result for right in paths]
+    return result
 
 
 def clause_number(text):
@@ -41,6 +80,33 @@ def scope_heading(text):
     if match and (first.isupper() or not first[match.end():].strip() or first[match.end():].lstrip().startswith(':')):
         return match.group().upper()
     return None
+
+
+def standalone_heading(chunk):
+    """Recognize explicit titles, including numbered titles with child clauses."""
+    heading, text = chunk.get('heading', '').strip(), chunk['text'].strip()
+    if not text:
+        return False
+    if not heading and chunk.get('child_clause_ids'):
+        first = text.splitlines()[0]
+        if re.fullmatch(r'[\d.() ]+', first):
+            heading = first
+    if not heading:
+        return False
+    numbered_title = (bool(chunk.get('child_clause_ids')) and text.startswith(heading + '\n')
+                      and re.fullmatch(r'[\d.() ]+', heading))
+    return bool((text == heading or numbered_title) and len(text.split()) <= 14
+                and not re.search(r'\b(?:shall|must|may|means|is|are|will|can|only|not|no|without|'
+                                  r'delete|retain|notify|disclose|provide|return|process)\b|[;:]\s*\S', text, re.I))
+
+
+def explicit_information_duty(chunk):
+    """A primary duty to deliver information is in this pipeline's scope."""
+    if re.search(r'\b(?:non[- ]binding|illustrative|example)\b', chunk['text'], re.I):
+        return False
+    return bool(re.search(r'\b(?:shall|must)\s+(?:provide|supply|deliver|submit)\s+'
+                          r'(?:(?:the|all|any|relevant|necessary|complete|detailed)\s+){0,3}'
+                          r'(?:information|documentation|records|reports|data)\b', chunk['text'], re.I))
 
 
 def scoped_chunks(chunks):
@@ -91,7 +157,7 @@ def write_json(path, value):
             temporary.unlink(missing_ok=True)
 
 
-def map_chunks(items, operation, client, progress=None):
+def map_chunks(items, operation, client, progress=None, completed=None):
     """Bound in-flight work and collect results in source order."""
     items = list(items)
     workers = getattr(client, 'workers', 1)
@@ -108,12 +174,14 @@ def map_chunks(items, operation, client, progress=None):
         results = []
         for item in items:
             results.append(apply(item))
+            if completed:
+                completed(item, results[-1])
             if progress:
                 progress(len(results), len(items), item['chunk_id'])
         return results
     results = [None] * len(items)
     pool = ThreadPoolExecutor(max_workers=workers)
-    pending, next_index, completed = {}, 0, 0
+    pending, next_index, done_count = {}, 0, 0
     try:
         while next_index < len(items) or pending:
             while next_index < len(items) and len(pending) < workers:
@@ -123,9 +191,11 @@ def map_chunks(items, operation, client, progress=None):
             for future in done:
                 index = pending.pop(future)
                 results[index] = future.result()
-                completed += 1
+                if completed:
+                    completed(items[index], results[index])
+                done_count += 1
                 if progress:
-                    progress(completed, len(items), items[index]['chunk_id'])
+                    progress(done_count, len(items), items[index]['chunk_id'])
         return results
     finally:
         for future in pending:

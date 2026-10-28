@@ -52,7 +52,7 @@ class CachedClient:
     def __init__(self, client, path, cancel, reuse, cache=None, lock=None):
         self.client, self.path, self.cancel = client, path, cancel
         self.settings = {key: getattr(client, key, None) for key in
-                         ('model', 'num_ctx', 'num_predict', 'think', 'model_digest')}
+                         ('model', 'num_ctx', 'num_predict', 'think', 'model_digest', 'sampling')}
         # Cache identity follows the model digest, not endpoint/GPU placement.
         if not self.settings['model_digest']:
             self.settings['url'] = getattr(client, 'url', None)
@@ -80,7 +80,8 @@ class CachedClient:
         effective_think = self.settings['think'] if think is None else think
         if effective_think == 'auto':
             effective_think = getattr(self.client, 'auto_think', None)
-        settings = dict(self.settings, num_predict=output_limit, think=effective_think)
+        settings = dict(self.settings, num_predict=output_limit, think=effective_think,
+                        sampling=deepcopy(getattr(self.client, 'sampling', None)))
         if num_ctx is not None:
             settings['num_ctx'] = num_ctx
         for key, value_setting in (('num_batch', num_batch), ('truncate', truncate)):
@@ -142,7 +143,8 @@ class Pipeline:
         self.benchmark_report = None
         saved = sorted((self.root / 'evaluation/runs').glob('*.json'), key=lambda path: path.stat().st_mtime, reverse=True)
         self.evaluation_report = next((value for path in saved
-                                       if isinstance(value := read_json(path), dict) and value.get('split') == 'test'), None)
+                                       if isinstance(value := read_json(path), dict) and value.get('split') == 'test'
+                                       and value.get('task') == 'classification'), None)
 
     def contracts(self):
         return sorted(p.name for p in (self.root / 'contracts').iterdir()
@@ -365,12 +367,9 @@ class Pipeline:
     def start_evaluation(self, request):
         if request.get('split', 'test') != 'test':
             raise ValueError('The UI evaluates the test set only. Use the local CLI for development.')
-        options = dict(task=request.get('task', 'both'), split='test',
-                       policy_mode=request.get('policy_mode', 'isolated'))
-        if options['task'] not in ('classification', 'policy', 'both'):
-            raise ValueError('Choose a supported evaluation task.')
-        if options['policy_mode'] not in ('isolated', 'gated') or (options['policy_mode'] == 'gated' and options['task'] != 'both'):
-            raise ValueError('Gated policy evaluation requires both tasks; otherwise choose isolated.')
+        if request.get('task', 'classification') != 'classification' or 'policy_mode' in request:
+            raise ValueError('Only task 1.3 classification evaluation is supported.')
+        options = dict(task='classification', split='test')
         data = load_reference(self.root)
         client = self.make_client(request)
         with self.lock:
@@ -379,24 +378,24 @@ class Pipeline:
             self.cancel.clear()
             self.active_client = client
             self.evaluation_report = None
-            self.job = dict(status='running', contract='reference set', stage='2' if options['task'] == 'policy' else '1.3', mode='evaluation',
+            self.job = dict(status='running', contract='reference set', stage='1.3', mode='evaluation',
                             completed=0, total=0, message='Evaluating frozen references; pipeline outputs are preserved', log=[])
         threading.Thread(target=self.run_evaluation, args=(data, client, options), daemon=True).start()
         return self.snapshot()
 
     def run_evaluation(self, data, client, options):
         def progress(done, total, message):
-            if message.startswith(('Policy', 'Starting policy')):
-                self.update(stage='2')
-            elif message.startswith(('Classification', 'Starting classification')):
-                self.update(stage='1.3')
+            self.update(stage='1.3')
             self.progress(done, total, message)
 
         def completed(report):
             write_json(self.root / 'evaluation/runs' / (report['run_id'] + '.json'), report)
             with self.lock:
+                previous_tasks = set((self.evaluation_report or {}).get('execution', {}))
                 self.evaluation_report = deepcopy(report)
-                self.job['log'].append('Saved ' + ', '.join(report['execution']) + ' evaluation predictions')
+                new_tasks = set(report['execution']) - previous_tasks
+                if new_tasks:
+                    self.job['log'].append('Saved ' + ', '.join(sorted(new_tasks)) + ' evaluation predictions')
         try:
             report = run_evaluation(data, client, self.root, progress=progress,
                                     cancel=self.cancel, completed=completed, **options)

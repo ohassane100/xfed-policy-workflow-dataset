@@ -63,7 +63,10 @@
           "description": "ODRL JSON-LD context plus IDS namespaces used by IDS Usage Control examples."
         },
         "@type": {
-          "enum": ["Agreement", "Set"],
+          "enum": [
+            "Agreement",
+            "Set"
+          ],
           "description": "Agreement when issuing parties are established; Set for draft rules with unknown issuers."
         },
         "uid": {
@@ -109,48 +112,8 @@
               "constraint": {
                 "type": "array",
                 "items": {
-                  "type": "object",
-                  "required": [
-                    "leftOperand",
-                    "operator",
-                    "rightOperand"
-                  ],
-                  "properties": {
-                    "uid": {
-                      "type": "string",
-                      "description": "Optional ODRL identifier for this Constraint."
-                    },
-                    "leftOperand": {
-                      "type": "string",
-                      "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
-                    },
-                    "operator": {
-                      "type": "string",
-                      "description": "ODRL/IDS operator, e.g. eq, neq, lt, lteq, gt, gteq, isA, isAllOf, isAnyOf, isNoneOf, or isPartOf."
-                    },
-                    "rightOperand": {
-                      "description": "Value compared with the left operand. Kept JSON-generic so literals, identifiers, or lists can be represented.",
-                      "type": [
-                        "string",
-                        "number",
-                        "integer",
-                        "boolean",
-                        "array",
-                        "object"
-                      ]
-                    },
-                    "dataType": {
-                      "type": "string",
-                      "description": "Optional datatype for the right operand, following ODRL terminology."
-                    },
-                    "unit": {
-                      "type": "string",
-                      "description": "Optional unit for the right operand, following ODRL terminology."
-                    }
-                  },
-                  "additionalProperties": false
-                },
-                "description": "ODRL Constraints that must be satisfied for the Permission."
+                  "$ref": "#/$defs/constraint"
+                }
               },
               "duty": {
                 "type": "array",
@@ -184,48 +147,8 @@
                     "constraint": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "required": [
-                          "leftOperand",
-                          "operator",
-                          "rightOperand"
-                        ],
-                        "properties": {
-                          "uid": {
-                            "type": "string",
-                            "description": "Optional ODRL identifier for this Constraint."
-                          },
-                          "leftOperand": {
-                            "type": "string",
-                            "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
-                          },
-                          "operator": {
-                            "type": "string",
-                            "description": "ODRL/IDS operator, e.g. eq, neq, lt, lteq, gt, gteq, isA, isAllOf, isAnyOf, isNoneOf, or isPartOf."
-                          },
-                          "rightOperand": {
-                            "description": "Value compared with the left operand. Kept JSON-generic so literals, identifiers, or lists can be represented.",
-                            "type": [
-                              "string",
-                              "number",
-                              "integer",
-                              "boolean",
-                              "array",
-                              "object"
-                            ]
-                          },
-                          "dataType": {
-                            "type": "string",
-                            "description": "Optional datatype for the right operand, following ODRL terminology."
-                          },
-                          "unit": {
-                            "type": "string",
-                            "description": "Optional unit for the right operand, following ODRL terminology."
-                          }
-                        },
-                        "additionalProperties": false
-                      },
-                      "description": "ODRL Constraints applying to this Duty."
+                        "$ref": "#/$defs/constraint"
+                      }
                     }
                   },
                   "additionalProperties": false
@@ -272,48 +195,8 @@
               "constraint": {
                 "type": "array",
                 "items": {
-                  "type": "object",
-                  "required": [
-                    "leftOperand",
-                    "operator",
-                    "rightOperand"
-                  ],
-                  "properties": {
-                    "uid": {
-                      "type": "string",
-                      "description": "Optional ODRL identifier for this Constraint."
-                    },
-                    "leftOperand": {
-                      "type": "string",
-                      "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
-                    },
-                    "operator": {
-                      "type": "string",
-                      "description": "ODRL/IDS operator, e.g. eq, neq, lt, lteq, gt, gteq, isA, isAllOf, isAnyOf, isNoneOf, or isPartOf."
-                    },
-                    "rightOperand": {
-                      "description": "Value compared with the left operand. Kept JSON-generic so literals, identifiers, or lists can be represented.",
-                      "type": [
-                        "string",
-                        "number",
-                        "integer",
-                        "boolean",
-                        "array",
-                        "object"
-                      ]
-                    },
-                    "dataType": {
-                      "type": "string",
-                      "description": "Optional datatype for the right operand, following ODRL terminology."
-                    },
-                    "unit": {
-                      "type": "string",
-                      "description": "Optional unit for the right operand, following ODRL terminology."
-                    }
-                  },
-                  "additionalProperties": false
-                },
-                "description": "ODRL Constraints applying to the Prohibition."
+                  "$ref": "#/$defs/constraint"
+                }
               },
               "remedy": {
                 "type": "array",
@@ -347,48 +230,8 @@
                     "constraint": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "required": [
-                          "leftOperand",
-                          "operator",
-                          "rightOperand"
-                        ],
-                        "properties": {
-                          "uid": {
-                            "type": "string",
-                            "description": "Optional ODRL identifier for this Constraint."
-                          },
-                          "leftOperand": {
-                            "type": "string",
-                            "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
-                          },
-                          "operator": {
-                            "type": "string",
-                            "description": "ODRL/IDS operator, e.g. eq, neq, lt, lteq, gt, gteq, isA, isAllOf, isAnyOf, isNoneOf, or isPartOf."
-                          },
-                          "rightOperand": {
-                            "description": "Value compared with the left operand. Kept JSON-generic so literals, identifiers, or lists can be represented.",
-                            "type": [
-                              "string",
-                              "number",
-                              "integer",
-                              "boolean",
-                              "array",
-                              "object"
-                            ]
-                          },
-                          "dataType": {
-                            "type": "string",
-                            "description": "Optional datatype for the right operand, following ODRL terminology."
-                          },
-                          "unit": {
-                            "type": "string",
-                            "description": "Optional unit for the right operand, following ODRL terminology."
-                          }
-                        },
-                        "additionalProperties": false
-                      },
-                      "description": "ODRL Constraints applying to this Duty."
+                        "$ref": "#/$defs/constraint"
+                      }
                     }
                   },
                   "additionalProperties": false
@@ -433,48 +276,8 @@
               "constraint": {
                 "type": "array",
                 "items": {
-                  "type": "object",
-                  "required": [
-                    "leftOperand",
-                    "operator",
-                    "rightOperand"
-                  ],
-                  "properties": {
-                    "uid": {
-                      "type": "string",
-                      "description": "Optional ODRL identifier for this Constraint."
-                    },
-                    "leftOperand": {
-                      "type": "string",
-                      "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
-                    },
-                    "operator": {
-                      "type": "string",
-                      "description": "ODRL/IDS operator, e.g. eq, neq, lt, lteq, gt, gteq, isA, isAllOf, isAnyOf, isNoneOf, or isPartOf."
-                    },
-                    "rightOperand": {
-                      "description": "Value compared with the left operand. Kept JSON-generic so literals, identifiers, or lists can be represented.",
-                      "type": [
-                        "string",
-                        "number",
-                        "integer",
-                        "boolean",
-                        "array",
-                        "object"
-                      ]
-                    },
-                    "dataType": {
-                      "type": "string",
-                      "description": "Optional datatype for the right operand, following ODRL terminology."
-                    },
-                    "unit": {
-                      "type": "string",
-                      "description": "Optional unit for the right operand, following ODRL terminology."
-                    }
-                  },
-                  "additionalProperties": false
-                },
-                "description": "ODRL Constraints applying to this Duty."
+                  "$ref": "#/$defs/constraint"
+                }
               }
             },
             "additionalProperties": false
@@ -482,13 +285,35 @@
           "description": "ODRL policy-level Duty rules referenced through the obligation property."
         }
       },
-      "allOf": [{
-        "if": {"properties": {"@type": {"const": "Agreement"}}},
-        "then": {"properties": {
-          "permission": {"items": {"required": ["assigner"]}},
-          "prohibition": {"items": {"required": ["assigner"]}}
-        }}
-      }],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "@type": {
+                "const": "Agreement"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "permission": {
+                "items": {
+                  "required": [
+                    "assigner"
+                  ]
+                }
+              },
+              "prohibition": {
+                "items": {
+                  "required": [
+                    "assigner"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ],
       "anyOf": [
         {
           "required": [
@@ -569,6 +394,137 @@
           }
         },
         "additionalProperties": false
+      }
+    },
+    "parameterBindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uid",
+          "label",
+          "dataType",
+          "status",
+          "sourceClauses"
+        ],
+        "properties": {
+          "uid": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dataType": {
+            "enum": [
+              "duration",
+              "boolean",
+              "number",
+              "string"
+            ]
+          },
+          "status": {
+            "const": "unresolved"
+          },
+          "sourceClauses": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "chunk_id",
+                "text",
+                "relationship"
+              ],
+              "properties": {
+                "chunk_id": {
+                  "type": "string"
+                },
+                "clause_id": {
+                  "type": "string"
+                },
+                "relationship": {
+                  "type": "string",
+                  "enum": [
+                    "primary",
+                    "context"
+                  ],
+                  "description": "Whether the clause directly states the rule or supplies necessary context."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Exact supporting contract text."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "One or more source clauses supporting the rule."
+          }
+        }
+      }
+    },
+    "partyBindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uid",
+          "role",
+          "status",
+          "sourceClauses"
+        ],
+        "properties": {
+          "uid": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "requester",
+              "access_provider"
+            ]
+          },
+          "status": {
+            "const": "unresolved"
+          },
+          "sourceClauses": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "chunk_id",
+                "text",
+                "relationship"
+              ],
+              "properties": {
+                "chunk_id": {
+                  "type": "string"
+                },
+                "clause_id": {
+                  "type": "string"
+                },
+                "relationship": {
+                  "type": "string",
+                  "enum": [
+                    "primary",
+                    "context"
+                  ],
+                  "description": "Whether the clause directly states the rule or supplies necessary context."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Exact supporting contract text."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "One or more source clauses supporting the rule."
+          }
+        }
       }
     }
   },
@@ -714,6 +670,132 @@
         }
       },
       "additionalProperties": false
+    },
+    "atomicConstraint": {
+      "type": "object",
+      "required": [
+        "leftOperand",
+        "operator"
+      ],
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Optional ODRL identifier for this Constraint."
+        },
+        "leftOperand": {
+          "type": "string",
+          "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
+        },
+        "operator": {
+          "type": "string",
+          "description": "ODRL/IDS operator, e.g. eq, neq, lt, lteq, gt, gteq, isA, isAllOf, isAnyOf, isNoneOf, or isPartOf."
+        },
+        "rightOperand": {
+          "description": "Value compared with the left operand. Kept JSON-generic so literals, identifiers, or lists can be represented.",
+          "type": [
+            "string",
+            "number",
+            "integer",
+            "boolean",
+            "array",
+            "object"
+          ]
+        },
+        "dataType": {
+          "type": "string",
+          "description": "Optional datatype for the right operand, following ODRL terminology."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Optional unit for the right operand, following ODRL terminology."
+        },
+        "rightOperandReference": {
+          "type": "string",
+          "minLength": 1,
+          "description": "IRI of an unresolved parameter declared in parameterBindings; not an invented value."
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "rightOperand"
+          ],
+          "not": {
+            "required": [
+              "rightOperandReference"
+            ]
+          }
+        },
+        {
+          "required": [
+            "rightOperandReference"
+          ],
+          "not": {
+            "required": [
+              "rightOperand"
+            ]
+          }
+        }
+      ]
+    },
+    "constraint": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/atomicConstraint"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "and"
+          ],
+          "properties": {
+            "and": {
+              "type": "array",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/constraint"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "or"
+          ],
+          "properties": {
+            "or": {
+              "type": "array",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/constraint"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "xone"
+          ],
+          "properties": {
+            "xone": {
+              "type": "array",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/constraint"
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

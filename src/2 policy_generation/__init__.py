@@ -4,15 +4,38 @@ import json
 import re
 import unicodedata
 from copy import deepcopy
+from decimal import Decimal
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, ValidationError
 
-from xfed.common import map_chunks, schema, validate
+from xfed.common import DURATION, constraint_branches, constraint_leaves, map_chunks, schema, standalone_heading, validate
 
 
 OPERATORS = ('eq', 'neq', 'lt', 'lteq', 'gt', 'gteq', 'isA', 'hasPart',
              'isPartOf', 'isAllOf', 'isAnyOf', 'isNoneOf')
+
+
+def rule_description(kind, rule, bindings=()):
+    """Describe encoded fields deterministically, never paraphrase the source."""
+    labels = {binding['uid']: binding.get('label', binding.get('role')) + ' [UNRESOLVED]' for binding in bindings}
+    operators = dict(eq='EQUALS', neq='DOES NOT EQUAL', lt='IS LESS THAN', lteq='IS AT MOST',
+                     gt='IS GREATER THAN', gteq='IS AT LEAST', isAnyOf='IS ONE OF', isNoneOf='IS NONE OF', isAllOf='IS ALL OF')
+    def condition(entry):
+        for operator in ('and', 'or', 'xone'):
+            if operator in entry:
+                return '(' + (' ' + operator.upper() + ' ').join(condition(part) for part in entry[operator]) + ')'
+        right = entry.get('rightOperand', labels.get(entry.get('rightOperandReference'), entry.get('rightOperandReference')))
+        return entry['leftOperand'] + ' ' + operators.get(entry['operator'], entry['operator']) + ' ' + json.dumps(right, ensure_ascii=False)
+    actor = labels.get(rule.get('assignee'), rule.get('assignee', '[unspecified]'))
+    predicates = ' AND '.join(condition(entry) for entry in rule.get('constraint', [])) or 'TRUE (no constraints)'
+    meaning = f"{kind.upper()}: responsible actor = {actor}; action = {rule['action']}; asset = {rule.get('target', '[inherited]')}. Encoded conditions: {predicates}."
+    operands = {entry['leftOperand'].casefold() for entry in constraint_leaves(rule.get('constraint', []))}
+    for label, names in (('recipient', {'recipient'}), ('price', {'payamount', 'cost', 'price', 'fee'}),
+                         ('elapsed-time bound', {'elapsedtime'})):
+        if not operands & names:
+            meaning += f' No explicit {label} constraint.'
+    return meaning
 
 
 def rules(policy):
@@ -67,6 +90,34 @@ def validate_fragment(fragment, contract, item, root):
     if fragment['contract_id'] != contract:
         raise ValueError('Generated policy changed the contract identifier.')
     check_traceability(fragment, item)
+    bindings = fragment.get('parameterBindings', [])
+    identifiers = {binding['uid'] for binding in bindings}
+    references = {condition['rightOperandReference'] for _, rule in rules(fragment['odrlPolicy'])
+                  for condition in constraint_leaves(rule.get('constraint', [])) if 'rightOperandReference' in condition}
+    if len(identifiers) != len(bindings) or identifiers != references:
+        raise ValueError('Every parameter reference needs exactly one used unresolved binding.')
+    by_id = {binding['uid']: binding for binding in bindings}
+    for _, rule in rules(fragment['odrlPolicy']):
+        for condition in constraint_leaves(rule.get('constraint', [])):
+            if (condition['leftOperand'].casefold() == 'elapsedtime' and 'rightOperandReference' in condition
+                    and by_id[condition['rightOperandReference']]['dataType'] != 'duration'):
+                raise ValueError('An elapsedTime reference must bind a duration, not a boolean or generic string.')
+    expected_prefix = f"urn:xfed:{contract}:{item['chunk_id']}:parameter:"
+    for binding in bindings:
+        if not binding['uid'].startswith(expected_prefix):
+            raise ValueError('Parameter identifiers must use the local clause parameter namespace.')
+        # Check parameter evidence with the same exact-source rules as rules.
+        check_traceability(dict(odrlPolicy=dict(obligation=[dict(uid='binding')]), traceability=[dict(
+            ruleUid='binding', ruleType='obligation', sourceClauses=binding['sourceClauses'])]), item)
+    party_bindings = fragment.get('partyBindings', [])
+    party_ids = {binding['uid'] for binding in party_bindings}
+    if len(party_ids) != len(party_bindings) or not party_ids.issubset({rule.get('assignee') for _, rule in rules(fragment['odrlPolicy'])}):
+        raise ValueError('Every unresolved party binding must have one unique identifier used by a rule.')
+    for binding in party_bindings:
+        if not binding['uid'].startswith(f"urn:xfed:{contract}:{item['chunk_id']}:party:"):
+            raise ValueError('Party identifiers must use the local clause party namespace.')
+        check_traceability(dict(odrlPolicy=dict(obligation=[dict(uid='binding')]), traceability=[dict(
+            ruleUid='binding', ruleType='obligation', sourceClauses=binding['sourceClauses'])]), item)
     if any(not rule.get('assignee', '').strip() for kind, rule in rules(fragment['odrlPolicy']) if kind != 'duty'):
         raise ValueError('Every standalone rule must identify the responsible party in assignee.')
     evidence = '\n'.join(clause['text'] for clause in [item, *item['context']])
@@ -95,6 +146,7 @@ def validate_fragment(fragment, contract, item, root):
 def check_grounding(fragment, evidence):
     """Check source-grounded identifiers, parties, actions and constraint operators."""
 
+    binding_ids = {binding['uid'] for field in ('parameterBindings', 'partyBindings') for binding in fragment.get(field, [])}
     def grounded_identifiers(value):
         if isinstance(value, dict):
             for key, child in value.items():
@@ -106,7 +158,8 @@ def check_grounding(fragment, evidence):
         elif isinstance(value, str):
             vocabulary = value.startswith(('http://www.w3.org/ns/odrl/2/', 'https://www.w3.org/ns/odrl/2/',
                                             'https://w3id.org/idsa/'))
-            if value.startswith(('#', 'urn:', 'did:', 'http://', 'https://')) and not vocabulary and value not in evidence:
+            if (value.startswith(('#', 'urn:', 'did:', 'http://', 'https://')) and not vocabulary
+                    and value not in evidence and value not in binding_ids):
                 raise ValueError('Invented deployment identifier ' + repr(value) +
                                  '; use descriptive labels grounded in the supplied evidence.')
             for date in re.findall(r'\b\d{4}-\d{2}-\d{2}\b', value):
@@ -125,7 +178,7 @@ def check_grounding(fragment, evidence):
                 raise ValueError('Rule ' + field + ' must not be empty.')
         if not rule['action'].startswith(('http://', 'https://')) and re.search(r'\b(?:and|or)\b|[,;]', rule['action'], re.I):
             raise ValueError('Use one atomic action per rule; split compound actions with their conditions preserved.')
-        for constraint in rule.get('constraint', []):
+        for constraint in constraint_leaves(rule.get('constraint', [])):
             if constraint['leftOperand'].casefold() in {'clause_id', 'clauseid', 'referenceclause', 'business day'}:
                 raise ValueError('A clause citation or definition is evidence, not an executable condition; represent its actual restriction.')
             operator = constraint['operator'].rsplit('/', 1)[-1].removeprefix('odrl:')
@@ -147,9 +200,11 @@ def context_char_budget(client, num_predict=None, prompt=''):
 
 
 def request_value(contract, item, budget):
-    clause = {key: item[key] for key in ('chunk_id', 'clause_id', 'heading', 'text') if key in item}
-    clause.update(context=[], context_complete=not bool(item['context']),
+    # Put supporting material first and the extraction target last. Long parent
+    # sections otherwise leave an unrelated context rule nearest the answer.
+    clause = dict(context=[], context_complete=not bool(item['context']),
                   omitted_context_count=len(item['context']))
+    clause.update({key: item[key] for key in ('chunk_id', 'clause_id', 'heading', 'text') if key in item})
     if item.get('unresolved_references'):
         clause['unresolved_references'] = item['unresolved_references']
     value = dict(contract_id=contract, clause=clause)
@@ -176,7 +231,53 @@ def request_value(contract, item, budget):
     return value, clause
 
 
+def clause_decoder_schema(output_schema, item):
+    """Ground the grammar in this clause's evidence IDs and output complexity."""
+    decoder_schema = deepcopy(output_schema)
+    if ('osdu' in output_schema.get('properties', {}) and not re.search(
+            r'\b(?:OSDU|legal\s*tags?)\b', '\n'.join(clause['text'] for clause in [item, *item['context']]), re.I)):
+        # Optional, unused LegalTag unions break some server grammar compilers.
+        # Keep the saved policy validator strict; decode only relevant fields.
+        decoder_schema['properties'].pop('osdu')
+    identifiers = list(dict.fromkeys(clause['chunk_id'] for clause in [item, *item['context']]))
+    def evidence_ids(value):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if key == 'evidence':
+                    # Avoid mixed prefixItems/items tuples: backend converters
+                    # can silently ignore the prefix. Explicit required fields
+                    # make primary identity part of the ordinary object grammar.
+                    value[key] = dict(type='object', additionalProperties=False, required=['primary', 'supporting'],
+                        properties=dict(primary=dict(type='string', const=item['chunk_id']),
+                            supporting=dict(type='array', maxItems=len(identifiers)-1,
+                                items=dict(type='string', enum=identifiers))))
+                else:
+                    evidence_ids(child)
+        elif isinstance(value, list):
+            for child in value:
+                evidence_ids(child)
+    evidence_ids(decoder_schema)
+    complexity = len(re.findall(r'\b(?:shall|must|may|can|will|and|or|nor)\b', item['text'], re.I))
+    decoder_schema['properties']['rules']['maxItems'] = max(2, min(12, 2 + complexity))
+    access_matches = list(re.finditer(r'\b(?:the\s+)?([A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,3})\s+shall\s+have\s+access\b', item['text']))
+    access = access_matches[0] if len(access_matches) == 1 else None
+    if (access and not re.match(r'(?:no|not|neither|only)\b', access[1], re.I)
+            and not re.search(r'\b(?:no|not|neither)\s*$', item['text'][:access.start()], re.I)
+            and not re.search(r'\b(?:must|may|can|will|obligation)\b|\bshall\b(?!\s+have\s+access)'
+                              r'|\b(?:is|are)\s+(?:permitted|required|prohibited)\b'
+                              r'|\b(?:no|not)\b(?!\s+(?:charge|cost|fee)\b)', item['text'], re.I)):
+        # A named party's single access right is not a reciprocal provider duty.
+        # Mixed clauses retain the general grammar so independent duties survive.
+        properties = decoder_schema['properties']['rules']['items']['properties']
+        properties['kind'] = dict(type='string', const='permission')
+        properties['action'] = dict(type='string', const='read')
+        properties['actor'] = dict(type='string', const=access[1])
+        properties['actor_role'] = dict(type='string', const='literal')
+    return decoder_schema
+
+
 def generate_answer(client, prompt, contract, item, output_schema, feedback=None):
+    decoder_schema = clause_decoder_schema(output_schema, item)
     num_ctx = getattr(client, 'num_ctx', 16384)
     initial_output_limit = getattr(client, 'num_predict', 4096)
     maximum_output_limit = max(initial_output_limit, min(num_ctx - 1024, initial_output_limit * 2))
@@ -184,6 +285,7 @@ def generate_answer(client, prompt, contract, item, output_schema, feedback=None
     context_retries, output_retries = 0, 0
     for _ in range(2):
         budget = context_char_budget(client, output_limit, prompt)
+        budget -= len(json.dumps(decoder_schema, ensure_ascii=False).encode('utf-8'))
         if feedback is not None:
             budget -= len(json.dumps(feedback, ensure_ascii=False).encode('utf-8')) + 64
         value, supplied_clause = request_value(contract, item, budget)
@@ -193,9 +295,9 @@ def generate_answer(client, prompt, contract, item, output_schema, feedback=None
             raise ValueError('Supporting context exceeds the safe input budget; increase context tokens. '
                              f"{supplied_clause['omitted_context_count']} context entries do not fit.")
         if feedback is not None:
-            value['correction'] = feedback
+            value = dict(correction=feedback, **value)
         try:
-            answer = client.generate(prompt, value, output_schema, num_predict=output_limit,
+            answer = client.generate(prompt, value, decoder_schema, num_predict=output_limit,
                                      truncate=False, compact_json=True)
             return answer, supplied_clause, context_retries, output_retries
         except ValueError as error:
@@ -287,8 +389,10 @@ def merge_osdu(output, fragment, report, chunk_id):
 def response_schema(root=Path('.')):
     """A small source-backed rule plan; IDs, traceability and ODRL are compiled locally."""
     text = dict(type='string', minLength=1)
-    evidence = dict(type='array', minItems=1, items=dict(type='object', additionalProperties=False,
-        required=['chunk_id', 'quote'], properties=dict(chunk_id=text, quote=text)))
+    legacy_evidence = dict(type='array', minItems=1, items=dict(type='object', additionalProperties=False,
+        required=['chunk_id'], properties=dict(chunk_id=text)))
+    evidence = dict(anyOf=[dict(type='object', additionalProperties=False, required=['primary', 'supporting'],
+        properties=dict(primary=text, supporting=dict(type='array', items=text))), legacy_evidence])
     original = schema(5, root)
     def inline(value):
         if isinstance(value, list):
@@ -300,81 +404,338 @@ def response_schema(root=Path('.')):
         return {key: inline(child) for key, child in value.items() if key not in ('title', 'description')}
     metadata = inline(original['properties']['osdu'])
     metadata.pop('minProperties', None)
-    constraint = deepcopy(original['properties']['odrlPolicy']['properties']['obligation']
-                          ['items']['properties']['constraint'])
-    constraint['items']['properties'].pop('uid', None)
-    constraint['items']['properties']['operator'] = dict(type='string', enum=list(OPERATORS))
+    atom = deepcopy(original['$defs']['atomicConstraint'])
+    atom['properties'].pop('uid', None)
+    atom['properties']['operator'] = dict(type='string', enum=list(OPERATORS))
+    # Bounded, typed alternatives keep Ollama's grammar finite. Saved output
+    # supports recursive ODRL logic; extraction needs only OR-of-AND branches.
+    literal = dict(type=['string', 'number', 'boolean'])
+    atom['properties']['rightOperand'] = dict(anyOf=[literal, dict(type='array', minItems=1, items=literal)])
+    # Mutually exclusive alternatives rather than an unrestricted object union.
+    reference = deepcopy(atom)
+    reference.pop('oneOf', None)
+    reference['properties'].pop('rightOperand')
+    reference['required'] = ['leftOperand', 'operator', 'rightOperandReference']
+    atom.pop('oneOf', None)
+    atom['properties'].pop('rightOperandReference')
+    atom['required'] = ['leftOperand', 'operator', 'rightOperand']
+    def logical(child):
+        return dict(anyOf=[{'$ref': '#/$defs/comparison'}, *[dict(type='object', additionalProperties=False,
+            required=[operator], properties={operator: dict(type='array', minItems=2, maxItems=8,
+                uniqueItems=True, items=child)}) for operator in ('and', 'or', 'xone')]])
+    definitions = dict(comparison=dict(anyOf=[atom, reference]),
+        logical1=logical({'$ref': '#/$defs/comparison'}),
+        logical2=logical({'$ref': '#/$defs/logical1'}))
+    constraint = dict(type='array', maxItems=16, items={'$ref': '#/$defs/logical2'})
     # Keep the decoding grammar simple (no regex lookahead); semantic atomicity
     # is checked after compilation. Source actions such as "stop distributing" remain possible.
     action = dict(type='string', minLength=1, pattern=r'^[^,;\r\n]+$')
     properties = dict(actor=text, action=action, asset=text, conditions=constraint, evidence=evidence)
-    duty = dict(type='object', additionalProperties=False, required=list(properties), properties=properties)
+    required = list(properties)
+    properties['actor_role'] = dict(type='string', enum=['literal', 'requester', 'access_provider'])
+    duty = dict(type='object', additionalProperties=False, required=required, properties=properties)
+    # Decide modality before emitting actions/conditions. In an autoregressive
+    # grammar, deciding prohibition last encourages double-negated predicates.
     rule = dict(type='object', additionalProperties=False,
-        required=[*properties, 'kind', 'duties', 'remedies'], properties=dict(properties,
-            kind=dict(type='string', enum=['permission', 'prohibition', 'obligation']),
-            issuer=text,
+        required=['kind', *required, 'duties', 'remedies'], properties=dict(
+            kind=dict(type='string', enum=['permission', 'prohibition', 'obligation']), **properties,
             duties=dict(type='array', items=duty), remedies=dict(type='array', items=duty)))
     return dict(type='object', additionalProperties=False, required=['rules', 'unrepresented', 'reason'],
+        **{'$defs': definitions},
         properties=dict(rules=dict(type='array', items=rule), reason=dict(text, maxLength=600), osdu=metadata,
+            parameters=dict(type='array', items=dict(type='object', additionalProperties=False,
+                required=['key', 'label', 'dataType', 'evidence'], properties=dict(key=text, label=text,
+                    dataType=dict(type='string', enum=['duration', 'boolean', 'number', 'string']), evidence=evidence))),
             unrepresented=dict(type='array', items=dict(type='object', additionalProperties=False,
                 required=['evidence', 'reason'], properties=dict(evidence=evidence, reason=text)))))
 
 
-def compile_plan(answer, contract, item):
-    """Check literal evidence spans and deterministically build the saved policy schema."""
+def compile_plan(answer, contract, item, rejected=None):
+    """Resolve source IDs, check legacy quotes and deterministically build ODRL."""
+    def normalized(text):
+        # Typographic apostrophes and line-wrapped whitespace do not change a
+        # literal party/asset name. Keep all words and logical connectors.
+        text = unicodedata.normalize('NFKC', text).translate(str.maketrans({'\u2019': "'", '\u2018': "'"}))
+        return re.sub(r'\s+', ' ', text.casefold()).strip()
+
     def sources(entries):
+        if isinstance(entries, dict):
+            entries = [dict(chunk_id=entries['primary']), *[dict(chunk_id=identifier) for identifier in entries['supporting']]]
         result, seen = [], set()
         for entry in entries:
+            # PDF wrapping changes whitespace, not words. Match whitespace
+            # flexibly while retaining the exact original source in traceability.
+            quote = entry.get('quote')
+            pattern = r'\s+'.join(re.escape(word) for word in quote.split()) if quote is not None else None
             matches = [clause for clause in [item, *item['context']]
-                       if clause['chunk_id'] == entry['chunk_id'] and entry['quote'].strip()
-                       and entry['quote'] in clause['text']]
+                       if clause['chunk_id'] == entry['chunk_id']
+                       and (quote is None or pattern and re.search(pattern, clause['text']))]
             if not matches:
-                raise ValueError('Rule evidence quote must be an exact nonempty span of a supplied chunk.')
+                raise ValueError('Rule evidence ID must resolve to a supplied source; any legacy quote must match its original words.')
             for clause in matches:
                 if clause['chunk_id'] not in seen:
                     seen.add(clause['chunk_id'])
                     result.append(dict(chunk_id=clause['chunk_id'], relationship=(
                         'primary' if clause['chunk_id'] == item['chunk_id'] else 'context')))
         if item['chunk_id'] not in seen:
-            raise ValueError('Every atomic rule needs a literal evidence span from the primary clause.')
+            raise ValueError('Every atomic rule needs source evidence from the primary clause.')
         return result
 
     for omitted in answer['unrepresented']:
         sources(omitted['evidence'])
-    policy, traces = {}, []
+    parameters = {}
+    for index, parameter in enumerate(answer.get('parameters', []), 1):
+        if parameter['key'] in parameters:
+            raise ValueError('Parameter keys must be unique.')
+        source_refs = sources(parameter['evidence'])
+        # This label describes an unknown value, it is not the value itself.
+        # Exact evidence is retained; semantic review checks what it denotes.
+        parameters[parameter['key']] = dict(uid=f"urn:xfed:{contract}:{item['chunk_id']}:parameter:{index}",
+            label=parameter['label'], dataType=parameter['dataType'], status='unresolved', sourceClauses=source_refs)
+    policy, traces, parties = {}, [], {}
     def compile_rule(value, kind):
         # A correct citation does not ground an invented party or asset. Require
-        # literal labels in the rule's own cited spans, including definitions.
-        def normalized(text):
-            return re.sub(r'\s+', ' ', unicodedata.normalize('NFKC', text).casefold()).strip()
-        cited = [normalized(entry['quote']) for entry in value['evidence']]
+        # literal labels in the rule's own cited clauses, including definitions.
+        source_refs = sources(value['evidence'])
+        cited_ids = {entry['chunk_id'] for entry in source_refs}
+        actor = re.compile(r'(?<!\w)' + re.escape(normalized(value['actor'])) + r'(?!\w)')
+        if value.get('actor_role', 'literal') == 'literal' and not any(actor.search(normalized(clause['text'])) for clause in [item, *item['context']]
+                   if clause['chunk_id'] in cited_ids):
+            # A model may omit the supplied parent/definition that names the
+            # actor of a pronoun/list item. Resolve that citation, not the actor:
+            # no alias, party name or source outside the supplied input is added.
+            candidates = [clause for clause in item['context']
+                          if clause.get('relationship') in ('parent', 'definition') and actor.search(normalized(clause['text']))]
+            candidates.sort(key=lambda clause: (clause.get('clause_id') != item.get('parent_clause_id'),
+                                                clause.get('relationship') != 'definition', len(clause['text'])))
+            if candidates:
+                source_refs.extend(sources([dict(chunk_id=item['chunk_id']), dict(chunk_id=candidates[0]['chunk_id'])])[1:])
+                cited_ids = {entry['chunk_id'] for entry in source_refs}
+        # Resolve antecedents such as "such records" inside a cited clause.
+        # Labels must still be literal source text; no new party/asset is inferred.
+        cited = [normalized(clause['text']) for clause in [item, *item['context']]
+                 if clause['chunk_id'] in cited_ids]
         for field in ('actor', 'asset', 'issuer'):
+            if field == 'actor' and value.get('actor_role', 'literal') != 'literal':
+                continue
             if field in value and not any(re.search(r'(?<!\w)' + re.escape(normalized(value[field])) + r'(?!\w)', span)
                                           for span in cited):
                 raise ValueError('Rule ' + field + ' must use a literal label from its cited evidence; '
                                  'cite the supplied definition instead of inventing a label.')
+        primary = normalized(item['text'])
+        if re.search(r'\b(?:shall|must|may|can)\b|\b(?:is|are)\s+permitted\b', primary):
+            primary_actions = {
+                'notify': r'\b(?:notif\w*|inform\w*|report\w*|aware\w*)\b',
+                'inform': r'\b(?:notif\w*|inform\w*|report\w*|aware\w*)\b',
+                'obtainapproval': r'\b(?:approv\w*|consent\w*|authori[sz]\w*)\b',
+            }
+            pattern = primary_actions.get(value['action'].casefold())
+            if pattern and not re.search(pattern, primary):
+                raise ValueError('Action ' + value['action'] + ' is not supported by the operative PRIMARY text. '
+                                 'Do not extract a parent/context duty or turn a request into obtaining approval.')
+        leaves = list(constraint_leaves(value['conditions']))
+        branches = constraint_branches(value['conditions'])
+        if (kind == 'obligation' and 'security requirements' in normalized(value['asset'])
+                and re.search(r'\baccess\b.{0,100}\b(?:depends on|subject to|only if|conditional on)\b', primary)
+                and not re.search(r'\b(?:shall|must)\s+(?:meet|comply|satisfy|maintain)\b', primary)):
+            raise ValueError('Access prerequisite is an independent security obligation. Keep it on the permission '
+                             'as a condition or nested duty; the source does not impose a standalone duty.')
+        for condition in leaves:
+            if 'rightOperandReference' in condition and condition['rightOperandReference'] not in parameters:
+                raise ValueError('rightOperandReference must name a declared source-backed parameter key.')
+            if (condition['leftOperand'].casefold() == 'elapsedtime' and 'rightOperandReference' in condition
+                    and parameters[condition['rightOperandReference']]['dataType'] != 'duration'):
+                raise ValueError('An elapsedTime reference must bind a duration, not a boolean or generic string.')
+            values = condition.get('rightOperand')
+            if (condition['leftOperand'].casefold() in ('format', 'quality') and condition['operator'] == 'isAnyOf'
+                    and isinstance(values, list) and len(values) > 1 and all(isinstance(part, str) for part in values)):
+                positions = [(primary.find(normalized(part)), len(normalized(part))) for part in values]
+                if all(position >= 0 for position, _ in positions):
+                    source_list = primary[min(position for position, _ in positions):max(position + length for position, length in positions)]
+                    if re.search(r'\band\b', source_list) and not re.search(r'\bor\b', source_list):
+                        raise ValueError('Source format/quality requirements are cumulative, not alternatives. '
+                                         'Use isAllOf or separate conjunctive constraints.')
+        if kind == 'permission':
+            primary = normalized(item['text'])
+            qualifications = [normalized(json.dumps([branch, value.get('duties', []), value['asset']], ensure_ascii=False))
+                              for branch in branches]
+            if (value['action'].casefold() in ('read', 'access', 'retrieve', 'use')
+                    and re.search(r'\b(?:at no charge|free of charge|royalty[- ]free)\b', primary)
+                    and not all(any(condition['leftOperand'].casefold() in ('payamount', 'price', 'fee', 'payment')
+                                and condition['operator'] == 'eq' and type(condition.get('rightOperand')) in (int, float)
+                                and condition['rightOperand'] == 0 for condition in branch)
+                            or re.search(r'\b(?:no charge|free of charge|royalty[- ]free)\b', qualification)
+                            for branch, qualification in zip(branches, qualifications))):
+                raise ValueError('Access permission omits its no-charge qualification; retain payAmount eq 0.')
+            for condition in leaves:
+                if (condition['leftOperand'].casefold() == 'purpose' and condition['operator'] == 'isAnyOf'
+                        and isinstance(condition.get('rightOperand'), list) and len(condition['rightOperand']) > 1
+                        and any(re.search(r'\b(?:in accordance with|subject to|comply|compliance)\b', str(part), re.I)
+                                for part in condition['rightOperand'])):
+                    raise ValueError('Compliance qualification is an alternative purpose. Keep compliance as a '
+                                     'separate cumulative constraint instead of allowing it to replace the purpose.')
+            if (value['action'].casefold() in ('read', 'access', 'retrieve', 'use')
+                    and re.search(r'\bin accordance with the work plan\b', primary)
+                    and not all('work plan' in qualification for qualification in qualifications)):
+                raise ValueError('Permission omits explicit Work Plan compliance; keep it as a cumulative qualification.')
+            if (value['action'].casefold() in ('read', 'access', 'retrieve', 'provideaccess', 'grantaccess', 'allowaccess', 'grant')
+                    and re.search(r'\baccess\b.{0,100}\b(?:depends on|subject to|only if|conditional on)\b'
+                                  r'.{0,240}\bsecurity requirements\b', primary)
+                    and not all('security' in qualification for qualification in qualifications)):
+                raise ValueError('Access permission omits its security prerequisite. Keep that prerequisite on '
+                                 'the permission itself; a separate security obligation does not restrict this grant.')
+            if (value['action'].casefold() in ('read', 'access', 'retrieve', 'use')
+                    and re.search(r'(?<!\w)' + re.escape(normalized(value['asset']))
+                                  + r'\s+(?:that\s+(?:is|are)\s+)?necessary\b', primary)
+                    and not all(re.search(r'\bnecessary\b', qualification) for qualification in qualifications)):
+                raise ValueError('Permission broadens an asset restricted to what is necessary. Preserve that '
+                                 'necessity restriction in this rule, separately from its general purpose.')
+        if value['action'].casefold() in ('notify', 'inform', 'report'):
+            senders = re.findall(r'\b(?:The\s+)?([A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,3})\s+'
+                                 r'(?:must|shall)\s+(?:notify|inform)\b', item['text'])
+            if len(set(senders)) == 1 and normalized(value['actor']).removeprefix('the ') != normalized(senders[0]):
+                raise ValueError('Notification responsible actor differs from the explicit source sender: ' + senders[0])
+            named_recipient = re.search(r'\b(?:notify|inform)\s+(?:(?:the|all|each)\s+)?'
+                r'([A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,3})\s+(?:of|about|without|within|regarding|that)\b', item['text'])
+            if named_recipient and not all(any(condition['leftOperand'].casefold() == 'recipient'
+                                               for condition in branch) for branch in branches):
+                raise ValueError('Notification recipient is explicit in the source but missing from conditions; '
+                                 'encode the notified party as recipient, not as actor or target.')
+            if named_recipient:
+                recipient = normalized(named_recipient[1])
+                for condition in leaves:
+                    if condition['leftOperand'].casefold() == 'recipient' and condition['operator'] in ('eq', 'isAnyOf'):
+                        values = condition.get('rightOperand', [])
+                        values = values if isinstance(values, list) else [values]
+                        if values and all(normalized(str(part)).removeprefix('the ') != recipient for part in values):
+                            raise ValueError('Notification recipient differs from the explicit source recipient: ' + named_recipient[1])
+            subject = re.search(r'\b(?:notify|inform)\s+(?:the\s+)?[A-Z][\w-]*\s+of\s+(?:any\s+)?([A-Z][\w-]*)', item['text'])
+            if subject and not re.search(r'(?<!\w)' + re.escape(normalized(subject[1]).rstrip('s')) + r's?(?!\w)', normalized(value['asset'])):
+                raise ValueError('Notification asset omits the explicit subject being reported: ' + subject[1])
+            if re.search(r'\b(?:of|after)\s+(?:becoming aware|discovery|discovering|awareness)\b', item['text'], re.I):
+                for condition in leaves:
+                    if (condition['leftOperand'].casefold() in ('event', 'trigger') and 'rightOperand' in condition
+                            and not re.search(r'\b(?:aware\w*|discover\w*)\b', str(condition['rightOperand']), re.I)):
+                        raise ValueError('Notification timing trigger omits the source awareness/discovery event.')
+            bound = re.search(r'\bwithin\s+(\d+)\s*(?:\([^)]*\)\s*)?(hours?|days?)\b', item['text'], re.I)
+            if bound:
+                seconds = Decimal(bound[1]) * (3600 if bound[2].lower().startswith('hour') else 86400)
+                for branch in branches:
+                    upper = []
+                    for condition in branch:
+                        if condition['leftOperand'].casefold() != 'elapsedtime':
+                            continue
+                        parsed = DURATION.fullmatch(str(condition.get('rightOperand', '')))
+                        if parsed and not (parsed['years'] or parsed['months']):
+                            actual = sum(Decimal(parsed[key] or '0') * multiplier for key, multiplier in
+                                         (('days', 86400), ('hours', 3600), ('minutes', 60), ('seconds', 1)))
+                            if actual >= seconds and condition['operator'] in ('gt', 'gteq'):
+                                raise ValueError('Notification within-period upper bound is reversed as a minimum elapsed time.')
+                            if condition['operator'] in ('lt', 'lteq'):
+                                upper.append(actual)
+                    if upper and min(upper) > seconds:
+                        raise ValueError('Notification elapsed-time upper bound is longer than the explicit source deadline.')
+            if (re.search(r'\bunless\b[^.]*\bshorter\b', item['text'], re.I)
+                    and not re.search(r'\b(?:shorter|earlier)\b', json.dumps([
+                        value['conditions'], [parameters[condition['rightOperandReference']]['label']
+                            for condition in leaves if 'rightOperandReference' in condition]]), re.I)):
+                raise ValueError('Notification deadline omits an explicit shorter-period exception; '
+                                 'preserve that qualification on this duty using source wording.')
+            if (re.search(r'\bunless\b[^.]*\bshorter\b', item['text'], re.I) and any(
+                    condition['leftOperand'].casefold() == 'exception'
+                    and condition['operator'] in ('eq', 'isAnyOf', 'isA') for condition in value['conditions'] if 'leftOperand' in condition)):
+                raise ValueError('A shorter-period exception changes the deadline, not whether notification is owed. '
+                                 'Keep the duty applicable normally and preserve its shorter timing qualification; '
+                                 'do not require the exception to be true as an AND condition.')
+        if (kind in ('permission', 'obligation') and re.search(r'\bor\s+as\s+(?:agreed|authori[sz]ed|permitted)\b',
+                item['text'], re.I) and len(value['conditions']) > 1 and any(
+                    condition['leftOperand'].casefold() == 'exception'
+                    and condition['operator'] in ('eq', 'isAnyOf', 'isA') for condition in value['conditions'] if 'leftOperand' in condition)):
+            raise ValueError('Alternative authorisation is encoded as an AND exception condition. '
+                             'Split the source-supported alternatives into separate rule branches or mark the '
+                             'unrepresentable qualification for review; do not require both alternatives.')
+        for condition in leaves:
+            if (condition['leftOperand'].casefold() == 'elapsedtime'
+                    and isinstance(condition.get('rightOperand'), str)
+                    and not DURATION.fullmatch(condition['rightOperand'])):
+                raise ValueError('elapsedTime requires an ISO 8601 duration or a number with units; '
+                                 'preserve qualitative wording such as without undue delay in a timing constraint.')
+        if kind == 'prohibition':
+            scope = ' '.join(cited)
+            exceptions = r'\b(?:unless|except|without|outside|other than|non[- ]|unauthori[sz]ed|unapproved)\b'
+            if re.search(r'\b(?:not|nor|no)\b', scope) and not re.search(exceptions, scope):
+                for condition in leaves:
+                    if (condition['leftOperand'].casefold() in ('purpose', 'recipient')
+                            and condition['operator'] in ('neq', 'isNoneOf')):
+                        raise ValueError('Prohibition constraint reverses a source restriction: kind already supplies '
+                                         'negation. Use a positive comparison for the stated purpose/recipient; '
+                                         'negative comparisons require an explicit source exclusion or exception.')
         uid = f'r{len(traces) + 1}'
-        traces.append(dict(ruleUid=uid, ruleType=kind, sourceClauses=sources(value['evidence'])))
+        traces.append(dict(ruleUid=uid, ruleType=kind, sourceClauses=source_refs))
         rule = dict(uid=uid, assignee=value['actor'], action=value['action'], target=value['asset'])
+        if value.get('actor_role', 'literal') != 'literal':
+            role = value['actor_role']
+            primary = normalized(item['text'])
+            if value['actor'] != role or not (
+                    role == 'requester' and re.search(r'\brequests?\b', primary)
+                    or role == 'access_provider' and re.search(r'\baccess\b', primary)
+                    and re.search(r'\b(?:shall|must)\s+be\s+granted\b', primary)):
+                raise ValueError('An unresolved actor role must be requester or access_provider supported by the primary text; do not invent a named party.')
+            parties.setdefault(role, dict(uid=f"urn:xfed:{contract}:{item['chunk_id']}:party:{len(parties) + 1}",
+                                         role=role, status='unresolved', sourceClauses=source_refs))
+            rule['assignee'] = parties[role]['uid']
         if value['conditions']:
-            rule['constraint'] = value['conditions']
+            rule['constraint'] = deepcopy(value['conditions'])
+            for condition in constraint_leaves(rule['constraint']):
+                if 'rightOperandReference' in condition:
+                    condition['rightOperandReference'] = parameters[condition['rightOperandReference']]['uid']
         return rule
-    for value in answer['rules']:
+    for index, value in enumerate(answer['rules']):
         kind = value['kind']
-        if (value['duties'] and kind != 'permission') or (value['remedies'] and kind != 'prohibition'):
-            raise ValueError('Only permissions have prerequisite duties; only prohibitions have remedies.')
-        rule = compile_rule(value, kind)
-        if value.get('issuer'):
-            rule['assigner'] = value['issuer']
-        for field, planned in (('duty', 'duties'), ('remedy', 'remedies')):
-            if value[planned]:
-                rule[field] = [compile_rule(child, 'duty') for child in value[planned]]
+        start = len(traces)
+        try:
+            # A named example is already covered by an otherwise identical rule
+            # on its general asset. Do not turn it into a second independent rule.
+            for other in answer['rules']:
+                if (other is not value and other['asset'] != value['asset'] and all(
+                        other.get(key) == value.get(key) for key in
+                        ('kind', 'actor', 'action', 'conditions', 'issuer', 'duties', 'remedies'))
+                        and (other['evidence'].get('primary') == item['chunk_id']
+                             if isinstance(other['evidence'], dict) else
+                             any(entry['chunk_id'] == item['chunk_id'] for entry in other['evidence']))
+                        and re.search(r'(?<!\w)' + re.escape(normalized(other['asset']))
+                            + r'\s*,?\s*(?:such as|for example|including)\s+(?:(?:a|an|the)\s+)?'
+                            + re.escape(normalized(value['asset'])) + r'(?!\w)', normalized(item['text']))):
+                    raise ValueError('Illustrative example duplicates a general rule with the same scope; '
+                                     'keep the general asset rule once instead of a separate example rule.')
+            if (value['duties'] and kind != 'permission') or (value['remedies'] and kind != 'prohibition'):
+                raise ValueError('Only permissions have prerequisite duties; only prohibitions have remedies.')
+            rule = compile_rule(value, kind)
+            if value.get('issuer'):
+                rule['assigner'] = value['issuer']
+            for field, planned in (('duty', 'duties'), ('remedy', 'remedies')):
+                if value[planned]:
+                    rule[field] = [compile_rule(child, 'duty') for child in value[planned]]
+        except ValueError as error:
+            if rejected is None:
+                raise
+            # Never retain a parent with a rejected prerequisite or remedy.
+            del traces[start:]
+            rejected.append(dict(plan_index=index, reason=str(error)))
+            continue
         policy.setdefault(kind, []).append(rule)
     if not traces:
         return None
     # Use an ODRL Set when the evidence does not identify every issuer.
     policy['@type'] = 'Agreement' if all(rule.get('assigner') for kind, rule in rules(policy)) else 'Set'
     fragment = dict(odrlPolicy=policy, traceability=traces)
+    used_parameters = {condition['rightOperandReference'] for _, rule in rules(policy)
+                       for condition in constraint_leaves(rule.get('constraint', [])) if 'rightOperandReference' in condition}
+    if used_parameters:
+        fragment['parameterBindings'] = [parameter for parameter in parameters.values() if parameter['uid'] in used_parameters]
+    used_parties = {rule.get('assignee') for _, rule in rules(policy)}
+    if any(party['uid'] in used_parties for party in parties.values()):
+        fragment['partyBindings'] = [party for party in parties.values() if party['uid'] in used_parties]
     if answer.get('osdu'):
         fragment['osdu'] = answer['osdu']
     return complete_fragment(fragment, contract, item)
@@ -394,7 +755,7 @@ def complete_fragment(fragment, contract, item):
         ('profile', 'http://www.w3.org/ns/odrl/2/core'),
     ):
         policy.setdefault(key, value)
-    for trace in fragment['traceability']:
+    for trace in [*fragment['traceability'], *fragment.get('parameterBindings', []), *fragment.get('partyBindings', [])]:
         sources = []
         for source in trace['sourceClauses']:
             candidates = [c for c in [item, *item['context']]
@@ -440,6 +801,17 @@ def entailed_groups(fragment, checked):
         else:
             output['odrlPolicy'].pop(kind, None)
     output['traceability'] = [trace for trace in output['traceability'] if trace['ruleUid'] in retained]
+    references = {condition['rightOperandReference'] for _, rule in rules(output['odrlPolicy'])
+                  for condition in constraint_leaves(rule.get('constraint', [])) if 'rightOperandReference' in condition}
+    if 'parameterBindings' in output:
+        output['parameterBindings'] = [binding for binding in output['parameterBindings'] if binding['uid'] in references]
+        if not output['parameterBindings']:
+            output.pop('parameterBindings')
+    if 'partyBindings' in output:
+        used = {rule.get('assignee') for _, rule in rules(output['odrlPolicy'])}
+        output['partyBindings'] = [binding for binding in output['partyBindings'] if binding['uid'] in used]
+        if not output['partyBindings']:
+            output.pop('partyBindings')
     return (output if retained else None), removed
 
 
@@ -450,16 +822,34 @@ def generate_item(item, client, prompt, contract, request_schema, root):
     correction, feedback, diagnostics, partial = prompt, None, {}, None
     reviewer_prompt = (Path(root) / 'prompts/policy_reviewer.md').read_text(encoding='utf-8')
     def result(fragment, reason, failed=False, outcome=None):
+        if fragment and (fragment.get('parameterBindings') or fragment.get('partyBindings')):
+            outcome = 'partial_needs_review'
+            reason = 'Unresolved source bindings; do not enforce before resolution. ' + reason
+            diagnostics['unresolved_parameter_bindings'] = fragment.get('parameterBindings', [])
+            diagnostics['unresolved_party_bindings'] = fragment.get('partyBindings', [])
         entry = report_clause(item, fragment is not None, reason, supplied, context_retries, output_retries)
         entry.update(diagnostics)
         if outcome:
             entry['outcome'] = outcome
         return fragment, entry, failed
 
+    if standalone_heading(item):
+        diagnostics['deterministic_no_rule'] = 'standalone_heading'
+        return result(None, 'Standalone heading contains no operative rule; supporting clauses remain separate inputs.',
+                      outcome='abstained_needs_review')
+    if (re.search(r'^About [^\n:]{1,80}:', item['text'], re.M | re.I)
+            and re.search(r'^How (?:to|do) [^\n?]{1,100}\?', item['text'], re.M | re.I)
+            and re.search(r'https?://', item['text'])
+            and not re.search(r'\b(?:must|shall)\b', item['text'], re.I)):
+        diagnostics['deterministic_no_rule'] = 'explanatory_faq_requires_review'
+        return result(None, 'Explanatory FAQ with external guidance and no explicit must/shall requirement; '
+                      'review source status before creating independent contract rules.', outcome='abstained_needs_review')
+
     for attempt in range(2):
         try:
             diagnostics.pop('semantic_check', None)
             diagnostics.pop('withheld_rule_uids', None)
+            diagnostics.pop('withheld_plan_groups', None)
             answer, supplied, retry_count, output_retry_count = generate_answer(
                 client, correction, contract, item, request_schema, feedback=feedback)
             draft_cache_key = getattr(client, 'last_cache_key', None)
@@ -467,7 +857,21 @@ def generate_item(item, client, prompt, contract, request_schema, root):
             output_retries += output_retry_count
             Draft202012Validator(request_schema).validate(answer)
             diagnostics.update(rule_plan=answer, generation_attempts=attempt + 1)
-            fragment = compile_plan(answer, contract, supplied)
+            # Omission claims are review data, not accepted rules. A bad claim
+            # must not prevent checking an otherwise empty or sound extraction.
+            try:
+                compile_plan(dict(answer, rules=[]), contract, supplied)
+            except ValueError as error:
+                diagnostics['unrepresented_evidence_error'] = str(error)
+            # First request a full repair. If a later plan still mixes invalid
+            # groups into sound rules, withhold them and review the remainder.
+            rejected = []
+            fragment = compile_plan(dict(answer, unrepresented=[]), contract, supplied,
+                                    rejected=rejected if attempt else None)
+            if rejected:
+                diagnostics['withheld_plan_groups'] = rejected
+                if fragment is None:
+                    raise ValueError('No valid source-grounded rule groups remain after withholding invalid groups.')
             if fragment is not None:
                 validate_fragment(fragment, contract, supplied, root)
             candidates = []
@@ -476,17 +880,21 @@ def generate_item(item, client, prompt, contract, request_schema, root):
                 candidates = [dict(rule_type=kind, rule=rule,
                     source_chunk_ids=[source['chunk_id'] for source in traces[rule['uid']]['sourceClauses']])
                     for kind, rule in rules(fragment['odrlPolicy'])]
-            checked = review_item(dict(supplied, candidate_rules=candidates), client,
+            checked = review_item(dict(supplied, candidate_rules=candidates,
+                                       parameter_bindings=(fragment or {}).get('parameterBindings', []),
+                                       party_bindings=(fragment or {}).get('partyBindings', [])), client,
                                   reviewer_prompt, contract, root, require_resolved=False)
             diagnostics['semantic_check'] = dict(checked, same_model_as_generator=True)
             entailed = not checked.get('error') and all(row['verdict'] == 'ENTAILED' for row in checked['rule_reviews'])
             complete = checked['coverage'] == ('COMPLETE' if fragment else 'NO_RULES_NEEDED')
-            if entailed and complete and not answer['unrepresented']:
+            if fragment is None and entailed and checked['coverage'] == 'NO_RULES_NEEDED':
+                return result(None, answer['reason'], outcome='abstained_needs_review')
+            if entailed and complete and not answer['unrepresented'] and not rejected:
                 return result(fragment, answer['reason'], outcome='generated' if fragment else 'abstained_needs_review')
             # Keep sound rules after a repair rather than discarding them solely for
             # incomplete coverage. Never accept a contradicted or unverifiable rule.
             if attempt and fragment and entailed and (checked['coverage'] in ('MISSING_RULES', 'NEEDS_CONTEXT')
-                                                      or answer['unrepresented']):
+                                                      or answer['unrepresented'] or rejected):
                 return result(fragment, 'Partial extraction: ' + checked['reason'], outcome='partial_needs_review')
             supported, removed = entailed_groups(fragment, checked)
             if supported:
@@ -541,7 +949,7 @@ def generate(document, client, root=Path('.'), progress=None, classified=None):
         'profile': 'http://www.w3.org/ns/odrl/2/core',
     }, traceability=[])
     report = dict(contract_id=contract, status='draft', clauses=[],
-                  generation_strategy='source_backed_plan_with_same_model_check_v2')
+                  generation_strategy='source_ids_with_same_model_check_v3')
     if classified is not None:
         validate(classified, 3, root)
         originals = {chunk['chunk_id']: chunk for chunk in classified['chunks']}
@@ -596,6 +1004,10 @@ def generate(document, client, root=Path('.'), progress=None, classified=None):
             if fragment['odrlPolicy'].get(kind):
                 output['odrlPolicy'].setdefault(kind, []).extend(fragment['odrlPolicy'][kind])
         output['traceability'].extend(fragment['traceability'])
+        if fragment.get('parameterBindings'):
+            output.setdefault('parameterBindings', []).extend(fragment['parameterBindings'])
+        if fragment.get('partyBindings'):
+            output.setdefault('partyBindings', []).extend(fragment['partyBindings'])
     report['summary'] = {outcome: sum(entry['outcome'] == outcome for entry in report['clauses'])
                          for outcome in ('generated', 'partial_needs_review', 'abstained_needs_review', 'rejected')}
     report['summary']['input_clauses'] = len(document['items'])

@@ -4,13 +4,15 @@ from collections import defaultdict
 from copy import deepcopy
 import hashlib
 import json
+import re
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, ValidationError
 
 from xfed.common import map_chunks, schema, validate
 from xfed.enrichment import ContextIndex
-from xfed.policy_generation import check_grounding, context_char_budget, request_value, rules, summarize_error
+from xfed.llm import OllamaConnectionError
+from xfed.policy_generation import check_grounding, context_char_budget, request_value, rule_description, rules, summarize_error
 
 
 def fingerprint(value):
@@ -33,38 +35,61 @@ def conflicts(policy):
     return result
 
 
-def review_schema(candidates, root):
+def review_schema(candidates, root, primary=None):
     entry = deepcopy(schema(6, root)['properties']['rule_reviews']['items'])
     entry['required'] = ['rule_uid', 'rule_type', 'verdict', 'reason']
-    entry['properties']['reason']['minLength'] = 1
+    entry['properties']['reason'].update(minLength=1, maxLength=400)
     if candidates:
         entry['properties']['rule_uid']['enum'] = [row['rule']['uid'] for row in candidates]
+    quote = dict(type='string', minLength=1, maxLength=800)
+    if primary:
+        # Let the grammar copy real source spans, including PDF typography,
+        # instead of rejecting a sound review for a retyped apostrophe.
+        spans = ([primary] if len(primary) <= 800 else []) + [line.strip() for line in primary.splitlines()
+                    if line.strip() and len(line.strip()) <= 800 and not re.fullmatch(r'[\d.() ]+', line.strip())]
+        quote['enum'] = list(dict.fromkeys(spans or [primary[:800]]))
     return dict(type='object', additionalProperties=False,
                 required=['relevance', 'rule_reviews', 'coverage', 'reason', 'missing_rules'],
                 properties=dict(
                     relevance=dict(type='string', enum=['RELEVANT', 'NOT_RELEVANT', 'NEEDS_CONTEXT']),
                     rule_reviews=dict(type='array', minItems=len(candidates), maxItems=len(candidates), items=entry),
                     coverage=dict(type='string', enum=['COMPLETE', 'MISSING_RULES', 'NO_RULES_NEEDED', 'NEEDS_CONTEXT']),
-                    reason=dict(type='string', minLength=1),
-                    missing_rules=dict(type='array', items=dict(type='string', minLength=1))))
+                    reason=dict(type='string', minLength=1, maxLength=600),
+                    missing_rules=dict(type='array', items=dict(type='object', additionalProperties=False,
+                        required=['requirement', 'primary_quote'], properties=dict(
+                            requirement=dict(type='string', minLength=1, maxLength=600),
+                            primary_quote=quote)))))
 
 
 def review_item(item, worker, prompt, contract, root, require_resolved=True):
     candidates = item['candidate_rules']
     expected = {row['rule']['uid']: row['rule_type'] for row in candidates}
-    response_schema = review_schema(candidates, root)
+    response_schema = review_schema(candidates, root, item['text'])
     reviewer = dict(model=getattr(worker, 'model', None), model_digest=getattr(worker, 'model_digest', None))
     failure = None
     for attempt in range(2):
         try:
             budget = context_char_budget(worker, prompt=prompt) - len(json.dumps(candidates, ensure_ascii=False)) - 512
+            budget -= len(json.dumps(response_schema, ensure_ascii=False).encode('utf-8'))
             value, supplied = request_value(contract, item, budget)
             if value is None or not supplied['context_complete']:
                 raise ValueError('Review evidence exceeds the safe input budget; increase context tokens.')
-            value['candidate_rules'] = candidates
+            bindings = [*item.get('parameter_bindings', []), *item.get('party_bindings', [])]
+            value['candidate_rules'] = [dict(candidate, encoded_meaning=rule_description(
+                candidate['rule_type'], candidate['rule'], bindings)) for candidate in candidates]
+            value['parameter_bindings'] = item.get('parameter_bindings', [])
+            value['party_bindings'] = item.get('party_bindings', [])
             system = prompt if failure is None else prompt + '\nRepair the response format: ' + failure
             answer = worker.generate(system, value, response_schema, truncate=False)
             Draft202012Validator(response_schema).validate(answer)
+            missing_evidence = answer['missing_rules']
+            for missing in missing_evidence:
+                pattern = r'\s+'.join(re.escape(word) for word in missing['primary_quote'].split())
+                if not pattern or not re.search(pattern, supplied['text']):
+                    raise ValueError('Missing rules must quote operative words from PRIMARY, not independent parent/context requirements.')
+            answer['missing_rules'] = [entry['requirement'] for entry in missing_evidence]
+            if missing_evidence:
+                answer['missing_rule_evidence'] = missing_evidence
             actual = {row['rule_uid']: row['rule_type'] for row in answer['rule_reviews']}
             if actual != expected or len(answer['rule_reviews']) != len(expected):
                 raise ValueError('Review every supplied rule exactly once with its matching rule_type.')
@@ -84,10 +109,15 @@ def review_item(item, worker, prompt, contract, root, require_resolved=True):
                 answer['reason'] += ' Unresolved references: ' + '; '.join(item['unresolved_references'])
             return dict(answer, chunk_id=item['chunk_id'], reviewer=reviewer,
                         unresolved_references=item.get('unresolved_references', []))
+        except OllamaConnectionError:
+            raise
         except (ValueError, ValidationError, RuntimeError) as error:
             if hasattr(worker, 'discard_last_response'):
                 worker.discard_last_response()
             failure = summarize_error(error)
+            if not attempt and 'output token limit reached' in failure.lower():
+                failure += ' Return concise explanations within the schema limits; do not repeat source text.'
+                continue
             if any(term in failure.lower() for term in ('safe input budget', 'context limit reached',
                                                         'output token limit reached')) or isinstance(error, RuntimeError):
                 break
@@ -141,7 +171,9 @@ def review(policy, enriched, classified, client, root=Path('.'), progress=None, 
             elif original is not None:
                 source_texts.append(source['text'])
         try:
-            check_grounding(dict(odrlPolicy=dict(obligation=[rule])), '\n'.join(source_texts))
+            check_grounding(dict(odrlPolicy=dict(obligation=[rule]),
+                                 parameterBindings=(policy or {}).get('parameterBindings', []),
+                                 partyBindings=(policy or {}).get('partyBindings', [])), '\n'.join(source_texts))
         except ValueError as error:
             evidence_errors.append(rule['uid'] + ': ' + str(error))
         candidates[identifier].append(dict(rule_type=kind, rule=deepcopy(rule),
@@ -152,6 +184,12 @@ def review(policy, enriched, classified, client, root=Path('.'), progress=None, 
         context, missing = index.context_for(chunk)
         item = deepcopy(prepared.get(identifier) or dict(
             {key: value for key, value in chunk.items() if key != 'classification'}, context=context))
+        item['parameter_bindings'] = [binding for binding in (policy or {}).get('parameterBindings', [])
+                                     if any(source['chunk_id'] == identifier and source['relationship'] == 'primary'
+                                            for source in binding['sourceClauses'])]
+        item['party_bindings'] = [binding for binding in (policy or {}).get('partyBindings', [])
+                                 if any(source['chunk_id'] == identifier and source['relationship'] == 'primary'
+                                        for source in binding['sourceClauses'])]
         if item['text'] != chunk['text']:
             raise ValueError('Enriched primary text changed before review: ' + identifier)
         # Preserve every valid source actually cited, even if retrieval has changed since generation.

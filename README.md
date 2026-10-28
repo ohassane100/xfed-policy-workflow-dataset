@@ -30,26 +30,36 @@ Rerunning a stage invalidates its downstream outputs.
 
 Ollama is used for relevance classification (1.3) and policy creation (2); enrichment (1.4) resolves context deterministically.
 
-Stage 2 extracts atomic rules with literal evidence, compiles ODRL locally, then
+Stage 2 extracts atomic rules with source IDs, copies original evidence locally, compiles ODRL, then
 checks each clause for unsupported rules and omissions with a fresh model request.
 One correction is allowed; rejected and partial clauses remain in the generation
 report. The check uses the same model.
-Actor/asset labels must appear in cited evidence. Unsupported rule groups are
+Actor/asset labels must appear in cited source clauses. Unsupported rule groups are
 withheld together with their prerequisites; supported groups can remain as an
 explicit partial draft.
+Evaluation saves predictions and provisional scores after each completed request;
+unfinished cases stay visible until final scoring.
 Relevant and uncertain clauses reach generation; classification exclusions are
 recorded. Rules with missing issuers use an ODRL Set. Context overflow fails
 explicitly. Rerun through policy creation after updating to rebuild extraction
 metadata and context.
 
-CLI commands are in `run.md`; model configuration starts from
-`config/models.example.yaml`. Evaluation defaults to the complete independent
+The **Evaluation** tab measures task 1.3 classification only. **Policy review**
+is a static visual demo with labelled sample content and inert buttons. It has
+no node connections, review actions, downloads or amendment logic.
+
+To use the university model through the existing tunnel while keeping scripts and
+reports local, run locally (no server changes or remote commands):
+
+```powershell
+.venv/Scripts/python.exe -m xfed.ui --ollama-url http://127.0.0.1:11435
+```
+
+Model configuration starts from
+`config/models.example.yaml`. Classification evaluation uses the complete exposed
 Contract 05 (Equinor Volve data licence); Contracts 01–03 are development material.
-See [evaluation/README.md](evaluation/README.md). Run focused tests with:
+See [evaluation/README.md](evaluation/README.md). Run regression tests with:
 
 ```bash
-python -m unittest discover -s "tests/1 preprocessing/1.3 relevance"
-python -m unittest discover -s "tests/1 preprocessing/1.4 enrichment"
-python -m unittest discover -s "tests/2 policy_generation"
-python -m unittest discover -s tests/ui
+python -m unittest discover -s tests -p "test_*.py"
 ```

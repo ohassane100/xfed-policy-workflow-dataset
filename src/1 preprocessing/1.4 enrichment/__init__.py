@@ -3,7 +3,7 @@ from copy import deepcopy
 from pathlib import Path
 import re
 
-from xfed.common import DEFINITION, NUMBER, scope_heading, scoped_chunks, validate
+from xfed.common import DEFINITION, NUMBER, scope_heading, scoped_chunks, standalone_heading, validate
 
 
 REFERENCES = re.compile(rf'\b(?:articles?|clauses?|sections?|paragraphs?|provisions?)\s+({NUMBER}(?:\s*(?:,|and|or|to|[-\u2013])\s*{NUMBER})*)', re.I)
@@ -142,7 +142,7 @@ class ContextIndex:
         children = list(chunk.get('child_clause_ids', []))
         children.extend(child['clause_id'] for child in self.children.get((scope, chunk.get('clause_id')), [])
                         if 'clause_id' in child)
-        if chunk.get('heading', '').strip() == chunk['text'].strip() and not chunk['text'].rstrip().endswith(':'):
+        if standalone_heading(chunk) and not chunk['text'].rstrip().endswith(':'):
             # A standalone heading does not need an entire section to classify its own meaning.
             children = []
         for child in dict.fromkeys(children):

@@ -19,9 +19,9 @@ import unittest
 
 from xfed.common import map_chunks, write_json
 from xfed.enrichment import ContextIndex, enrich
-from xfed.llm import OllamaClient, OllamaPool
+from xfed.llm import OllamaClient, OllamaConnectionError, OllamaPool
 from xfed.llm.service import OllamaServicePool, nvidia_gpus
-from xfed.policy_generation import (compile_plan, complete_fragment, generate, generate_answer, generate_item,
+from xfed.policy_generation import (clause_decoder_schema, compile_plan, complete_fragment, generate, generate_answer, generate_item,
                                     response_schema, summarize_error, validate_fragment)
 from jsonschema import Draft202012Validator, ValidationError
 from xfed.policy_review import conflicts, review
@@ -61,14 +61,14 @@ def reviewed(value):
     return dict(relevance='RELEVANT', rule_reviews=[dict(rule_uid=row['rule']['uid'],
         rule_type=row['rule_type'], verdict='ENTAILED', reason='Simulated supported rule.')
         for row in value['candidate_rules']], coverage='COMPLETE' if value['candidate_rules'] else 'MISSING_RULES',
-        reason='Simulated review.', missing_rules=[] if value['candidate_rules'] else ['Deletion duty omitted.'])
+        reason='Simulated review.', missing_rules=[] if value['candidate_rules'] else [dict(requirement='Deletion duty omitted.', primary_quote=value['clause']['text'])])
 
 
 def plan(item, kind='obligation', **changes):
     rule = dict(kind=kind, actor='Provider', action='delete', asset='supplied data',
                 conditions=[dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT12H'),
                             dict(leftOperand='event', operator='eq', rightOperand='notice')],
-                evidence=[dict(chunk_id=item['chunk_id'], quote=item['text'])], duties=[], remedies=[])
+                evidence=dict(primary=item['chunk_id'], supporting=[]), duties=[], remedies=[])
     rule.update(changes)
     return dict(rules=[rule], unrepresented=[], reason='Simulated source-backed rule.')
 
@@ -328,7 +328,10 @@ class QualityTests(unittest.TestCase):
             barrier.wait(timeout=5)
             return item['chunk_id']
         items = [dict(chunk_id=str(i)) for i in range(3)]
-        self.assertEqual(map_chunks(items, operation, Pool()), ['0', '1', '2'])
+        received = []
+        self.assertEqual(map_chunks(items, operation, Pool(), completed=lambda item, value:
+                                    received.append((item['chunk_id'], value))), ['0', '1', '2'])
+        self.assertEqual(sorted(received), [('0', '0'), ('1', '1'), ('2', '2')])
 
     def test_real_http_clients_overlap_in_classification_generation_and_review(self):
         barrier, requests = Barrier(3), []
@@ -468,7 +471,9 @@ class QualityTests(unittest.TestCase):
                 self.assertEqual(supplied_schema['type'], 'object')
                 self.assertFalse(supplied_schema['additionalProperties'])
                 if 'candidate_rules' not in json.loads(payload['messages'][1]['content']):
-                    self.assertEqual(supplied_schema, response_schema(ROOT))
+                    supplied_clause = json.loads(payload['messages'][1]['content'])['clause']
+                    expected_schema = clause_decoder_schema(response_schema(ROOT), supplied_clause)
+                    self.assertEqual(supplied_schema, expected_schema)
                 self.assertIs(payload['truncate'], False)
                 self.assertIs(payload['shift'], False)
             for worker in pool.metadata()['models']:
@@ -862,7 +867,7 @@ class QualityTests(unittest.TestCase):
         def check(value):
             response = reviewed(value)
             if value['candidate_rules'][0]['rule_type'] == 'permission':
-                response.update(coverage='MISSING_RULES', missing_rules=['Provider must delete within 12 hours after notice.'])
+                response.update(coverage='MISSING_RULES', missing_rules=[dict(requirement='Provider must delete within 12 hours after notice.', primary_quote=value['clause']['text'])])
                 response['rule_reviews'][0].update(verdict='CONTRADICTED', reason='Must delete is a duty, not a permission.')
             return response
         client = PlanClient(answer, check)
@@ -952,7 +957,7 @@ class QualityTests(unittest.TestCase):
 
     def test_partial_coverage_is_explicit_and_failed_checks_cannot_pass(self):
         def check(value):
-            return dict(reviewed(value), coverage='MISSING_RULES', missing_rules=['Missing acknowledgement duty.'])
+            return dict(reviewed(value), coverage='MISSING_RULES', missing_rules=[dict(requirement='Missing acknowledgement duty.', primary_quote=value['clause']['text'])])
         output, entry, failed = generate_item(self.item, PlanClient(plan(self.item), check),
                                              'prompt', 'contract', response_schema(ROOT), ROOT)
         self.assertFalse(failed)
@@ -974,7 +979,7 @@ class QualityTests(unittest.TestCase):
                 raise ValueError('Ollama output token limit reached')
             return plan(self.item)
         def check(value):
-            return dict(reviewed(value), coverage='MISSING_RULES', missing_rules=['Acknowledgement duty.'])
+            return dict(reviewed(value), coverage='MISSING_RULES', missing_rules=[dict(requirement='Acknowledgement duty.', primary_quote=value['clause']['text'])])
         client = PlanClient(answer, check)
         client.last_request = dict(thinking_chars=10, answer_chars=0)
         output, entry, failed = generate_item(self.item, client, 'prompt', 'contract', response_schema(ROOT), ROOT)
@@ -984,7 +989,7 @@ class QualityTests(unittest.TestCase):
         self.assertIn('token limit', entry['repair_error'])
 
     def test_reviewed_missing_evidence_is_an_abstention_not_a_transport_failure(self):
-        answer = dict(rules=[], unrepresented=[dict(evidence=[dict(chunk_id='c1', quote=self.item['text'])],
+        answer = dict(rules=[], unrepresented=[dict(evidence=[dict(chunk_id='c1')],
                       reason='Responsible actor definition missing.')], reason='Cannot safely encode.')
         check = lambda value: dict(no_rule_review(value), relevance='RELEVANT', coverage='NEEDS_CONTEXT')
         output, entry, failed = generate_item(self.item, PlanClient(answer, check), 'prompt',
@@ -1023,16 +1028,6 @@ class QualityTests(unittest.TestCase):
         self.assertNotIn('Supplier; pre-existing HW-710', texts)
         self.assertNotIn('date', index.definitions)
 
-    def test_rule_mismatches_explain_missing_and_unexpected_rules_without_softening_scores(self):
-        from xfed.evaluation import policy_counts
-        data = dict(inputs={'i': dict(contract_id='contract', clause=chunk(), policy_context=[], context=[])},
-                    contexts={}, value_aliases={}, contract_aliases={}, action_aliases={})
-        gold = dict(kind='obligation', action='delete', target='supplied data', assignee='Provider')
-        case = dict(input_id='i', gold=dict(rules=[gold]))
-        counts = policy_counts(case, dict(policy=fragment(self.item, 'permission')), data, ROOT)
-        self.assertEqual((counts['tp'], counts['fp'], counts['fn']), (0, 1, 1))
-        self.assertEqual(counts['rule_differences']['missing'][0]['kind'], 'obligation')
-        self.assertEqual(counts['rule_differences']['unexpected'][0]['kind'], 'permission')
 
     def test_split_manifest_counts_and_missing_predictions(self):
         from xfed.evaluation import digest, load_reference, score_report
@@ -1080,10 +1075,9 @@ class QualityTests(unittest.TestCase):
                 return no_rule_review(value)
             return dict(rules=[], unrepresented=[], reason='Simulated abstention.') if 'contract_id' in value else dict(label='RELEVANT')
         data = load_reference(ROOT)
-        for split, count, policy_count in [('dev', 300, 60), ('test', 76, 76)]:
+        for split, count in [('dev', 300), ('test', 76)]:
             report = run_evaluation(data, Runner(answer), ROOT, split=split)
             self.assertEqual(len(report['predictions']['classification']), count)
-            self.assertEqual(len(report['predictions']['policy']), policy_count)
             self.assertEqual(report['status'], 'complete')
             self.assertTrue(report['run_id'])
             self.assertTrue(report['inference_sha256'])
@@ -1099,13 +1093,12 @@ class QualityTests(unittest.TestCase):
         from xfed.evaluation import load_reference, reference_summary
         summary = reference_summary(load_reference(ROOT), split='test')
         self.assertEqual(summary['counts']['classification']['total'], 76)
-        self.assertEqual(summary['counts']['policy']['total'], 76)
         with TemporaryDirectory() as directory:
             root = Path(directory)
             pipeline = Pipeline(root, 'http://127.0.0.1:11434')
             with self.assertRaisesRegex(ValueError, 'test set only'):
                 pipeline.start_evaluation(dict(split='dev'))
-            report = dict(run_id='simulated-test-run', split='test', status='complete',
+            report = dict(run_id='simulated-test-run', split='test', status='complete', task='classification',
                           metrics={}, reference_status='provisional')
             with patch('xfed.ui.run_evaluation', return_value=report):
                 pipeline.run_evaluation({}, object(), dict(split='test'))
@@ -1118,7 +1111,7 @@ class QualityTests(unittest.TestCase):
             self.assertEqual(restored.evaluation_report['status'], 'cancelled')
             self.assertEqual(restored.evaluation_report['error'], 'Simulated cancellation')
 
-    def test_contract05_is_the_complete_independent_source_for_both_tasks(self):
+    def test_contract05_retains_all_classification_source_chunks(self):
         from xfed.evaluation import digest, load_reference, reference_summary
         from xfed.extraction import extract_document
         from xfed.segmentation import segment
@@ -1130,13 +1123,13 @@ class QualityTests(unittest.TestCase):
         inputs = {key: value for key, value in data['inputs'].items() if value['contract_id'] == 'contract_05'}
         self.assertEqual([value['clause'] for value in inputs.values()], segmented['chunks'])
         self.assertEqual(digest(segmented), data['sources']['contract_05']['segmentation_content_sha256'])
-        for task in ('classification', 'policy'):
+        for task in ('classification',):
             cases = [case for case in data[task] if case['split'] == 'test']
             self.assertEqual({case['input_id'] for case in cases}, set(inputs))
             self.assertTrue(all(case['gold']['review_status'] == 'draft' for case in cases))
         known = {chunk['chunk_id']: chunk for chunk in segmented['chunks']}
         for value in inputs.values():
-            for field in ('context', 'policy_context'):
+            for field in ('context',):
                 for identifier in value[field]:
                     context = data['contexts'][identifier]
                     original = known[context['chunk_id']]
@@ -1147,7 +1140,7 @@ class QualityTests(unittest.TestCase):
         from unittest.mock import patch
         from xfed.evaluation import load_reference
         original = load_reference(ROOT)
-        for task in ('classification', 'policy'):
+        for task in ('classification',):
             data = deepcopy(original)
             data[task].pop()  # Contract 05 follows the retained development cases.
             with patch.object(Path, 'read_text', return_value=json.dumps(data)):
@@ -1171,65 +1164,10 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(scores['macro_f1'], .5)
         self.assertEqual(scores['confusion_matrix']['RELEVANT']['NEEDS_CONTEXT'], 1)
 
-    def test_contract05_policy_gold_roundtrip_and_all_abstain_baseline(self):
-        from xfed.evaluation import digest, input_for, load_reference, policy_counts, score_report
-        data = load_reference(ROOT)
-        cases = [case for case in data['policy'] if case['split'] == 'test']
-        predictions = {}
-        for case in cases:
-            item = input_for(data, case, True)
-            fragment = None
-            for option in [case['gold']['rules'], *case['gold'].get('alternatives', [])]:
-                policy, traces = {}, []
-                for position, gold in enumerate(option):
-                    rule = deepcopy(gold)
-                    kind = rule.pop('kind')
-                    rule['uid'] = f'r{position}'
-                    if kind in ('permission', 'prohibition'):
-                        rule['assigner'] = 'Equinor and the former Volve license partners'
-                    policy.setdefault(kind, []).append(rule)
-                    traces.append(dict(ruleUid=rule['uid'], ruleType=kind,
-                        sourceClauses=[dict(chunk_id=item['chunk_id'], relationship='primary')]))
-                candidate = complete_fragment(dict(odrlPolicy=policy, traceability=traces), 'contract_05', item) if option else None
-                self.assertTrue(policy_counts(case, dict(policy=candidate), data, ROOT)['exact'])
-                if option == case['gold']['rules']:
-                    fragment = candidate
-            predictions[case['case_id']] = dict(policy=fragment, input_sha256=digest(item))
-        report = dict(reference_version=data['version'], reference_sha256=digest(data), split='test', task='policy',
-            selected_cases=dict(policy=list(predictions)), predictions=dict(policy=predictions), execution={})
-        scored = score_report(data, report, ROOT)
-        complete = scored['metrics']['policy']['real/full_document']
-        self.assertEqual(complete['n'], 76)
-        self.assertEqual(complete['canonical_rules']['f1'], 1)
-        self.assertEqual(complete['exact_case_accuracy'], 1)
-        self.assertEqual(scored['reference_status'], 'provisional')
-        for prediction in predictions.values():
-            prediction['policy'] = None
-        scored = score_report(data, report, ROOT)
-        self.assertEqual(scored['metrics']['policy']['real/full_document']['canonical_rules']['recall'], 0)
-        self.assertEqual(scored['metrics']['policy']['real/operative']['exact_case_accuracy'], 0)
-        with self.assertRaisesRegex(ValueError, 'not marked reviewed'):
-            score_report(data, report, ROOT, require_reviewed=True)
 
-    def test_rule_fields_are_diagnostics_and_duplicates_do_not_earn_extra_credit(self):
-        from xfed.evaluation import align_rules, policy_counts
-        data = dict(inputs={'i': dict(contract_id='contract', clause=chunk(), policy_context=[], context=[])},
-                    contexts={}, value_aliases={}, contract_aliases={}, action_aliases={})
-        gold = dict(kind='obligation', action='delete', target='supplied data', assignee='Provider',
-                    constraint=[dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT12H')])
-        counts = policy_counts(dict(input_id='i', gold=dict(rules=[gold])),
-                               dict(policy=fragment(self.item)), data, ROOT)
-        self.assertEqual((counts['tp'], counts['fp'], counts['fn']), (0, 1, 1))
-        self.assertEqual(counts['field_slots']['action']['tp'], 1)
-        self.assertEqual(counts['field_alignment'][0]['differing_fields'], ['constraint'])
-        slots, aligned = align_rules([gold], [gold, gold])
-        self.assertEqual(len(aligned), 1)
-        self.assertTrue(all(value == dict(tp=1, fp=1, fn=0) for value in slots.values()))
-        other = dict(gold, action='share', assignee='Recipient')
-        slots, aligned = align_rules([gold, other], [other, gold])
-        self.assertEqual([(row['expected'], row['predicted']) for row in aligned], [(0, 1), (1, 0)])
-        self.assertTrue(all(value['tp'] == 2 for value in slots.values()))
-        self.assertEqual(align_rules([], [gold])[0]['action'], dict(tp=0, fp=1, fn=0))
+
+
+
 
     def test_blind_review_packets_preserve_evidence_and_require_completed_human_annotations(self):
         from xfed.evaluation import apply_reviews, digest, load_reference, review_packet
@@ -1257,28 +1195,7 @@ class QualityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'evidence changed'):
             apply_reviews(data, packet)
 
-    def test_gated_evaluation_counts_excluded_rules_and_never_calls_policy_on_negatives(self):
-        from xfed.evaluation import load_reference, run_evaluation
-        class Runner(Client):
-            num_ctx = 131072
-            def preflight(self): pass
-            def reset_assignments(self): pass
-            def metadata(self): return dict(model=self.model)
-        def answer(value):
-            self.assertNotIn('contract_id', value)
-            return dict(label='NOT_RELEVANT')
-        client = Runner(answer)
-        report = run_evaluation(load_reference(ROOT), client, ROOT, policy_mode='gated')
-        metrics = report['metrics']['policy']['real/full_document']
-        self.assertEqual(metrics['outcomes'], dict(skipped_by_relevance=76))
-        self.assertEqual(metrics['canonical_rules']['recall'], 0)
-        self.assertEqual(metrics['operative']['generation_coverage'], 0)
-        self.assertEqual(metrics['all_abstain_baseline_accuracy'], 69 / 76)
-        self.assertIsNone(metrics['canonical_rules']['precision'])
-        self.assertFalse(report['quality_assessment']['reference_targets_verified'])
-        self.assertIn('does not re-evaluate PDF', report['evaluation_scope'])
-        with self.assertRaisesRegex(ValueError, 'requires both tasks'):
-            run_evaluation(load_reference(ROOT), client, ROOT, task='policy', policy_mode='gated')
+
 
     def test_routing_metrics_distinguish_uncertainty_from_lost_relevant_clauses(self):
         from xfed.evaluation import classification_metrics
@@ -1303,7 +1220,7 @@ class QualityTests(unittest.TestCase):
         # A definition can establish a literal label without broadening scope.
         item = dict(self.item, context=[dict(chunk('c2', 'Recipient means Provider.'), relationship='definition')])
         answer = plan(item, actor='Recipient')
-        answer['rules'][0]['evidence'].append(dict(chunk_id='c2', quote='Recipient means Provider.'))
+        answer['rules'][0]['evidence']['supporting'].append('c2')
         self.assertIsNotNone(compile_plan(answer, 'contract', item))
 
     def test_partial_rule_groups_keep_sound_rules_without_dropping_failed_prerequisites(self):
@@ -1312,7 +1229,7 @@ class QualityTests(unittest.TestCase):
         permission = deepcopy(answer['rules'][0])
         permission.update(kind='permission', action='use', duties=[dict(
             actor='Provider', action='notify', asset='supplied data', conditions=[],
-            evidence=[dict(chunk_id='c1', quote=item['text'])])])
+            evidence=[dict(chunk_id='c1')])])
         answer['rules'].append(permission)
         def check(value):
             result = reviewed(value)
@@ -1342,6 +1259,101 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(len(output['traceability']), 1)
         self.assertIn('repair_error', entry)
 
+    def test_failed_plan_repair_withholds_context_only_groups_before_source_review(self):
+        item = dict(self.item, context=[dict(chunk('c2', 'Provider may publish supplied data.'), relationship='other')])
+        answer = plan(item)
+        extra = plan(item, 'permission', action='publish', conditions=[], evidence=[dict(chunk_id='c2')])['rules'][0]
+        answer['rules'].append(extra)
+        with self.assertRaisesRegex(ValueError, 'primary'):
+            compile_plan(answer, 'contract', item)
+        output, entry, failed = generate_item(item, PlanClient(answer), 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertEqual(entry['generation_attempts'], 2)
+        self.assertEqual(entry['outcome'], 'partial_needs_review')
+        self.assertEqual(entry['withheld_plan_groups'][0]['plan_index'], 1)
+        self.assertEqual(output['odrlPolicy']['obligation'][0]['action'], 'delete')
+        self.assertNotIn('permission', output['odrlPolicy'])
+        self.assertEqual(len(output['traceability']), 1)
+        self.assertEqual(entry['semantic_check']['rule_reviews'][0]['verdict'], 'ENTAILED')
+        validate_fragment(output, 'contract', item, ROOT)
+        def contradicted(value):
+            result = reviewed(value)
+            for row in result['rule_reviews']:
+                row.update(verdict='CONTRADICTED', reason='Simulated contradiction.')
+            return result
+        output, entry, failed = generate_item(item, PlanClient(answer, contradicted), 'prompt',
+                                             'contract', response_schema(ROOT), ROOT)
+        self.assertIsNone(output)
+        self.assertTrue(failed)
+
+    def test_invalid_nested_plan_evidence_withholds_its_whole_parent_group(self):
+        item = dict(self.item, text=self.item['text'] + ' Provider may use supplied data after notification.',
+                    context=[dict(chunk('c2', 'Provider must notify Customer of supplied data.'), relationship='other')])
+        answer = plan(item)
+        permission = plan(item, 'permission', action='use', conditions=[])['rules'][0]
+        permission['duties'] = [dict(actor='Provider', action='notify', asset='supplied data',
+            conditions=[dict(leftOperand='recipient', operator='eq', rightOperand='Customer')],
+            evidence=[dict(chunk_id='c2')])]
+        answer['rules'].append(permission)
+        # A later valid group must not inherit traces or IDs from the failed duty.
+        answer['rules'].append(plan(item, 'permission', action='use', conditions=[])['rules'][0])
+        output, entry, failed = generate_item(item, PlanClient(answer), 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertEqual(entry['outcome'], 'partial_needs_review')
+        self.assertEqual(entry['withheld_plan_groups'][0]['plan_index'], 1)
+        self.assertEqual([row['ruleUid'] for row in output['traceability']], ['r1', 'r2'])
+        self.assertNotIn('duty', output['odrlPolicy']['permission'][0])
+        validate_fragment(output, 'contract', item, ROOT)
+
+    def test_reviewer_retries_an_output_limit_without_dropping_evidence(self):
+        from xfed.policy_review import review_item
+        item = dict(self.item, candidate_rules=[dict(rule_type='obligation',
+                    rule=fragment(self.item)['odrlPolicy']['obligation'][0], source_chunk_ids=['c1'])])
+        seen = []
+        def answer(value):
+            seen.append(deepcopy(value))
+            if len(seen) == 1:
+                raise ValueError('Ollama output token limit reached at 4096 tokens')
+            return reviewed(value)
+        result = review_item(item, Client(answer), 'prompt', 'contract', ROOT)
+        self.assertNotIn('error', result)
+        self.assertEqual(result['coverage'], 'COMPLETE')
+        self.assertEqual(len(seen), 2)
+        self.assertEqual(seen[0], seen[1])
+        def always_fails(value):
+            raise ValueError('Ollama output token limit reached at 4096 tokens')
+        client = Client(always_fails)
+        result = review_item(item, client, 'prompt', 'contract', ROOT)
+        self.assertEqual(len(client.calls), 2)
+        self.assertIn('error', result)
+        self.assertEqual(result['rule_reviews'][0]['verdict'], 'AMBIGUOUS')
+
+    def test_reviewer_repairs_oversized_explanations_instead_of_truncating_them(self):
+        from xfed.policy_review import review_item
+        item = dict(self.item, candidate_rules=[dict(rule_type='obligation',
+                    rule=fragment(self.item)['odrlPolicy']['obligation'][0], source_chunk_ids=['c1'])])
+        attempts = []
+        def answer(value):
+            attempts.append(value)
+            result = reviewed(value)
+            if len(attempts) == 1:
+                result['rule_reviews'][0]['reason'] = 'x' * 401
+            return result
+        result = review_item(item, Client(answer), 'prompt', 'contract', ROOT)
+        self.assertNotIn('error', result)
+        self.assertEqual(len(attempts), 2)
+        self.assertEqual(result['rule_reviews'][0]['reason'], 'Simulated supported rule.')
+
+    def test_all_invalid_plan_groups_remain_a_failure_instead_of_an_abstention(self):
+        answer = plan(self.item, evidence=[dict(chunk_id='missing')])
+        output, entry, failed = generate_item(self.item, PlanClient(answer), 'prompt',
+                                             'contract', response_schema(ROOT), ROOT)
+        self.assertIsNone(output)
+        self.assertTrue(failed)
+        self.assertIn('No valid source-grounded', entry['reason'])
+        self.assertEqual(len(entry['withheld_plan_groups']), 1)
+        self.assertNotIn('semantic_check', entry)
+
     def test_summary_disclaimer_is_attached_on_its_own_page_without_spreading_to_operative_pages(self):
         disclaimer = chunk('c1', 'This summary is not a substitute for the license.')
         summary = chunk('c2', 'Recipient may share Data.')
@@ -1352,6 +1364,561 @@ class QualityTests(unittest.TestCase):
         context, _ = index.context_for(operative)
         self.assertNotIn(disclaimer['text'], [value['text'] for value in context])
 
+    def test_numbered_topic_heading_does_not_inherit_its_child_rules(self):
+        heading = chunk('c1', '8.1\nConfidentiality', heading='8.1', clause_id='8.1', child_clause_ids=['8.1.1'])
+        child = chunk('c2', 'Recipient must protect Data.', clause_id='8.1.1', parent_clause_id='8.1')
+        client = Client(dict(label='RELEVANT'))
+        context, _ = ContextIndex([heading, child]).context_for(heading)
+        self.assertNotIn(child['text'], [value['text'] for value in context])
+        self.assertEqual(classify_batch([dict(clause=heading, context=context, unresolved_references=[])], client, ROOT)[0]['label'], 'NOT_RELEVANT')
+        self.assertEqual(client.calls, [])
+        title_without_heading = dict(heading)
+        title_without_heading.pop('heading')
+        self.assertEqual(classify_batch([dict(clause=title_without_heading, context=[], unresolved_references=[])], client, ROOT)[0]['label'], 'NOT_RELEVANT')
+        for text in ('8.1\nRecipient must protect Data.', '8.1\nDelete Data', '8.1\nResearch use only'):
+            substantive = dict(heading, text=text)
+            self.assertEqual(classify_batch([dict(clause=substantive, context=[], unresolved_references=[])], client, ROOT)[0]['label'], 'RELEVANT')
+
+    def test_source_id_evidence_and_pdf_whitespace_preserve_original_citations(self):
+        item = dict(self.item, text='Provider must delete\nthe supplied data within 12 hours after notice.')
+        answer = plan(item)
+        answer['rules'][0]['evidence'] = [dict(chunk_id='c1')]
+        Draft202012Validator(response_schema(ROOT)).validate(answer)
+        output = compile_plan(answer, 'contract', item)
+        self.assertEqual(output['traceability'][0]['sourceClauses'][0]['text'], item['text'])
+        answer['rules'][0]['evidence'][0]['quote'] = item['text'].replace('\n', ' ')
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+        answer['rules'][0]['evidence'][0]['quote'] = item['text'].replace('must', 'may')
+        with self.assertRaisesRegex(ValueError, 'quote'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['evidence'] = [dict(chunk_id='unknown')]
+        with self.assertRaisesRegex(ValueError, 'evidence'):
+            compile_plan(answer, 'contract', item)
+
+    def test_prohibition_polarity_is_checked_even_if_model_review_would_accept_it(self):
+        item = dict(self.item, text='Provider must not use supplied data for advertising.')
+        answer = plan(item, 'prohibition', action='use', conditions=[dict(
+            leftOperand='purpose', operator='isNoneOf', rightOperand='advertising')])
+        with self.assertRaisesRegex(ValueError, 'reverses'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'][0]['operator'] = 'eq'
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+        item = dict(item, text='Provider must not use supplied data for purposes other than research.')
+        answer = plan(item, 'prohibition', action='use', conditions=[dict(
+            leftOperand='purpose', operator='isNoneOf', rightOperand='research')])
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+
+    def test_eval_checkpoints_survive_cancellation_and_never_claim_full_results(self):
+        from xfed.evaluation import load_reference, run_evaluation
+        class Runner(Client):
+            num_ctx = 131072
+            def preflight(self): pass
+            def reset_assignments(self): pass
+            def metadata(self): return dict(model=self.model)
+        snapshots, cancel = [], Event()
+        def completed(report):
+            snapshots.append(report)
+            if report['progress']['classification']['completed'] >= 3:
+                cancel.set()
+        with self.assertRaises(InterruptedError):
+            run_evaluation(load_reference(ROOT), Runner(dict(label='RELEVANT')), ROOT,
+                           task='classification', cancel=cancel, completed=completed)
+        snapshot = snapshots[-1]
+        self.assertEqual(snapshot['status'], 'running')
+        self.assertEqual(snapshot['progress']['classification'], dict(completed=3, total=76))
+        self.assertEqual(len(snapshot['predictions']['classification']), 3)
+        self.assertEqual(snapshot['live_metrics']['classification']['completed']['n'], 3)
+        self.assertNotIn('metrics', snapshot)
+        self.assertEqual(snapshots[0]['progress']['classification']['completed'], 0)
+
+    def test_evaluation_stops_on_lost_connection_and_preserves_completed_predictions(self):
+        from xfed.evaluation import load_reference, run_evaluation, score_report
+        class Runner(Client):
+            def preflight(self): pass
+            def reset_assignments(self): pass
+            def metadata(self): return dict(model=self.model)
+        calls = []
+        def answer(value):
+            calls.append(value)
+            if len(calls) == 2:
+                raise OllamaConnectionError('Forwarded endpoint disconnected.')
+            return dict(label='RELEVANT', reason='Simulated classification.')
+        data, saved = load_reference(ROOT), []
+        with self.assertRaisesRegex(OllamaConnectionError, 'disconnected'):
+            run_evaluation(data, Runner(answer), ROOT, task='classification', completed=saved.append)
+        report = saved[-1]
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(report['status'], 'failed')
+        self.assertTrue(report['infrastructure_error'])
+        count = report['progress']['classification']['completed']
+        self.assertGreater(count, 0)
+        self.assertLess(count, 76)
+        self.assertEqual(count, len(report['predictions']['classification']))
+        self.assertEqual(report['live_metrics']['classification']['completed']['n'], count)
+        self.assertNotIn('metrics', report)
+        rescored = score_report(data, report, ROOT)
+        self.assertEqual(rescored['metrics']['classification']['real/full_document']['errors'], 76 - count)
+        class Unavailable(Runner):
+            def preflight(self): raise OllamaConnectionError('Not connected.')
+        saved.clear()
+        with self.assertRaises(OllamaConnectionError):
+            run_evaluation(data, Unavailable(dict(label='RELEVANT')), ROOT,
+                           task='classification', completed=saved.append)
+        self.assertTrue(saved[-1]['infrastructure_error'])
+        self.assertEqual(saved[-1]['progress']['classification']['completed'], 0)
+
+    def test_review_connection_failure_propagates_instead_of_becoming_a_model_verdict(self):
+        from xfed.policy_review import review_item
+        item = dict(self.item, candidate_rules=[dict(rule_type='obligation',
+                    rule=fragment(self.item)['odrlPolicy']['obligation'][0], source_chunk_ids=['c1'])])
+        def disconnected(value):
+            raise OllamaConnectionError('Forwarded endpoint disconnected.')
+        client = Client(disconnected)
+        with self.assertRaises(OllamaConnectionError):
+            review_item(item, client, 'prompt', 'contract', ROOT)
+        self.assertEqual(len(client.calls), 1)
+
+    def test_notification_recipient_and_qualitative_timing_are_not_lost(self):
+        item = dict(self.item, text='Provider must notify Customer of incidents without undue delay.')
+        answer = plan(item, action='notify', asset='incidents', conditions=[])
+        with self.assertRaisesRegex(ValueError, 'recipient'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'] = [dict(leftOperand='recipient', operator='eq', rightOperand='Customer'),
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='undue delay')]
+        with self.assertRaisesRegex(ValueError, 'qualitative'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'][1] = dict(leftOperand='timing', operator='eq', rightOperand='without undue delay')
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+
+    def test_duration_syntax_rejects_invalid_component_order_and_missing_time_separator(self):
+        for value in ['P1H', 'P1DT', 'PT', 'P1D2D', 'PT1.5H', 'P1W', 'P1YH']:
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'duration'):
+                compile_plan(plan(self.item, conditions=[dict(leftOperand='elapsedTime', operator='lteq', rightOperand=value)]),
+                             'contract', self.item)
+        for value in ['P3Y', 'P1Y2M3DT4H5M6.5S', 'PT0S', 'P30D', 'PT72H']:
+            self.assertIsNotNone(compile_plan(plan(self.item, conditions=[dict(
+                leftOperand='elapsedTime', operator='lteq', rightOperand=value)]), 'contract', self.item))
+
+    def test_clause_decoder_does_not_invent_an_issuer_but_legacy_explicit_metadata_still_compiles(self):
+        shape = response_schema(ROOT)
+        self.assertNotIn('issuer', shape['properties']['rules']['items']['properties'])
+        output, entry, failed = generate_item(self.item, PlanClient(plan(self.item)), 'prompt',
+                                             'contract', shape, ROOT)
+        self.assertFalse(failed)
+        self.assertEqual(output['odrlPolicy']['@type'], 'Set')
+        self.assertNotIn('assigner', output['odrlPolicy']['obligation'][0])
+        explicit = plan(self.item, issuer='Provider')
+        self.assertEqual(compile_plan(explicit, 'contract', self.item)['odrlPolicy']['@type'], 'Agreement')
+
+    def test_access_permission_keeps_security_prerequisite_in_its_own_rule(self):
+        item = dict(self.item, text='Provider may grant Recipient access to Registry. '
+                    'Such access depends on Recipient meeting all security requirements.')
+        answer = plan(item, 'permission', action='provideAccess', asset='Registry', conditions=[])
+        with self.assertRaisesRegex(ValueError, 'security prerequisite'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'].append(plan(item, 'obligation', actor='Recipient', action='meet',
+                                  asset='security requirements', conditions=[])['rules'][0])
+        with self.assertRaisesRegex(ValueError, 'security prerequisite'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'] = [dict(leftOperand='security', operator='eq',
+            rightOperand='Recipient meeting all security requirements')]
+        prerequisite = answer['rules'].pop()
+        with self.assertRaisesRegex(ValueError, 'independent security obligation'):
+            compile_plan(dict(answer, rules=[*answer['rules'], prerequisite]), 'contract', item)
+        prerequisite.pop('kind')
+        prerequisite.pop('duties')
+        prerequisite.pop('remedies')
+        answer['rules'][0]['duties'] = [prerequisite]
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+
+    def test_access_scope_does_not_drop_necessity_while_preserving_purpose(self):
+        item = dict(self.item, text='Provider may read Data necessary for research.')
+        answer = plan(item, 'permission', action='read', asset='Data', conditions=[
+            dict(leftOperand='purpose', operator='eq', rightOperand='research')])
+        with self.assertRaisesRegex(ValueError, 'necessity restriction'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'].append(dict(leftOperand='scope', operator='eq',
+            rightOperand='necessary for research'))
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+
+    def test_notification_shorter_deadline_exception_cannot_be_omitted(self):
+        item = dict(self.item, text='Provider must notify Customer of incidents within 72 hours of discovery, '
+                    'unless mandatory rules require notification within a shorter period.')
+        answer = plan(item, action='notify', asset='incidents', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Customer'),
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT72H'),
+            dict(leftOperand='event', operator='eq', rightOperand='discovery')])
+        with self.assertRaisesRegex(ValueError, 'shorter-period exception'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'].append(dict(leftOperand='timing', operator='eq',
+                                                   rightOperand='subject to any mandatory shorter deadline'))
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+        answer['rules'][0]['conditions'][-1] = dict(leftOperand='exception', operator='eq',
+            rightOperand='mandatory rules require a shorter period')
+        with self.assertRaisesRegex(ValueError, 'AND condition'):
+            compile_plan(answer, 'contract', item)
+
+    def test_source_or_authorisation_cannot_be_a_conjunctive_exception(self):
+        item = dict(self.item, text='Provider may use supplied data for research or as agreed by Customer.')
+        answer = plan(item, 'permission', action='use', conditions=[
+            dict(leftOperand='purpose', operator='eq', rightOperand='research'),
+            dict(leftOperand='exception', operator='eq', rightOperand='agreed by Customer')])
+        with self.assertRaisesRegex(ValueError, 'AND exception'):
+            compile_plan(answer, 'contract', item)
+        # Distinct branches retain the source's choice instead of conjoining it.
+        alternative = deepcopy(answer['rules'][0])
+        alternative['conditions'] = [dict(leftOperand='approval', operator='eq', rightOperand='agreed by Customer')]
+        answer['rules'][0]['conditions'] = [dict(leftOperand='purpose', operator='eq', rightOperand='research')]
+        answer['rules'].append(alternative)
+        self.assertEqual(len(compile_plan(answer, 'contract', item)['odrlPolicy']['permission']), 2)
+
+    def test_example_rule_is_withheld_only_when_the_same_general_rule_already_covers_it(self):
+        item = dict(self.item, text='Provider may implement protection measures, such as a software update, '
+                    'if they do not negatively affect Customer.')
+        answer = plan(item, 'permission', action='implement', asset='protection measures', conditions=[
+            dict(leftOperand='impact', operator='neq', rightOperand='negative effect on Customer')])
+        example = deepcopy(answer['rules'][0])
+        example['asset'] = 'software update'
+        answer['rules'].append(example)
+        with self.assertRaisesRegex(ValueError, 'Illustrative example'):
+            compile_plan(answer, 'contract', item)
+        output, entry, failed = generate_item(item, PlanClient(answer), 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertEqual(entry['outcome'], 'partial_needs_review')
+        self.assertEqual(len(output['odrlPolicy']['permission']), 1)
+        self.assertEqual(entry['withheld_plan_groups'][0]['plan_index'], 1)
+        validate_fragment(output, 'contract', item, ROOT)
+        # Independently qualified examples and other actions are distinct rules.
+        example['conditions'] = [dict(leftOperand='purpose', operator='eq', rightOperand='security')]
+        self.assertEqual(len(compile_plan(answer, 'contract', item)['odrlPolicy']['permission']), 2)
+        example['conditions'] = deepcopy(answer['rules'][0]['conditions'])
+        example['action'] = 'modify'
+        self.assertEqual(len(compile_plan(answer, 'contract', item)['odrlPolicy']['permission']), 2)
+
+
+    def test_free_access_and_plan_compliance_cannot_be_dropped_or_made_alternatives(self):
+        item = dict(self.item, text='Provider may access supplied data at no charge for research in accordance with the Work Plan.')
+        answer = plan(item, 'permission', action='read', conditions=[dict(leftOperand='purpose', operator='eq', rightOperand='research')])
+        with self.assertRaisesRegex(ValueError, 'no-charge'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'].append(dict(leftOperand='payAmount', operator='eq', rightOperand=0))
+        answer['rules'][0]['conditions'].append(dict(leftOperand='compliance', operator='eq', rightOperand='in accordance with the Work Plan'))
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+        answer['rules'][0]['conditions'][0] = dict(leftOperand='purpose', operator='isAnyOf',
+            rightOperand=['research', 'in accordance with the Work Plan'])
+        with self.assertRaisesRegex(ValueError, 'alternative purpose'):
+            compile_plan(answer, 'contract', item)
+
+    def test_symbolic_shorter_deadline_preserves_duty_and_requires_binding(self):
+        item = dict(self.item, text='Provider must notify Customer of incidents within 72 hours of discovery, '
+                    'unless mandatory rules require notification within a shorter period.')
+        shorter = dict(leftOperand='shorterPeriodRequired', operator='eq', rightOperand=True)
+        answer = plan(item, action='notify', asset='incidents', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Customer'),
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT72H'),
+            dict(leftOperand='event', operator='eq', rightOperand='discovery'),
+            {'or': [dict(shorter, rightOperand=False), {'and': [shorter,
+                dict(leftOperand='elapsedTime', operator='lteq', rightOperandReference='shorter')]}]}])
+        answer['parameters'] = [dict(key='shorter', label='shorter period', dataType='duration',
+                                     evidence=[dict(chunk_id=item['chunk_id'])])]
+        Draft202012Validator(response_schema(ROOT)).validate(answer)
+        fragment = compile_plan(answer, 'contract', item)
+        validate_fragment(fragment, 'contract', item, ROOT)
+        binding = fragment['parameterBindings'][0]
+        self.assertEqual(binding['status'], 'unresolved')
+        wrong_type = deepcopy(fragment)
+        wrong_type['parameterBindings'][0]['dataType'] = 'boolean'
+        with self.assertRaisesRegex(ValueError, 'must bind a duration'):
+            validate_fragment(wrong_type, 'contract', item, ROOT)
+        self.assertNotIn('value', binding)
+        self.assertEqual(binding['sourceClauses'][0]['text'], item['text'])
+        output, entry, failed = generate_item(item, PlanClient(answer), 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertEqual(entry['outcome'], 'partial_needs_review')
+        self.assertIn('do not enforce', entry['reason'])
+        tampered = deepcopy(fragment)
+        tampered.pop('parameterBindings')
+        with self.assertRaisesRegex(ValueError, 'unresolved binding'):
+            validate_fragment(tampered, 'contract', item, ROOT)
+        answer['rules'][0]['conditions'][-1]['or'][1]['and'][1]['rightOperand'] = 'PT24H'
+        with self.assertRaises(ValidationError):
+            Draft202012Validator(response_schema(ROOT)).validate(answer)
+
+
+
+    def test_every_logical_access_branch_retains_its_required_qualification(self):
+        item = dict(self.item, text='Provider may read supplied data at no charge for research.')
+        price = dict(leftOperand='payAmount', operator='eq', rightOperand=0)
+        purpose = dict(leftOperand='purpose', operator='eq', rightOperand='research')
+        answer = plan(item, 'permission', action='read', conditions=[{'or': [price, purpose]}])
+        with self.assertRaisesRegex(ValueError, 'no-charge'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'] = [price, {'or': [purpose,
+            dict(leftOperand='approval', operator='eq', rightOperand='agreed')]}]
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+        from xfed.common import constraint_branches
+        with self.assertRaisesRegex(ValueError, 'Too many logical branches'):
+            constraint_branches([{'or': [dict(purpose, rightOperand='a'), dict(purpose, rightOperand='b')]}] * 8)
+
+    def test_heading_generation_does_not_extract_independent_child_rules(self):
+        item = dict(self.item, heading='8.1', text='8.1\nConfidentiality', child_clause_ids=['8.1.1'],
+                    context=[dict(chunk('c2', 'Provider must delete supplied data.'), relationship='reference')])
+        client = PlanClient(plan(self.item))
+        output, entry, failed = generate_item(item, client, 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertIsNone(output)
+        self.assertFalse(failed)
+        self.assertEqual(entry['deterministic_no_rule'], 'standalone_heading')
+        self.assertEqual(client.calls, [])
+
+    def test_actor_citation_resolves_supplied_parent_but_never_invents_a_label(self):
+        item = dict(self.item, text='(a) delete supplied data within 12 hours of notice;',
+                    parent_clause_id='2', context=[dict(chunk('parent', '2. Provider must:', clause_id='2'), relationship='parent')])
+        fragment = compile_plan(plan(item), 'contract', item)
+        validate_fragment(fragment, 'contract', item, ROOT)
+        self.assertEqual({source['chunk_id'] for source in fragment['traceability'][0]['sourceClauses']},
+                         {item['chunk_id'], 'parent'})
+        with self.assertRaisesRegex(ValueError, 'literal label'):
+            compile_plan(plan(item, actor='Unknown party'), 'contract', item)
+
+    def test_literal_labels_allow_typographic_apostrophes_but_not_changed_connectors(self):
+        item = dict(self.item, text='Provider must maintain Company\u2019s Systems or Networks records.')
+        answer = plan(item, action='maintain', asset="Company's Systems or Networks records", conditions=[])
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+        answer['rules'][0]['asset'] = "Company's Systems and Networks records"
+        with self.assertRaisesRegex(ValueError, 'literal label'):
+            compile_plan(answer, 'contract', item)
+
+    def test_primary_evidence_follows_context_and_repair_feedback_in_model_request(self):
+        item = dict(self.item, context=[dict(chunk('parent', 'A supporting definition.'), relationship='definition')])
+        client = PlanClient(plan(item))
+        generate_answer(client, 'prompt', 'contract', item, response_schema(ROOT), feedback=dict(previous_plan='untrusted'))
+        value = client.calls[0][0]
+        self.assertLess(list(value).index('correction'), list(value).index('clause'))
+        self.assertLess(list(value['clause']).index('context'), list(value['clause']).index('text'))
+        self.assertEqual(value['clause']['text'], item['text'])
+        self.assertEqual(value['clause']['context'][0]['text'], item['context'][0]['text'])
+
+    def test_passive_request_duty_uses_an_explicit_unresolved_party_not_an_invented_name(self):
+        item = dict(self.item, text='All requests for access to Project Results must be submitted in writing.')
+        answer = plan(item, actor='requester', actor_role='requester', action='submit', asset='requests for access to Project Results',
+                      conditions=[dict(leftOperand='form', operator='eq', rightOperand='in writing')])
+        Draft202012Validator(response_schema(ROOT)).validate(answer)
+        fragment = compile_plan(answer, 'contract', item)
+        validate_fragment(fragment, 'contract', item, ROOT)
+        binding = fragment['partyBindings'][0]
+        self.assertEqual(binding['role'], 'requester')
+        self.assertEqual(fragment['odrlPolicy']['obligation'][0]['assignee'], binding['uid'])
+        output, entry, failed = generate_item(item, PlanClient(answer), 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertEqual(entry['outcome'], 'partial_needs_review')
+        answer['rules'][0]['actor'] = 'Invented legal party'
+        with self.assertRaisesRegex(ValueError, 'unresolved actor role'):
+            compile_plan(answer, 'contract', item)
+
+
+    def test_notifications_preserve_recipient_subject_trigger_and_quantitative_bound(self):
+        item = dict(self.item, text='Provider must notify Customer of Incidents within 72 hours of becoming aware of the Incident.')
+        answer = plan(item, action='notify', asset='Incidents', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Customer'),
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT72H'),
+            dict(leftOperand='event', operator='eq', rightOperand='becoming aware of the Incident')])
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+        for field, replacement, message in [('recipient', 'Provider', 'explicit source recipient'),
+                ('event', 'Customer', 'timing trigger'), ('elapsedTime', 'PT720H', 'longer')]:
+            changed = deepcopy(answer)
+            next(c for c in changed['rules'][0]['conditions'] if c['leftOperand'] == field)['rightOperand'] = replacement
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, message):
+                compile_plan(changed, 'contract', item)
+        answer['rules'][0]['asset'] = 'Customer'
+        with self.assertRaisesRegex(ValueError, 'explicit subject'):
+            compile_plan(answer, 'contract', item)
+
+    def test_clause_grammar_requires_explicit_primary_and_known_supporting_source_ids(self):
+        item = dict(self.item, context=[dict(chunk('parent', 'Provider means the supplier.'), relationship='definition')])
+        shape = clause_decoder_schema(response_schema(ROOT), item)
+        Draft202012Validator(shape).validate(plan(item))
+        self.assertNotIn('enum', shape['properties']['rules']['items']['properties']['actor'])
+        self.assertNotIn('enum', shape['properties']['rules']['items']['properties']['asset'])
+        answer = plan(item)
+        answer['rules'][0]['evidence'] = dict(primary='parent', supporting=[])
+        with self.assertRaises(ValidationError):
+            Draft202012Validator(shape).validate(answer)
+        answer['rules'][0]['evidence'] = dict(primary=item['chunk_id'], supporting=['unknown'])
+        with self.assertRaises(ValidationError):
+            Draft202012Validator(shape).validate(answer)
+        self.assertLessEqual(shape['properties']['rules']['maxItems'], 12)
+
+    def test_access_right_grammar_does_not_turn_shall_have_access_into_a_provider_duty(self):
+        item = dict(self.item, text='For Term, the Parties shall have access at no charge to supplied data.')
+        shape = clause_decoder_schema(response_schema(ROOT), item)
+        valid = plan(item, 'permission', actor='Parties', action='read', conditions=[
+            dict(leftOperand='payAmount', operator='eq', rightOperand=0)])
+        Draft202012Validator(shape).validate(valid)
+        valid['rules'][0]['kind'] = 'obligation'
+        with self.assertRaises(ValidationError):
+            Draft202012Validator(shape).validate(valid)
+        for text in ['No Parties shall have access to supplied data.',
+                     'Parties shall have access to supplied data and must pay a fee.',
+                     'Company shall have access to Records. Provider shall have access to supplied data.',
+                     'Parties shall have access to supplied data and can publish results.',
+                     'Parties shall have access to no supplied data.']:
+            mixed = clause_decoder_schema(response_schema(ROOT), dict(item, text=text))
+            self.assertNotIn('const', mixed['properties']['rules']['items']['properties']['kind'])
+
+    def test_coverage_review_cannot_import_a_missing_rule_from_parent_context(self):
+        from xfed.policy_review import review_item
+        item = dict(self.item, candidate_rules=[], context=[dict(chunk('parent', 'Customer must acknowledge receipt.'), relationship='parent')])
+        worker = Client(dict(relevance='RELEVANT', rule_reviews=[], coverage='MISSING_RULES', reason='Missing acknowledgement',
+            missing_rules=[dict(requirement='Customer must acknowledge receipt.', primary_quote='Customer must acknowledge receipt.')]))
+        checked = review_item(item, worker, 'prompt', 'contract', ROOT, require_resolved=False)
+        self.assertIn('primary_quote', checked['error'])
+        self.assertEqual(checked['coverage'], 'NEEDS_CONTEXT')
+
+    def test_primary_action_grounding_blocks_parent_notices_and_request_approval_substitution(self):
+        item = dict(self.item, text='The objecting Party can request a publication delay of 90 days.',
+                    context=[dict(chunk('parent', 'Provider must notify Customer of publication plans.'), relationship='parent')])
+        answer = plan(item, actor='Provider', action='notify', asset='publication plans', conditions=[],
+                      evidence=[dict(chunk_id=item['chunk_id']), dict(chunk_id='parent')])
+        with self.assertRaisesRegex(ValueError, 'operative PRIMARY'):
+            compile_plan(answer, 'contract', item)
+        answer = plan(item, 'permission', actor='objecting Party', action='obtainApproval', asset='publication delay', conditions=[])
+        with self.assertRaisesRegex(ValueError, 'obtaining approval'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['action'] = 'requestDelay'
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+        fragment = dict(self.item, text='(a) publication plans;',
+                        context=[dict(chunk('parent', 'Provider must notify Customer of:'), relationship='parent')])
+        inherited = plan(fragment, actor='Provider', action='notify', asset='publication plans', conditions=[],
+                         evidence=[dict(chunk_id=fragment['chunk_id']), dict(chunk_id='parent')])
+        validate_fragment(compile_plan(inherited, 'contract', fragment), 'contract', fragment, ROOT)
+
+    def test_format_requirements_joined_by_and_cannot_be_changed_to_alternatives(self):
+        item = dict(self.item, text='Provider must supply supplied data in comprehensive, structured and machine-readable format.')
+        answer = plan(item, action='supply', conditions=[dict(leftOperand='format', operator='isAnyOf',
+            rightOperand=['comprehensive', 'structured', 'machine-readable'])])
+        with self.assertRaisesRegex(ValueError, 'cumulative'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'][0]['operator'] = 'isAllOf'
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+        alternative = dict(item, text=item['text'].replace(' and ', ' or '))
+        answer['rules'][0]['conditions'][0]['operator'] = 'isAnyOf'
+        validate_fragment(compile_plan(answer, 'contract', alternative), 'contract', alternative, ROOT)
+
+    def test_explicit_information_delivery_is_relevant_without_borrowing_context_duties(self):
+        source = chunk('c1', 'Contractor shall report events to Company and shall provide information on possible causes.')
+        client = Client(dict(label='NOT_RELEVANT'))
+        result = classify_batch([dict(clause=source, context=[], unresolved_references=[])], client, ROOT)
+        self.assertEqual(result[0]['label'], 'RELEVANT')
+        self.assertEqual(client.calls, [])
+        primary = chunk('c2', 'Definitions')
+        result = classify_batch([dict(clause=primary, context=[dict(source, relationship='parent')], unresolved_references=[])], client, ROOT)
+        self.assertEqual(result[0]['label'], 'NOT_RELEVANT')
+        from xfed.common import explicit_information_duty
+        self.assertFalse(explicit_information_duty(chunk(text='Illustrative example: Contractor shall provide information.')))
+
+    def test_explanatory_faq_is_withheld_for_review_but_explicit_obligations_still_run(self):
+        text = 'About access:\nGeneral guidance.\nHow to request access?\nSee https://example.test/guidance.'
+        item = dict(self.item, text=text)
+        client = PlanClient(plan(self.item))
+        policy, entry, failed = generate_item(item, client, 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertIsNone(policy)
+        self.assertFalse(failed)
+        self.assertEqual(entry['deterministic_no_rule'], 'explanatory_faq_requires_review')
+        self.assertEqual(client.calls, [])
+        operative = dict(self.item, text=text + '\nProvider must delete supplied data.')
+        client = PlanClient(plan(operative, conditions=[]))
+        policy, entry, failed = generate_item(operative, client, 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertIsNotNone(policy)
+        self.assertNotIn('deterministic_no_rule', entry)
+
+    def test_sampling_options_are_bounded_and_cannot_override_resource_settings(self):
+        options = dict(temperature=0.7, top_p=0.8, top_k=20, min_p=0.0, presence_penalty=1.5,
+                       repeat_penalty=1.0, seed=42)
+        client = OllamaClient('http://127.0.0.1:11435', 'simulated', sampling=options)
+        self.assertEqual(client.metadata()['sampling'], options)
+        changed = client.metadata()
+        changed['sampling']['temperature'] = 1.5
+        self.assertEqual(client.sampling['temperature'], 0.7)
+        for invalid in [False, {'num_ctx': 100000}, {'temperature': float('nan')}, {'seed': True},
+                        {'top_k': -1}, {'presence_penalty': 3}]:
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                OllamaClient('http://127.0.0.1:11435', 'simulated', sampling=invalid)
+
+    def test_cache_does_not_reuse_answers_after_sampling_changes(self):
+        class SamplingClient(Client):
+            sampling = dict(temperature=0)
+        client = SamplingClient(dict(answer=True))
+        with TemporaryDirectory() as directory:
+            cached = CachedClient(client, Path(directory)/'cache.json', Event(), False)
+            for _ in range(2):
+                cached.generate('prompt', dict(value=1), dict(type='object'))
+            self.assertEqual(len(client.calls), 1)
+            client.sampling = dict(temperature=0.7, seed=42)
+            cached.generate('prompt', dict(value=1), dict(type='object'))
+            self.assertEqual(len(client.calls), 2)
+
+    def test_unused_osdu_does_not_break_the_model_decoder_but_explicit_metadata_is_supported(self):
+        captured = []
+        class Capture(Client):
+            def generate(self, prompt, value, shape, **options):
+                captured.append(deepcopy(shape))
+                return super().generate(prompt, value, shape, **options)
+        generate_answer(Capture(plan(self.item)), 'prompt', 'contract', self.item, response_schema(ROOT))
+        self.assertNotIn('osdu', captured[-1]['properties'])
+        item = dict(self.item, text=self.item['text'] + ' OSDU LegalTag project-data.')
+        generate_answer(Capture(plan(item)), 'prompt', 'contract', item, response_schema(ROOT))
+        self.assertIn('osdu', captured[-1]['properties'])
+
+    def test_isolated_checkbox_option_remains_uncertain_without_an_operative_parent(self):
+        client = Client(dict(label='RELEVANT'))
+        item = dict(clause=chunk(text='\u2610 Remote access through a gateway'), context=[], unresolved_references=[])
+        self.assertEqual(classify_batch([item], client, ROOT)[0]['label'], 'NEEDS_CONTEXT')
+        self.assertEqual(client.calls, [])
+        item['context'] = [dict(chunk('parent', 'Recipient may choose one access method:'), relationship='parent')]
+        self.assertEqual(classify_batch([item], client, ROOT)[0]['label'], 'RELEVANT')
+        item['context'] = []
+        item['clause']['text'] = '\u2610 Recipient may use Data for research.'
+        self.assertEqual(classify_batch([item], client, ROOT)[0]['label'], 'RELEVANT')
+
+
+    def test_retired_evaluation_requests_are_rejected_before_model_access(self):
+        pipeline = Pipeline(ROOT, 'http://127.0.0.1:11435')
+        with patch.object(pipeline, 'make_client') as factory:
+            with self.assertRaisesRegex(ValueError, 'classification'):
+                pipeline.start_evaluation(dict(task='policy'))
+            with self.assertRaisesRegex(ValueError, 'classification'):
+                pipeline.start_evaluation(dict(task='both'))
+            factory.assert_not_called()
+
+
+    def test_classification_scores_unknown_labels_as_failed_cases(self):
+        from xfed.evaluation import classification_metrics
+        result = classification_metrics([dict(gold='RELEVANT', label='invalid')])
+        self.assertEqual(result['errors'], 1)
+        self.assertEqual(result['accuracy'], 0)
+
+    def test_removed_drafting_and_node_review_routes_cannot_start_jobs(self):
+        from urllib.request import Request, urlopen
+        from urllib.error import HTTPError
+        from xfed.ui import handler
+        pipeline = Pipeline(ROOT, 'http://127.0.0.1:11435')
+        server = ThreadingHTTPServer(('127.0.0.1', 0), handler(pipeline))
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with patch.object(pipeline, 'make_client') as factory:
+                for route in ('/api/uct', '/api/uct/run', '/api/uct/decision', '/api/uct/approve', '/api/uct/save'):
+                    request = Request('http://127.0.0.1:' + str(server.server_port) + route,
+                                      data=b'{}', headers={'Content-Type': 'application/json'})
+                    with self.assertRaises(HTTPError) as error:
+                        urlopen(request)
+                    self.assertEqual(error.exception.code, 404)
+                factory.assert_not_called()
+                self.assertEqual(pipeline.snapshot()['status'], 'idle')
+        finally:
+            server.shutdown()
+            thread.join()
+            server.server_close()
 
 if __name__ == '__main__':
     unittest.main()
