@@ -209,7 +209,7 @@ function controls(){
  $('download').disabled=!output;
  document.querySelector('[data-view="pdf"]').disabled=!contract();
  $('open-workspace').disabled=!contract();
- const model=names.filter(Boolean).join('')+(parallel?' × '+$('worker-count').value:'');
+ const model=screen==='evaluation'?$('evaluation-model').value:screen==='uct'?$('uct-model').value:screen==='policy-review'?$('review-model').value:names.filter(Boolean).join('')+(parallel?' × '+$('worker-count').value:'');
  $('model-label').textContent=model?model:modelsOK?'No installed model':modelsChecked?'Ollama unavailable':'Checking Ollama';
  $('model-chip').classList.toggle('pending',!model);
  $('model-chip').title=model||$('connection').textContent;
