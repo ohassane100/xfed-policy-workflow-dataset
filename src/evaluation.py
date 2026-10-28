@@ -304,6 +304,45 @@ def policy_rules(fragment):
 RULE_FIELDS = ('kind', 'action', 'assignee', 'target', 'constraint')
 
 
+def reference_label_compatibility(data, split):
+    """Flag reference labels unreachable under literal-source compilation.
+
+    This conservative check allows all supplied context and declared aliases;
+    reachability does not establish entailment or correctness of a reference.
+    """
+    issues, blocked, operative = [], [], 0
+    for case in data['policy']:
+        if case['split'] != split or not case['gold']['rules']:
+            continue
+        operative += 1
+        contract = data['inputs'][case['input_id']]['contract_id']
+        item = input_for(data, case, True)
+        spans = [re.sub(r'\s+', ' ', unicodedata.normalize('NFKC', clause['text']).casefold()).strip()
+                 for clause in [item, *item['context']]]
+        aliases = {normal(key): normal(value) for key, value in
+                   {**data['value_aliases'], **data['contract_aliases'].get(contract, {})}.items()}
+        option_blocked = []
+        for option_index, option in enumerate([case['gold']['rules'], *case['gold'].get('alternatives', [])]):
+            missing = []
+            for rule_index, rule in enumerate(option):
+                canonical = canonical_rule(rule, data, contract)
+                for field in ('assignee', 'target'):
+                    candidates = {rule[field], canonical[field],
+                                  *(key for key, value in aliases.items() if value == canonical[field])}
+                    if not any(any(re.search(r'(?<!\w)' + re.escape(normal(candidate)) + r'(?!\w)', span)
+                                   for span in spans) for candidate in candidates):
+                        missing.append(dict(rule_index=rule_index, field=field, label=rule[field]))
+            option_blocked.append(bool(missing))
+            if missing:
+                issues.append(dict(case_id=case['case_id'], option_index=option_index, unavailable_labels=missing))
+        if all(option_blocked):
+            blocked.append(case['case_id'])
+    return dict(operative_cases=operative, cases_with_no_literal_option=len(blocked),
+                blocked_case_ids=blocked, details=issues,
+                scope='Actor/asset label reachability only, including supplied context and declared aliases; '
+                      'not a semantic correctness score. Review source-label and reference-format compatibility.')
+
+
 def align_rules(expected, actual):
     """Maximum-weight one-to-one field alignment, for diagnostics only.
 
@@ -461,7 +500,6 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
     if report.get('split') not in ('dev', 'test'):
         raise ValueError('Reports must declare dev or test.')
     output = deepcopy(report)
-    output['scoring_sha256'] = hashlib.sha256((Path(root) / 'src/evaluation.py').read_bytes()).hexdigest()
     metrics, mismatches = {}, []
     for task, operation in [('classification', classification_metrics), ('policy', policy_metrics)]:
         predictions = report.get('predictions', {}).get(task, {})
@@ -532,7 +570,7 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
                   incomplete_tasks=[task for task in report['selected_cases'] if task not in report.get('execution', {})],
                   reference_status='reviewed' if all(value['reviewed'] == value['n'] for task in metrics.values() for value in task.values()) else 'provisional',
                   metric_notes=data.get('limitations', []), interval_note='Wilson intervals assume independent cases. Page-cluster bootstrap intervals resample pages within each fixed source contract (500 replicates); neither interval establishes generalisation to new contracts.')
-    output['evaluation_protocol'] = 'strict_rules_with_aligned_field_diagnostics_v2'
+    output['evaluation_protocol'] = 'strict_rules_with_source_compatibility_diagnostics_v3'
     output['metric_notes'] = [*output['metric_notes'],
         'Aligned field diagnostics give partial credit only for debugging, never for complete-rule correctness. '
         'No approximate string or model-judge similarity changes strict precision or recall.']
@@ -541,6 +579,12 @@ def score_report(data, report, root=Path('.'), require_reviewed=False):
                                      'Use this exposed agreement diagnostically; reserve new independently annotated contracts for final validation.')
     policy = next((value for value in metrics.get('policy', {}).values() if value['aggregate']), None)
     if policy is not None:
+        compatibility = reference_label_compatibility(data, report['split'])
+        output['reference_output_compatibility'] = compatibility
+        if compatibility['cases_with_no_literal_option']:
+            output['metric_notes'].append('Some actor/asset reference labels cannot be emitted under literal-source '
+                'compilation with the declared aliases. Strict scores are format-conformance results, not standalone '
+                'semantic quality measurements; inspect reference_output_compatibility before interpreting them.')
         precision, recall = policy['canonical_rules']['precision'], policy['canonical_rules']['recall']
         interval = policy['rule_precision_wilson_ci95']
         point_targets = precision is not None and recall is not None and precision >= .99 and recall >= .99

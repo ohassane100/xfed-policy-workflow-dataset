@@ -1236,6 +1236,37 @@ class QualityTests(unittest.TestCase):
         self.assertTrue(all(value['tp'] == 2 for value in slots.values()))
         self.assertEqual(align_rules([], [gold])[0]['action'], dict(tp=0, fp=1, fn=0))
 
+    def test_reference_label_audit_honours_declared_aliases_and_alternative_rule_sets(self):
+        from xfed.evaluation import reference_label_compatibility
+        rule = dict(kind='obligation', action='delete', assignee='Provider', target='derived records')
+        case = dict(case_id='case', input_id='i', split='dev', gold=dict(rules=[rule]))
+        data = dict(policy=[case], inputs={'i':dict(contract_id='contract', clause=chunk(),
+                    context=[], policy_context=[])}, contexts={}, value_aliases={}, contract_aliases={}, action_aliases={})
+        report = reference_label_compatibility(data, 'dev')
+        self.assertEqual(report['operative_cases'], 1)
+        self.assertEqual(report['cases_with_no_literal_option'], 1)
+        self.assertEqual(report['details'][0]['unavailable_labels'][0]['field'], 'target')
+        data['value_aliases']['supplied data'] = 'derived records'
+        self.assertEqual(reference_label_compatibility(data, 'dev')['cases_with_no_literal_option'], 0)
+        data['value_aliases'].clear()
+        case['gold']['alternatives'] = [[dict(rule, target='supplied data')]]
+        report = reference_label_compatibility(data, 'dev')
+        self.assertEqual(report['cases_with_no_literal_option'], 0)
+        self.assertEqual(len(report['details']), 1)
+        self.assertEqual(rule['target'], 'derived records')
+
+    def test_reference_label_audit_preserves_word_boundaries_and_accepts_supplied_context(self):
+        from xfed.evaluation import reference_label_compatibility
+        rule = dict(kind='permission', action='use', assignee='Provider', target='Data')
+        item = dict(contract_id='contract', clause=chunk(text='Provider may use Metadata.'),
+                    context=[], policy_context=[])
+        data = dict(policy=[dict(case_id='case', input_id='i', split='dev', gold=dict(rules=[rule]))],
+                    inputs={'i':item}, contexts={}, value_aliases={}, contract_aliases={}, action_aliases={})
+        self.assertEqual(reference_label_compatibility(data, 'dev')['cases_with_no_literal_option'], 1)
+        data['contexts']['definition'] = dict(chunk('c2', 'Data means the supplied\nmeasurements.'), relationship='definition')
+        item['policy_context'] = ['definition']
+        self.assertEqual(reference_label_compatibility(data, 'dev')['cases_with_no_literal_option'], 0)
+
     def test_duration_equivalence_preserves_units_calendar_scope_and_comparison_direction(self):
         from xfed.evaluation import canonical_rule
         data = dict(value_aliases={}, contract_aliases={}, action_aliases={})

@@ -98,6 +98,10 @@ PDF extraction or context retrieval; the report states this boundary.
 Policy inputs absent from the relevance benchmark receive extra unscored
 classification decisions, saved with each policy prediction. They do not change
 the relevance benchmark denominator. Scored reports also record the scorer hash.
+`reference_output_compatibility` flags actor/asset reference labels unavailable
+under literal-source compilation, allowing supplied context, declared aliases and
+reference alternatives. It diagnoses reference/schema mismatches without changing
+gold or forgiving model errors; strict F1 alone is not a semantic quality grade.
 
 Predictions and `live_metrics` are checkpointed after each completed request, so
 the dashboard and downloaded JSON expose early results and cancellation retains
