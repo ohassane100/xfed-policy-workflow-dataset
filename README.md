@@ -44,6 +44,25 @@ recorded. Rules with missing issuers use an ODRL Set. Context overflow fails
 explicitly. Rerun through policy creation after updating to rebuild extraction
 metadata and context.
 
+The **UCT & node review** tab provides a 16-section structured drafting template,
+stable clause IDs and declared context dependencies. It uses the existing relevance
+and policy extractor; no automatic conversion of existing agreements is performed.
+Node decisions can be scripted or requested from already running Ollama endpoints
+(for example, one per Mac mini). Source amendments require central approval, then
+**Generate / update affected clauses** reuses unchanged fragments and regenerates
+changed clauses and their declared dependents. Undeclared prose dependencies cannot
+be tracked automatically. Node acceptance is advisory and never deploys a policy.
+Drafts, decisions and history stay in ignored `tmp/uct_workspace/`; the separate
+synthetic UCT benchmark is `evaluation/uct_reference.json`. Its provisional strict
+and field scores must not be pooled with real-contract results.
+
+To use the university model through the existing tunnel while keeping scripts and
+reports local, run locally (no server changes or remote commands):
+
+```powershell
+.venv/Scripts/python.exe -m xfed.ui --ollama-url http://127.0.0.1:11435
+```
+
 CLI commands are in `run.md`; model configuration starts from
 `config/models.example.yaml`. Evaluation defaults to the complete independent
 Contract 05 (Equinor Volve data licence); Contracts 01–03 are development material.

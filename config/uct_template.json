@@ -1,0 +1,55 @@
+{
+  "version": "uct-1",
+  "status": "Illustrative drafting template; not a universal legal instrument or executed agreement.",
+  "authoring_guidance": "Use stable clause IDs, one operative action per clause where practical, named parties and assets, explicit AND/OR, and complete conditions, exceptions, recipients and deadline triggers. Declare every dependency, including definitions and annexes. Do not move or rewrite an existing agreement without reviewing whether its meaning changes. Section placement never determines relevance.",
+  "references": [
+    "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/data-sharing/data-sharing-a-code-of-practice/data-sharing-agreements/",
+    "https://www.w3.org/TR/odrl-model/",
+    "contracts/contract_01/input/contract.pdf — model data access/use terms and cloud schedules",
+    "contracts/contract_02/input/contract.pdf — master agreement structure, work, payment, liability and general terms",
+    "contracts/contract_03/input/contract.pdf — collaboration, Background, results, confidentiality and publication"
+  ],
+  "contract": {
+    "contract_id": "uct_demo",
+    "title": "Universal Contract Template — data collaboration draft",
+    "sections": [
+      {"id": "parties", "title": "1. Parties and execution"},
+      {"id": "purpose", "title": "2. Purpose, scope and work plan"},
+      {"id": "definitions", "title": "3. Definitions and interpretation"},
+      {"id": "data", "title": "4. Data and asset schedule"},
+      {"id": "access", "title": "5. Access and permitted use"},
+      {"id": "sharing", "title": "6. Recipients and onward sharing"},
+      {"id": "security", "title": "7. Security and incident management"},
+      {"id": "privacy", "title": "8. Privacy and confidentiality"},
+      {"id": "results", "title": "9. Background, results and publication"},
+      {"id": "lifecycle", "title": "10. Retention, return and deletion"},
+      {"id": "governance", "title": "11. Governance, audit and change control"},
+      {"id": "commercial", "title": "12. Work, fees, tax and invoicing"},
+      {"id": "liability", "title": "13. Warranties, insurance and liability"},
+      {"id": "term", "title": "14. Term, suspension and termination"},
+      {"id": "general", "title": "15. Notices, disputes and general provisions"},
+      {"id": "schedules", "title": "16. Schedules, precedence and signatures"}
+    ],
+    "clauses": [
+      {"id": "UCT-1.1", "section": "parties", "text": "The proposed parties are Harbor Research and Northstar Energy. This document is an illustrative draft for their review, not a signed agreement.", "depends_on": []},
+      {"id": "UCT-2.1", "section": "purpose", "text": "The proposed project concerns reservoir research. The work plan describes the research milestones and does not itself grant access to information.", "depends_on": []},
+      {"id": "UCT-3.1", "section": "definitions", "text": "Project Dataset means the non-personal sensor readings listed in the data schedule. Background means information contributed before the project. Project Results means information produced during the project.", "depends_on": []},
+      {"id": "UCT-4.1", "section": "data", "text": "The data schedule identifies Project Dataset as non-personal well sensor readings. A different dataset requires an explicit amendment; it is not included by implication.", "depends_on": ["UCT-3.1"]},
+      {"id": "UCT-5.1", "section": "access", "text": "Harbor Research may read Project Dataset only for reservoir research.", "depends_on": ["UCT-3.1", "UCT-4.1"]},
+      {"id": "UCT-5.2", "section": "access", "text": "Harbor Research must not use Project Dataset for advertising.", "depends_on": ["UCT-3.1", "UCT-4.1"]},
+      {"id": "UCT-6.1", "section": "sharing", "text": "Harbor Research must not distribute Project Dataset to third parties.", "depends_on": ["UCT-3.1", "UCT-4.1"]},
+      {"id": "UCT-7.1", "section": "security", "text": "Harbor Research must encrypt Project Dataset while it is stored.", "depends_on": ["UCT-3.1", "UCT-4.1"]},
+      {"id": "UCT-7.2", "section": "security", "text": "Harbor Research must notify Northstar Energy of a security incident affecting Project Dataset within 24 hours after Harbor Research becomes aware of the incident.", "depends_on": ["UCT-3.1", "UCT-4.1"]},
+      {"id": "UCT-8.1", "section": "privacy", "text": "No personal data is included in the proposed data schedule. This statement supplies scope and does not establish a lawful basis for processing personal data.", "depends_on": ["UCT-4.1"]},
+      {"id": "UCT-9.1", "section": "results", "text": "Harbor Research may read Background only when it is necessary for reservoir research and access is free of charge.", "depends_on": ["UCT-3.1"]},
+      {"id": "UCT-9.2", "section": "results", "text": "Harbor Research may distribute Project Results to Northstar Energy only after Northstar Energy has given written approval.", "depends_on": ["UCT-3.1"]},
+      {"id": "UCT-10.1", "section": "lifecycle", "text": "Harbor Research must delete Project Dataset within 30 days after termination of the collaboration.", "depends_on": ["UCT-3.1", "UCT-4.1"]},
+      {"id": "UCT-11.1", "section": "governance", "text": "Proposed amendments are recorded against stable clause identifiers. A node's suggested amendment is subject to central review and does not by itself change the agreed text.", "depends_on": []},
+      {"id": "UCT-12.1", "section": "commercial", "text": "Harbor Research must pay the agreed service fee within 30 days after receiving an invoice.", "depends_on": []},
+      {"id": "UCT-13.1", "section": "liability", "text": "The liability cap, warranty allocation and insurance requirements remain to be negotiated. This heading creates no data access right.", "depends_on": []},
+      {"id": "UCT-14.1", "section": "term", "text": "The proposed collaboration lasts twelve months from signature. Suspension and termination procedures remain to be agreed.", "depends_on": []},
+      {"id": "UCT-15.1", "section": "general", "text": "Governing law, dispute resolution and notice addresses remain to be agreed by the parties.", "depends_on": []},
+      {"id": "UCT-16.1", "section": "schedules", "text": "The schedules will contain the party register, data register, work plan and security measures. Document precedence and authorised signatures remain to be agreed.", "depends_on": []}
+    ]
+  }
+}

@@ -11,6 +11,7 @@
 @media(max-width:1100px){.topbar{padding:0 20px;gap:15px}.connection{display:none}.app-main{width:calc(100% - 40px)}.overview-layout{grid-template-columns:minmax(0,1fr) 270px;gap:20px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.stage .indicator{display:none}.stage{gap:7px}.stage .step-main{font-size:11px}.model-chip{max-width:210px}.summary .metric{padding:14px 12px}.workspace{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.topbar{padding:12px 16px;flex-wrap:wrap;gap:10px;min-height:62px}.top-nav{order:3;width:100%;overflow:auto;gap:3px}.top-nav button{flex:1;padding:7px 9px;font-size:11px;white-space:nowrap}.top-actions{max-width:60%}.model-chip{max-width:190px}.app-main{width:calc(100% - 32px);padding-top:23px}.overview-layout{grid-template-columns:1fr}.overview-layout .attention{order:2}.metrics{gap:9px;margin-bottom:23px}.metric{padding:14px 11px;gap:9px;min-height:80px}.metric strong{font-size:22px}.metric-icon{width:27px;height:27px}.pagehead{align-items:start}h1{font-size:23px}.pagehead>button{padding:7px 9px;min-width:110px}.data-table td,.data-table th{padding:13px 12px}.data-table{min-width:660px}.stage-nav{display:flex;overflow:auto;gap:5px}.stage{min-width:145px}.stage .step-main{font-size:12px}.pipeline-contract{flex-wrap:wrap}.pipeline-contract select{width:100%;flex:1;min-width:150px}.pipeline-settings{flex-direction:column;align-items:stretch}.model-field{width:100%}.actions button{flex:1}.settings{grid-template-columns:repeat(2,minmax(0,1fr))}.summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.summary .metric{min-height:74px}.workspace{grid-template-columns:1fr;height:auto;grid-template-rows:auto auto}.list{height:280px;border-right:0;border-bottom:1px solid var(--line)}.inspector{height:370px;padding:19px}.filterbar{flex-wrap:wrap}.filterbar input{flex-basis:100%}.filterbar select{flex:1}.recordcount{white-space:normal}.outputtop{padding:0 12px}.tabs{gap:15px}.download{font-size:10px;padding:5px 0}.outputfoot{overflow-wrap:anywhere}.jobrow{align-items:start}.job-right{flex-direction:column;align-items:end;gap:6px}.job-left{gap:6px}.footer{flex-wrap:wrap}.filter-tools input{max-width:none}iframe{height:470px}}
 @media(prefers-reduced-motion:reduce){.progress>div{transition:none}.progress.indeterminate>div{animation:none}}
+.uct-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px}.uct-card{padding:20px;margin-bottom:18px}.uct-card h2{margin-bottom:10px}.uct-card label{display:block;font-size:11px;font-weight:600;margin:12px 0 6px}.uct-card textarea{width:100%;min-height:90px;resize:vertical;padding:10px;border:1px solid var(--line);border-radius:5px;font:12px/1.6 var(--mono);color:var(--text);background:white}.uct-clause{border-top:1px solid var(--line);padding:14px 0}.uct-clause header{display:flex;align-items:center;gap:10px}.uct-clause header button{margin-left:auto}.uct-clause select{margin-top:8px}.uct-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.uct-center{border:1px solid #a9c6e5;background:var(--blue-soft);border-radius:6px;text-align:center;padding:18px}.uct-spoke{height:24px;width:1px;background:#a9c6e5;margin:auto}.uct-nodes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.uct-node{border-top:3px solid #a9c6e5;border-radius:5px;background:white;padding:14px;border-left:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);overflow-wrap:anywhere}.uct-node p{margin:8px 0}.uct-node button{margin:5px 5px 0 0}.uct-pre{white-space:pre-wrap;overflow:auto;max-height:440px;font:11px/1.7 var(--mono);background:var(--soft);border:1px solid var(--line);padding:12px}.uct-section{margin:18px 0 5px;font-size:14px}.uct-node-settings{display:grid;grid-template-columns:1fr 2fr 1fr;gap:8px;align-items:center;margin:10px 0}.uct-note{margin:10px 0}@media(max-width:1000px){.uct-layout{grid-template-columns:1fr}.uct-nodes{grid-template-columns:1fr}}
 </style>
 </head>
 
@@ -21,6 +22,7 @@
     <button data-screen="dashboard" class="active" aria-current="page">Dashboard</button>
     <button data-screen="contracts">Contracts</button>
     <button data-screen="pipeline">Pipeline</button>
+    <button data-screen="uct">UCT &amp; node review</button>
   </nav>
   <div class="top-actions"><div class="connection"><span id="connection-dot" class="dot"></span><span id="connection">Checking Ollama</span></div><div id="model-chip" class="model-chip pending"><span id="model-label">Local model: checking</span></div></div>
 </header>
@@ -58,6 +60,18 @@
     <section class="output" aria-label="Stage output"><div class="outputtop"><div class="tabs" role="tablist"><button class="tab active" data-view="records" role="tab" aria-selected="true">Records</button><button class="tab" data-view="json" role="tab" aria-selected="false">JSON</button><button class="tab" data-view="pdf" role="tab" aria-selected="false">Source PDF</button></div><button id="download" class="download" disabled>Download JSON</button></div>
     <div id="records-view"><div class="filterbar"><input id="search" type="search" placeholder="Search output" aria-label="Search output"><select id="filter" aria-label="Classification filter"><option value="">All classifications</option><option>RELEVANT</option><option>NOT_RELEVANT</option><option>NEEDS_CONTEXT</option></select><span id="record-count" class="recordcount">0 records</span></div><div class="workspace"><div class="list"><div class="listhead"><span>Identifier</span><span>Source text</span><span>Page</span></div><div id="record-list"></div></div><article id="inspector" class="inspector"><div class="empty"><strong>No output yet</strong>Awaiting stage 1.1</div></article></div><div class="pagination"><span id="page-label">0 records</span><div><button id="previous" aria-label="Previous records" title="Previous records"></button> <button id="next" aria-label="Next records" title="Next records"></button></div></div></div>
     <pre id="json-view" class="json hidden"></pre><div id="pdf-view" class="hidden"><iframe id="pdf" title="Source contract PDF"></iframe></div><details id="report" class="report hidden"><summary>Generation report</summary><pre id="report-text"></pre></details><div class="outputfoot"><span id="output-status">No completed output</span><span id="output-model"></span></div></section>
+  </section>
+  <section id="uct-screen" class="screen hidden">
+    <div class="pagehead"><div><div class="eyebrow">Structured drafting · central coordinator demo</div><h1>UCT &amp; node review</h1><p>Draft a readable agreement, extract policies, and review clause amendments from local nodes.</p></div><span id="uct-revision" class="badge neutral">Revision 1</span></div>
+    <div class="uct-layout">
+      <section class="surface uct-card"><h2>1. Contract draft</h2><p>Illustrative template inspired by Contracts 01–03. Sections include general commercial terms as well as data collaboration. Every clause still passes through relevance classification. Edit the draft rather than silently rewriting an existing agreement.</p><label for="uct-title">Agreement title</label><input id="uct-title"><div class="uct-actions"><button id="uct-save" class="primary">Save changes</button><button id="uct-reload">Reload saved draft</button><button id="uct-contract-download">Download readable contract</button></div><p id="uct-dirty" role="status"></p><details><summary>Clauses and dependencies</summary><p>Keep IDs stable. Name every dependency, including definitions and schedules. Use one action per clause when practical, explicit AND/OR, and complete exceptions and deadline triggers. Text changes in a dependency invalidate its dependents. Undeclared prose references cannot be tracked automatically.</p><div id="uct-clauses"></div><button id="uct-add">Add clause</button></details></section>
+      <section class="surface uct-card"><h2>2. Extract or update policy</h2><label for="uct-model">Installed central model</label><select id="uct-model"><option value="">Choose an installed model</option></select><label for="uct-context">UCT context tokens</label><input id="uct-context" type="number" min="4096" max="262144" step="1024" value="32768"><p class="uct-note">Uses the existing extractor and other generation settings from Pipeline. Requests use the configured Ollama API; this demo starts no services. Edits regenerate changed clauses and declared dependents. Unchanged fragments are reused only with the same source, model and pipeline identity.</p><div class="uct-actions"><button id="uct-generate" class="primary">Generate / update affected clauses</button><button id="uct-policy-download">Download policy.json</button><button id="uct-human-download">Download readable policy</button></div><p id="uct-generation-note">No policy generated.</p><details><summary>Human-readable policy</summary><pre id="uct-policy-text" class="uct-pre"></pre></details><details><summary>Policy JSON and extraction diagnostics</summary><pre id="uct-policy-json" class="uct-pre"></pre></details></section>
+    </div>
+    <section class="surface uct-card"><h2>3. Local-node review</h2><p>Three logical nodes receive the same policy.json and readable policy. Scripted simulation illustrates accept, modify and reject; it makes no model calls. LLM review sends requests to the endpoints configured below. These are advisory decisions, not legal approval.</p><div class="uct-actions"><button id="uct-simulate">Simulate three node decisions</button><button id="uct-llm-review">Ask configured node LLMs</button></div><details><summary>Node Ollama connections (future Mac mini setup)</summary><p>Use an already running Ollama API and installed model on each Mac. Empty fields use the central endpoint and selected model, so they are logical roles sharing one model. No remote commands, model downloads or service changes are performed.</p><div id="uct-node-settings"></div></details><div class="uct-center"><strong>Central coordinator</strong><p id="uct-consensus">Awaiting policy</p></div><div class="uct-spoke"></div><div id="uct-nodes" class="uct-nodes"></div>
+      <details><summary>Submit a node's manual decision or policy edit</summary><div class="settings"><div class="field"><label for="uct-manual-node">Local node</label><select id="uct-manual-node"></select></div><div class="field"><label for="uct-manual-decision">Decision</label><select id="uct-manual-decision"><option>ACCEPT</option><option>MODIFY</option><option>REJECT</option></select></div></div><label for="uct-manual-reason">Review reason</label><input id="uct-manual-reason" placeholder="Explain the decision"><div id="uct-amendment-fields" class="hidden"><label for="uct-amendment-clause">Source clause to amend</label><select id="uct-amendment-clause"></select><label for="uct-amendment-text">Complete proposed replacement text</label><textarea id="uct-amendment-text"></textarea><p>A change in policy meaning needs an explicit proposed source amendment. Central approval updates that clause; the next extraction recomputes affected sections. The suggested policy below is an advisory preview, not evidence-backed output.</p><button id="uct-load-preview">Load policy JSON for local editing</button><label for="uct-policy-preview">Optional edited policy.json preview</label><textarea id="uct-policy-preview" placeholder="Optional JSON preview; generated policy remains separate"></textarea></div><button id="uct-submit">Submit node decision</button></details>
+    </section>
+    <section class="surface uct-card"><h2>4. Separate UCT evaluation</h2><p>Synthetic, assistant-authored cases with frozen expectations for actors, actions, assets and conditions. Includes irrelevant sections, incident deadlines and access qualifications. Related template variants test this structured task; they do not establish accuracy on unseen real contracts. Node acceptance is not extraction accuracy.</p><div class="uct-actions"><select id="uct-eval-split" aria-label="UCT benchmark split"><option value="dev">Development variants</option><option value="test">Reserved template variant</option></select><button id="uct-eval-smoke">Run 6-case smoke test</button><button id="uct-eval-full">Run complete selected cohort</button><button id="uct-eval-download">Download UCT evaluation</button></div><p id="uct-eval-summary">No UCT evaluation completed.</p><div id="uct-eval-table" class="table-scroll"></div><details><summary>Evaluation mismatches and evidence</summary><pre id="uct-eval-details" class="uct-pre"></pre></details></section>
+    <details class="surface uct-card"><summary>Revision and decision history</summary><pre id="uct-events" class="uct-pre"></pre></details>
   </section>
   <footer class="footer"><span>XFed &middot; Contract-to-policy workspace</span><span>Policy extraction with source traceability</span></footer>
 </main>
@@ -170,9 +184,9 @@ function controls(){
  $('unload').disabled=locked||!ready||!modelUnloadingAvailable;
  $('reset').disabled=!contract()||locked||loading;
  $('unload').title=modelUnloadingAvailable?'Unload selected models from memory; keep downloaded files':'Restart the updated UI server to enable model unloading';
- const currentJob=screen==='pipeline'?state?.job:overview?.job;
+ const currentJob=screen==='uct'?uctState?.job:screen==='pipeline'?state?.job:overview?.job;
  $('cancel').classList.toggle('hidden',!busy||currentJob?.mode==='unload');
- $('cancel').disabled=state?.job.status==='cancelling'||overview?.job.status==='cancelling';
+ $('cancel').disabled=currentJob?.status==='cancelling';
  ['model','num_ctx','num_predict','relevance_num_predict','relevance_batch_size','relevance_compact','relevance_num_ctx','relevance_num_batch','relevance_think','think','timeout','reuse','contract'].forEach(id=>$(id).disabled=locked);
  $('parallel').disabled=locked||!installedModels.length||!gpuSelectionAvailable;$('worker-count').disabled=locked||!parallel;
  $('placement').disabled=locked||!parallel;
@@ -247,7 +261,8 @@ function updateJob(job){
  }));
  $('job-badge').textContent=job.status==='complete'?'Complete':job.status==='cancelling'?'Cancelling':job.status==='running'?'Running':job.status==='failed'?'Failed':'Cancelled';
  $('job-badge').className='badge '+(job.status==='failed'?'danger':job.status==='complete'?'success':'neutral');
- $('job-message').textContent=job.status==='idle'?'Ready':(job.mode==='unload'?'Model unloading':job.mode==='evaluation'?'Reference evaluation':prettyContract(job.contract)+' / '+job.stage+' '+stageName(job.stage))+' / '+job.message;
+ $('job-message').textContent=job.status==='idle'?'Ready':(job.mode==='uct'?'UCT':job.mode==='unload'?'Model unloading':job.mode==='evaluation'?'Reference evaluation':prettyContract(job.contract)+' / '+job.stage+' '+stageName(job.stage))+' / '+job.message;
+ $('cancel').textContent=job.mode==='uct'?'Cancel requests':'Cancel & unload';
  $('job-count').textContent=job.total?job.completed+' / '+job.total:'';
  $('run-log').textContent=(job.log||[]).join('  |  ');
  $('progress-fill').style.width=(job.total?100*job.completed/job.total:job.status==='complete'?100:0)+'%';
@@ -341,12 +356,12 @@ function openContract(id,step){
  if(view==='pdf')setView('pdf');
 }
 function showScreen(next,refresh=true){
- if(!['dashboard','contracts','pipeline'].includes(next))next='dashboard';
+ if(!['dashboard','contracts','pipeline','uct'].includes(next))next='dashboard';
  screen=next;
  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('hidden',s.id!==next+'-screen'));
  document.querySelectorAll('[data-screen]').forEach(b=>{b.classList.toggle('active',b.dataset.screen===next);b.setAttribute('aria-current',b.dataset.screen===next?'page':'false');});
  if(location.hash!=='#'+next)history.replaceState(null,'','#'+next);
- if(refresh){if(next==='pipeline')refreshState();else refreshOverview();}
+ if(refresh){if(next==='pipeline')refreshState();else if(next==='uct')refreshUct();else refreshOverview();}
 }
 function savedResults(){
  return (overview?.contracts||[]).flatMap(c=>stages.filter(([id])=>c.stages[id]?.run).map(([id,name])=>({
@@ -507,6 +522,98 @@ $('unload').onclick=async()=>{
 };
 $('run-step').onclick=()=>run('step');$('run-through').onclick=()=>run('through');$('cancel').onclick=async()=>{try{await api('/api/cancel',{});if(screen==='pipeline')await refreshState();else await refreshOverview();}catch(error){showError(error);}};$('refresh').onclick=refreshModels;$('model').onchange=renderWorkers;$('parallel').onchange=renderWorkers;$('worker-count').onchange=renderWorkers;$('placement').onchange=renderWorkers;$('search').oninput=()=>{page=0;renderRecords();};$('filter').onchange=()=>{page=0;renderRecords();};$('previous').onclick=()=>{page--;renderRecords();};$('next').onclick=()=>{page++;renderRecords();};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('contract').onchange=()=>{clearError();$('pdf').removeAttribute('src');outputKey='';selectStage(stage);if(view==='pdf')setView('pdf');};$('download').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=contract()+'_'+stages.find(s=>s[0]===stage)[2];link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 
+let uctState=null,uctDraft=null,uctDirty=false,uctLoading=false,uctEditorRevision=null;
+function downloadUct(name,value,text=false){const url=URL.createObjectURL(new Blob([text?value:JSON.stringify(value,null,2)],{type:text?'text/plain;charset=utf-8':'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function dirtyUct(){uctDirty=true;$('uct-dirty').textContent='Unsaved changes. Save before generating.';}
+function editUct(){
+ if(!uctDraft)return;
+ $('uct-title').value=uctDraft.title;
+ $('uct-clauses').replaceChildren();
+ for(const section of uctDraft.sections){
+  $('uct-clauses').append(element('h3',section.title,'uct-section'));
+  for(const row of uctDraft.clauses.filter(c=>c.section===section.id)){
+   const card=element('article',undefined,'uct-clause'),head=element('header'),remove=element('button','Remove');
+   head.append(element('strong',row.id),remove);card.append(head);
+   const placement=element('select');placement.setAttribute('aria-label','Section for '+row.id);
+   placement.replaceChildren(...uctDraft.sections.map(s=>new Option(s.title,s.id)));placement.value=row.section;
+   placement.onchange=()=>{row.section=placement.value;dirtyUct();editUct();};
+   const text=element('textarea');text.value=row.text;text.setAttribute('aria-label','Text for '+row.id);text.oninput=()=>{row.text=text.value;dirtyUct();};
+   const label=element('label','Depends on clause IDs, separated by commas'),dependencies=element('input');dependencies.value=row.depends_on.join(', ');dependencies.setAttribute('aria-label','Dependencies for '+row.id);
+   dependencies.oninput=()=>{row.depends_on=dependencies.value.split(',').map(s=>s.trim()).filter(Boolean);dirtyUct();};
+   remove.onclick=()=>{uctDraft.clauses=uctDraft.clauses.filter(c=>c!==row);dirtyUct();editUct();};
+   card.append(placement,text,label,dependencies);$('uct-clauses').append(card);
+  }
+ }
+}
+function proposalText(){const id=$('uct-amendment-clause').value;$('uct-amendment-text').value=uctState?.document.clauses.find(row=>row.id===id)?.text||'';}
+function uctStamp(){if(!uctState?.generation)throw Error('Generate a policy draft first.');return {revision:uctState.revision,policy_hash:uctState.generation.policy_hash};}
+async function uctRequest(path,body){clearError();try{await api(path,body);await refreshUct();}catch(error){showError(error);}}
+async function refreshUct(){
+ if(uctLoading)return;uctLoading=true;
+ try{
+  uctState=await api('/api/uct');updateJob(uctState.job);
+  const names=installedModels.map(m=>m.name),prior=$('uct-model').value;
+  if(JSON.stringify(names)!==JSON.stringify([...$('uct-model').options].map(o=>o.value))){$('uct-model').replaceChildren(...names.map(name=>new Option(name,name)));if(names.includes(prior))$('uct-model').value=prior;else if(names.includes('qwen3.5:122b-a10b'))$('uct-model').value='qwen3.5:122b-a10b';}
+  $('model-label').textContent='UCT model: '+($('uct-model').value||'choose an installed model');
+  if(!uctDirty&&uctEditorRevision!==uctState.revision){uctDraft=structuredClone(uctState.document);uctEditorRevision=uctState.revision;editUct();$('uct-dirty').textContent='Saved draft.';}
+  $('uct-revision').textContent='Revision '+uctState.revision;
+  const generation=uctState.generation,hasPolicy=Boolean(generation?.policy);
+  $('uct-generation-note').textContent=generation?'Draft: '+generation.regenerated.length+' clauses recomputed; '+generation.reused.length+' reused; '+generation.deleted.length+' deleted. '+Object.values(generation.clauses).filter(c=>c.failed).length+' failed. Source and coverage diagnostics still require review.':'No current policy. Generate after saving amendments.';
+  $('uct-policy-text').textContent=uctState.policy_text;$('uct-policy-json').textContent=JSON.stringify(generation,null,2);
+  $('uct-consensus').textContent=uctState.consensus;
+  const jobBusy=['running','cancelling'].includes(uctState.job.status)||uctState.running;
+  ['uct-save','uct-reload','uct-add','uct-submit'].forEach(id=>$(id).disabled=jobBusy);
+  ['uct-generate','uct-eval-smoke','uct-eval-full'].forEach(id=>$(id).disabled=jobBusy||uctDirty||!$('uct-model').value);
+  ['uct-simulate','uct-llm-review'].forEach(id=>$(id).disabled=jobBusy||!hasPolicy||uctDirty||(id==='uct-llm-review'&&!$('uct-model').value));
+  ['uct-policy-download','uct-human-download','uct-load-preview'].forEach(id=>$(id).disabled=!hasPolicy);
+  if(!$('uct-manual-node').options.length){
+   $('uct-manual-node').replaceChildren(...uctState.profiles.map(n=>new Option(n.name,n.id)));
+   for(const node of uctState.profiles){const row=element('div',undefined,'uct-node-settings'),url=element('input'),model=element('input');url.id='uct-url-'+node.id;url.placeholder='Use central endpoint';url.setAttribute('aria-label',node.name+' Ollama endpoint');model.id='uct-model-'+node.id;model.placeholder='Use central model';model.setAttribute('aria-label',node.name+' installed model');row.append(element('strong',node.name),url,model);$('uct-node-settings').append(row);}
+  }
+  const clauseNames=uctState.document.clauses.map(c=>c.id);
+  if(JSON.stringify(clauseNames)!==JSON.stringify([...$('uct-amendment-clause').options].map(o=>o.value))){$('uct-amendment-clause').replaceChildren(...clauseNames.map(id=>new Option(id,id)));proposalText();}
+  $('uct-nodes').replaceChildren();
+  for(const node of uctState.profiles){
+   const record=uctState.nodes.find(r=>r.node_id===node.id),card=element('article',undefined,'uct-node');
+   card.append(element('h3',node.name),element('p',node.mandate),pill(record?.decision||'Awaiting review',record?.decision==='ACCEPT'?'success':record?.decision==='REJECT'?'danger':'warning'));
+   if(record){card.append(element('p',record.mode+' · revision '+record.revision+' · '+record.status),element('p',record.reason));
+    for(const amendment of record.amendments||[]){const original=uctState.document.clauses.find(c=>c.id===amendment.clause_id);card.append(element('strong',amendment.clause_id),element('p','Current: '+(original?.text||'')),element('p','Proposed: '+amendment.replacement_text));if(amendment.depends_on)card.append(element('p','Dependencies: '+(original?.depends_on.join(', ')||'none')+' → '+(amendment.depends_on.join(', ')||'none')));}
+    if(record.proposed_policy){const details=element('details'),summary=element('summary','Proposed policy preview');details.append(summary,element('pre',JSON.stringify(record.proposed_policy,null,2),'uct-pre'));card.append(details);}
+    if(record.decision==='MODIFY'&&record.status==='pending_central_review'){
+     const approve=element('button','Approve source amendment'),dismiss=element('button','Dismiss');approve.disabled=dismiss.disabled=jobBusy;
+     approve.onclick=()=>uctRequest('/api/uct/approve',{node_id:node.id,...uctStamp()});dismiss.onclick=()=>uctRequest('/api/uct/dismiss',{node_id:node.id,...uctStamp()});card.append(approve,dismiss);
+    }
+   }
+   const packet=element('button','Download node review packet');packet.disabled=!hasPolicy;packet.onclick=()=>downloadUct(node.id+'-review.json',{node,revision:uctState.revision,policy_hash:generation.policy_hash,contract:uctState.document,policy:generation.policy,human_readable_policy:uctState.policy_text,decision:record||null});card.append(packet);$('uct-nodes').append(card);
+  }
+  $('uct-events').textContent=JSON.stringify(uctState.events,null,2);
+  const report=uctState.evaluation;$('uct-eval-download').disabled=!report;
+  if(report){const s=report.summary,pct=n=>n==null?'—':(100*n).toFixed(1)+'%';$('uct-eval-summary').textContent=report.split+' / '+report.status+' · '+s.completed+'/'+s.selected+' cases · '+s.failed+' failures · '+report.reference_status+'. Completed cases only; no real-contract accuracy claim.'+(uctState.evaluation_reference_current?'':' Saved results use an earlier reference version; inspect the recorded correction history.');
+   const table=element('table',undefined,'data-table'),tr=element('tr');['Measure','Result'].forEach(t=>tr.append(element('th',t)));table.append(tr);
+   for(const [label,value] of [['Relevance accuracy',pct(s.relevance_accuracy)],['Strict complete clause match',pct(s.exact_clause_accuracy)],['Exact operative clauses',s.exact_operative_clauses+'/'+s.operative_cases],['Correct no-rule controls',s.correct_no_rule_controls+'/'+s.control_cases],['Strict rule precision',pct(s.rules.precision)],['Strict rule recall',pct(s.rules.recall)],['Strict rule F1',pct(s.rules.f1)],...Object.entries(s.field_slots).map(([k,v])=>[k+' field F1',pct(v.f1)])]){const row=element('tr');row.append(element('td',label),element('td',value));table.append(row);}$('uct-eval-table').replaceChildren(table);$('uct-eval-details').textContent=JSON.stringify(report,null,2);
+  }
+ }catch(error){showError(error);}finally{uctLoading=false;}
+}
+async function runUct(action,extra={}){if(uctDirty){showError('Save draft changes first.');return;}await uctRequest('/api/uct/run',{...modelSettings(),num_ctx:Number($('uct-context').value),model:$('uct-model').value,action,...extra});}
+$('uct-title').oninput=()=>{if(uctDraft){uctDraft.title=$('uct-title').value;dirtyUct();}};
+$('uct-save').onclick=()=>uctRequest('/api/uct/save',{document:uctDraft,revision:uctEditorRevision}).then(()=>{if(uctState&&JSON.stringify(uctState.document)===JSON.stringify(uctDraft)){uctDirty=false;$('uct-dirty').textContent='Saved draft.';refreshUct();}});
+$('uct-reload').onclick=()=>{uctDirty=false;uctEditorRevision=null;refreshUct();};
+$('uct-add').onclick=()=>{if(!uctDraft)return;let n=1;while(uctDraft.clauses.some(c=>c.id==='UCT-custom-'+n))n++;uctDraft.clauses.push({id:'UCT-custom-'+n,section:uctDraft.sections[0].id,text:'Draft clause to be completed.',depends_on:[]});dirtyUct();editUct();};
+$('uct-model').onchange=refreshUct;
+$('uct-generate').onclick=()=>runUct('generate');
+$('uct-simulate').onclick=()=>runUct('review',{review_mode:'simulated'});
+$('uct-llm-review').onclick=()=>{const nodes={};for(const n of uctState.profiles)nodes[n.id]={url:$('uct-url-'+n.id).value.trim(),model:$('uct-model-'+n.id).value.trim()};runUct('review',{review_mode:'ollama',nodes});};
+$('uct-contract-download').onclick=()=>downloadUct('uct-contract.txt',uctState.contract_text,true);
+$('uct-policy-download').onclick=()=>downloadUct('policy.json',uctState.generation.policy);
+$('uct-human-download').onclick=()=>downloadUct('policy.txt',uctState.policy_text,true);
+$('uct-manual-decision').onchange=()=>$('uct-amendment-fields').classList.toggle('hidden',$('uct-manual-decision').value!=='MODIFY');
+$('uct-amendment-clause').onchange=proposalText;
+$('uct-load-preview').onclick=()=>$('uct-policy-preview').value=JSON.stringify(uctState.generation.policy,null,2);
+$('uct-submit').onclick=()=>{try{const decision={decision:$('uct-manual-decision').value,reason:$('uct-manual-reason').value.trim(),amendments:[]};if(decision.decision==='MODIFY'){decision.amendments=[{clause_id:$('uct-amendment-clause').value,replacement_text:$('uct-amendment-text').value}];if($('uct-policy-preview').value.trim())decision.proposed_policy=JSON.parse($('uct-policy-preview').value);}uctRequest('/api/uct/decision',{node_id:$('uct-manual-node').value,decision,...uctStamp()});}catch(error){showError(error);}};
+$('uct-eval-smoke').onclick=()=>runUct('evaluate',{split:$('uct-eval-split').value,limit:6});
+$('uct-eval-full').onclick=()=>runUct('evaluate',{split:$('uct-eval-split').value});
+$('uct-eval-download').onclick=()=>downloadUct('uct-evaluation.json',uctState.evaluation);
+
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 $('brand').onclick=()=>showScreen('dashboard');
 $('open-workspace').onclick=()=>showScreen('pipeline');
@@ -534,7 +641,7 @@ $('contract-search').oninput=()=>renderContractTable('contracts-table',$('contra
   refreshModels();
   await refreshOverview();
   refreshEvaluation();
-  setInterval(()=>screen==='pipeline'?refreshState():refreshOverview(),2000);
+  setInterval(()=>screen==='pipeline'?refreshState():screen==='uct'?refreshUct():refreshOverview(),2000);
  }catch(error){showError(error);}
 })();
 </script>
