@@ -1881,5 +1881,44 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(classify_batch([item], client, ROOT)[0]['label'], 'RELEVANT')
 
 
+    def test_retired_evaluation_requests_are_rejected_before_model_access(self):
+        pipeline = Pipeline(ROOT, 'http://127.0.0.1:11435')
+        with patch.object(pipeline, 'make_client') as factory:
+            with self.assertRaisesRegex(ValueError, 'classification'):
+                pipeline.start_evaluation(dict(task='policy'))
+            with self.assertRaisesRegex(ValueError, 'classification'):
+                pipeline.start_evaluation(dict(task='both'))
+            factory.assert_not_called()
+
+
+    def test_classification_scores_unknown_labels_as_failed_cases(self):
+        from xfed.evaluation import classification_metrics
+        result = classification_metrics([dict(gold='RELEVANT', label='invalid')])
+        self.assertEqual(result['errors'], 1)
+        self.assertEqual(result['accuracy'], 0)
+
+    def test_removed_drafting_and_node_review_routes_cannot_start_jobs(self):
+        from urllib.request import Request, urlopen
+        from urllib.error import HTTPError
+        from xfed.ui import handler
+        pipeline = Pipeline(ROOT, 'http://127.0.0.1:11435')
+        server = ThreadingHTTPServer(('127.0.0.1', 0), handler(pipeline))
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with patch.object(pipeline, 'make_client') as factory:
+                for route in ('/api/uct', '/api/uct/run', '/api/uct/decision', '/api/uct/approve', '/api/uct/save'):
+                    request = Request('http://127.0.0.1:' + str(server.server_port) + route,
+                                      data=b'{}', headers={'Content-Type': 'application/json'})
+                    with self.assertRaises(HTTPError) as error:
+                        urlopen(request)
+                    self.assertEqual(error.exception.code, 404)
+                factory.assert_not_called()
+                self.assertEqual(pipeline.snapshot()['status'], 'idle')
+        finally:
+            server.shutdown()
+            thread.join()
+            server.server_close()
+
 if __name__ == '__main__':
     unittest.main()

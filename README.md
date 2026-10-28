@@ -44,17 +44,9 @@ recorded. Rules with missing issuers use an ODRL Set. Context overflow fails
 explicitly. Rerun through policy creation after updating to rebuild extraction
 metadata and context.
 
-The **UCT drafting** tab provides a 16-section structured drafting template,
-stable clause IDs and declared context dependencies. It uses the existing relevance
-and policy extractor; no automatic conversion of existing agreements is performed.
-The separate **Policy review** tab shows advisory node decisions and amendment
-proposals. Node decisions can be scripted or requested from already running Ollama endpoints
-(for example, one per Mac mini). Source amendments require central approval, then
-**Generate / update affected clauses** reuses unchanged fragments and regenerates
-changed clauses and their declared dependents. Undeclared prose dependencies cannot
-be tracked automatically. Node acceptance is advisory and never deploys a policy.
-Drafts, decisions and history stay in ignored `tmp/uct_workspace/`.
-The **Evaluation** tab measures task 1.3 classification only.
+The **Evaluation** tab measures task 1.3 classification only. **Policy review**
+is a static visual demo with labelled sample content and inert buttons. It has
+no node connections, review actions, downloads or amendment logic.
 
 To use the university model through the existing tunnel while keeping scripts and
 reports local, run locally (no server changes or remote commands):

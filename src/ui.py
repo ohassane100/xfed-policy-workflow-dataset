@@ -24,8 +24,6 @@ from xfed.policy_generation import generate
 # The separate review stage is disabled; generation uses its clause evidence check.
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
 from xfed.evaluation import load_reference, reference_summary, run_evaluation
-from xfed.uct import UCTWorkspace
-from xfed import node_review
 
 
 STAGES = {
@@ -147,80 +145,6 @@ class Pipeline:
         self.evaluation_report = next((value for path in saved
                                        if isinstance(value := read_json(path), dict) and value.get('split') == 'test'
                                        and value.get('task') == 'classification'), None)
-        self._uct = None
-        self._uct_lock = threading.Lock()
-
-    @property
-    def uct(self):
-        with self._uct_lock:
-            if self._uct is None:
-                self._uct = UCTWorkspace(self.root)
-            return self._uct
-
-    def uct_state(self):
-        state = self.uct.snapshot()
-        state['consensus'] = node_review.consensus(state)
-        state['profiles'] = node_review.NODE_PROFILES
-        state['job'] = self.snapshot()
-        return state
-
-    def start_uct(self, request):
-        action = request.get('action')
-        if action not in ('generate', 'review'):
-            raise ValueError('Unknown UCT job.')
-        mode = request.get('review_mode', 'simulated')
-        if action == 'review' and mode not in ('simulated', 'ollama'):
-            raise ValueError('Choose simulated or ollama review.')
-        # UCT demo uses shared API clients only: no private Ollama services or GPU configuration.
-        model = request.get('model')
-        needs_model = action != 'review' or mode == 'ollama'
-        if needs_model and (not isinstance(model, str) or not model.strip()):
-            raise ValueError('Choose an installed model in Pipeline settings.')
-        endpoints = request.get('nodes', {})
-        if not isinstance(endpoints, dict) or set(endpoints) - {row['id'] for row in node_review.NODE_PROFILES}:
-            raise ValueError('Unknown node configuration.')
-        for settings in endpoints.values():
-            if not isinstance(settings, dict) or set(settings) - {'url', 'model'}:
-                raise ValueError('Node configuration accepts url and model only.')
-            if any(not isinstance(value, str) for value in settings.values()):
-                raise ValueError('Node endpoint and model must be strings.')
-        with self.lock, self.uct.lock:
-            if self.job['status'] in ('running', 'cancelling') or self.uct.running:
-                raise ValueError('Wait for the active job first.')
-            self.cancel.clear()
-            self.uct.running = True
-            self.active_client = None
-            self.job = dict(status='running', mode='uct', contract=None, stage=None, completed=0,
-                            total=0, message='UCT: ' + action, log=[])
-        def client_for(node=None):
-            settings = endpoints.get(node['id'], {}) if node else {}
-            client = OllamaPool([settings.get('url') or self.ollama_url], settings.get('model') or model,
-                                cancel=self.cancel, num_ctx=request.get('num_ctx', 32768),
-                                num_predict=request.get('num_predict', 4096), think='auto',
-                                relevance_num_predict=1024, timeout=request.get('timeout', 600))
-            with self.lock:
-                self.active_client = client
-            return client
-        def work():
-            try:
-                if action == 'review':
-                    node_review.run_reviews(self.uct, mode, client_for, self.progress)
-                else:
-                    client = client_for()
-                    client.preflight()
-                    self.uct.run(client, self.progress)
-                self.update(status='cancelled' if self.cancel.is_set() else 'complete', message='UCT job finished')
-            except (InterruptedError, Cancelled):
-                self.update(status='cancelled', message='UCT job cancelled; completed clause work remains saved.')
-            except Exception as error:
-                self.update(status='failed', message=str(error))
-            finally:
-                # Shared university/Mac endpoints remain owned by their administrators.
-                with self.lock, self.uct.lock:
-                    self.active_client = None
-                    self.uct.running = False
-        threading.Thread(target=work, daemon=True).start()
-        return self.snapshot()
 
     def contracts(self):
         return sorted(p.name for p in (self.root / 'contracts').iterdir()
@@ -677,8 +601,7 @@ class Pipeline:
             if self.job['status'] == 'running' and self.job.get('mode') != 'unload':
                 self.cancel.set()
                 client = self.active_client
-                self.job.update(status='cancelling', message='Stopping requests' if self.job.get('mode') == 'uct'
-                                else 'Stopping requests and unloading run models')
+                self.job.update(status='cancelling', message='Stopping requests and unloading run models')
         if client:
             client.cancel_requests()
         return self.snapshot()
@@ -737,8 +660,6 @@ def handler(pipeline):
                     self.send(dict(report=pipeline.benchmark_result()))
                 elif route.path == '/api/evaluation':
                     self.send(pipeline.evaluation_result())
-                elif route.path == '/api/uct':
-                    self.send(pipeline.uct_state())
                 elif route.path in ('/api/output', '/api/pdf'):
                     contract = query['contract'][0]
                     if route.path == '/api/pdf':
@@ -763,7 +684,7 @@ def handler(pipeline):
                 return
             try:
                 size = int(self.headers.get('Content-Length', 0))
-                if not 0 < size <= (2000000 if self.path.startswith('/api/uct') else 65536):
+                if not 0 < size <= 65536:
                     raise ValueError('Invalid request size.')
                 request = json.loads(self.rfile.read(size))
                 if not isinstance(request, dict):
@@ -780,20 +701,6 @@ def handler(pipeline):
                     self.send(pipeline.stop())
                 elif self.path == '/api/unload':
                     self.send(pipeline.start_unload(request), 202)
-                elif self.path == '/api/uct/save':
-                    self.send(pipeline.uct.save(request['document'], request['revision']))
-                elif self.path == '/api/uct/run':
-                    self.send(pipeline.start_uct(request), 202)
-                elif self.path == '/api/uct/decision':
-                    node_review.submit(pipeline.uct, request['node_id'], request['decision'],
-                                       request['revision'], request['policy_hash'])
-                    self.send(pipeline.uct_state())
-                elif self.path == '/api/uct/approve':
-                    node_review.approve(pipeline.uct, request['node_id'], request['revision'], request['policy_hash'])
-                    self.send(pipeline.uct_state())
-                elif self.path == '/api/uct/dismiss':
-                    node_review.dismiss(pipeline.uct, request['node_id'], request['revision'], request['policy_hash'])
-                    self.send(pipeline.uct_state())
                 else:
                     self.send(dict(error='Not found'), 404)
             except Exception as exc:
