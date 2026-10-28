@@ -1028,16 +1028,6 @@ class QualityTests(unittest.TestCase):
         self.assertNotIn('Supplier; pre-existing HW-710', texts)
         self.assertNotIn('date', index.definitions)
 
-    def test_rule_mismatches_explain_missing_and_unexpected_rules_without_softening_scores(self):
-        from xfed.evaluation import policy_counts
-        data = dict(inputs={'i': dict(contract_id='contract', clause=chunk(), policy_context=[], context=[])},
-                    contexts={}, value_aliases={}, contract_aliases={}, action_aliases={})
-        gold = dict(kind='obligation', action='delete', target='supplied data', assignee='Provider')
-        case = dict(input_id='i', gold=dict(rules=[gold]))
-        counts = policy_counts(case, dict(policy=fragment(self.item, 'permission')), data, ROOT)
-        self.assertEqual((counts['tp'], counts['fp'], counts['fn']), (0, 1, 1))
-        self.assertEqual(counts['rule_differences']['missing'][0]['kind'], 'obligation')
-        self.assertEqual(counts['rule_differences']['unexpected'][0]['kind'], 'permission')
 
     def test_split_manifest_counts_and_missing_predictions(self):
         from xfed.evaluation import digest, load_reference, score_report
@@ -1085,10 +1075,9 @@ class QualityTests(unittest.TestCase):
                 return no_rule_review(value)
             return dict(rules=[], unrepresented=[], reason='Simulated abstention.') if 'contract_id' in value else dict(label='RELEVANT')
         data = load_reference(ROOT)
-        for split, count, policy_count in [('dev', 300, 60), ('test', 76, 76)]:
+        for split, count in [('dev', 300), ('test', 76)]:
             report = run_evaluation(data, Runner(answer), ROOT, split=split)
             self.assertEqual(len(report['predictions']['classification']), count)
-            self.assertEqual(len(report['predictions']['policy']), policy_count)
             self.assertEqual(report['status'], 'complete')
             self.assertTrue(report['run_id'])
             self.assertTrue(report['inference_sha256'])
@@ -1104,13 +1093,12 @@ class QualityTests(unittest.TestCase):
         from xfed.evaluation import load_reference, reference_summary
         summary = reference_summary(load_reference(ROOT), split='test')
         self.assertEqual(summary['counts']['classification']['total'], 76)
-        self.assertEqual(summary['counts']['policy']['total'], 76)
         with TemporaryDirectory() as directory:
             root = Path(directory)
             pipeline = Pipeline(root, 'http://127.0.0.1:11434')
             with self.assertRaisesRegex(ValueError, 'test set only'):
                 pipeline.start_evaluation(dict(split='dev'))
-            report = dict(run_id='simulated-test-run', split='test', status='complete',
+            report = dict(run_id='simulated-test-run', split='test', status='complete', task='classification',
                           metrics={}, reference_status='provisional')
             with patch('xfed.ui.run_evaluation', return_value=report):
                 pipeline.run_evaluation({}, object(), dict(split='test'))
@@ -1123,7 +1111,7 @@ class QualityTests(unittest.TestCase):
             self.assertEqual(restored.evaluation_report['status'], 'cancelled')
             self.assertEqual(restored.evaluation_report['error'], 'Simulated cancellation')
 
-    def test_contract05_is_the_complete_independent_source_for_both_tasks(self):
+    def test_contract05_retains_all_classification_source_chunks(self):
         from xfed.evaluation import digest, load_reference, reference_summary
         from xfed.extraction import extract_document
         from xfed.segmentation import segment
@@ -1135,13 +1123,13 @@ class QualityTests(unittest.TestCase):
         inputs = {key: value for key, value in data['inputs'].items() if value['contract_id'] == 'contract_05'}
         self.assertEqual([value['clause'] for value in inputs.values()], segmented['chunks'])
         self.assertEqual(digest(segmented), data['sources']['contract_05']['segmentation_content_sha256'])
-        for task in ('classification', 'policy'):
+        for task in ('classification',):
             cases = [case for case in data[task] if case['split'] == 'test']
             self.assertEqual({case['input_id'] for case in cases}, set(inputs))
             self.assertTrue(all(case['gold']['review_status'] == 'draft' for case in cases))
         known = {chunk['chunk_id']: chunk for chunk in segmented['chunks']}
         for value in inputs.values():
-            for field in ('context', 'policy_context'):
+            for field in ('context',):
                 for identifier in value[field]:
                     context = data['contexts'][identifier]
                     original = known[context['chunk_id']]
@@ -1152,7 +1140,7 @@ class QualityTests(unittest.TestCase):
         from unittest.mock import patch
         from xfed.evaluation import load_reference
         original = load_reference(ROOT)
-        for task in ('classification', 'policy'):
+        for task in ('classification',):
             data = deepcopy(original)
             data[task].pop()  # Contract 05 follows the retained development cases.
             with patch.object(Path, 'read_text', return_value=json.dumps(data)):
@@ -1176,119 +1164,10 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(scores['macro_f1'], .5)
         self.assertEqual(scores['confusion_matrix']['RELEVANT']['NEEDS_CONTEXT'], 1)
 
-    def test_contract05_policy_gold_roundtrip_and_all_abstain_baseline(self):
-        from xfed.evaluation import digest, input_for, load_reference, policy_counts, score_report
-        data = load_reference(ROOT)
-        cases = [case for case in data['policy'] if case['split'] == 'test']
-        predictions = {}
-        for case in cases:
-            item = input_for(data, case, True)
-            fragment = None
-            for option in [case['gold']['rules'], *case['gold'].get('alternatives', [])]:
-                policy, traces = {}, []
-                for position, gold in enumerate(option):
-                    rule = deepcopy(gold)
-                    kind = rule.pop('kind')
-                    rule['uid'] = f'r{position}'
-                    if kind in ('permission', 'prohibition'):
-                        rule['assigner'] = 'Equinor and the former Volve license partners'
-                    policy.setdefault(kind, []).append(rule)
-                    traces.append(dict(ruleUid=rule['uid'], ruleType=kind,
-                        sourceClauses=[dict(chunk_id=item['chunk_id'], relationship='primary')]))
-                candidate = complete_fragment(dict(odrlPolicy=policy, traceability=traces), 'contract_05', item) if option else None
-                self.assertTrue(policy_counts(case, dict(policy=candidate), data, ROOT)['exact'])
-                if option == case['gold']['rules']:
-                    fragment = candidate
-            predictions[case['case_id']] = dict(policy=fragment, input_sha256=digest(item))
-        report = dict(reference_version=data['version'], reference_sha256=digest(data), split='test', task='policy',
-            selected_cases=dict(policy=list(predictions)), predictions=dict(policy=predictions), execution={})
-        scored = score_report(data, report, ROOT)
-        complete = scored['metrics']['policy']['real/full_document']
-        self.assertEqual(complete['n'], 76)
-        self.assertEqual(complete['canonical_rules']['f1'], 1)
-        self.assertEqual(complete['exact_case_accuracy'], 1)
-        self.assertEqual(scored['reference_status'], 'provisional')
-        for prediction in predictions.values():
-            prediction['policy'] = None
-        scored = score_report(data, report, ROOT)
-        self.assertEqual(scored['metrics']['policy']['real/full_document']['canonical_rules']['recall'], 0)
-        self.assertEqual(scored['metrics']['policy']['real/operative']['exact_case_accuracy'], 0)
-        with self.assertRaisesRegex(ValueError, 'not marked reviewed'):
-            score_report(data, report, ROOT, require_reviewed=True)
 
-    def test_rule_fields_are_diagnostics_and_duplicates_do_not_earn_extra_credit(self):
-        from xfed.evaluation import align_rules, policy_counts
-        data = dict(inputs={'i': dict(contract_id='contract', clause=chunk(), policy_context=[], context=[])},
-                    contexts={}, value_aliases={}, contract_aliases={}, action_aliases={})
-        gold = dict(kind='obligation', action='delete', target='supplied data', assignee='Provider',
-                    constraint=[dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT12H')])
-        counts = policy_counts(dict(input_id='i', gold=dict(rules=[gold])),
-                               dict(policy=fragment(self.item)), data, ROOT)
-        self.assertEqual((counts['tp'], counts['fp'], counts['fn']), (0, 1, 1))
-        self.assertEqual(counts['field_slots']['action']['tp'], 1)
-        self.assertEqual(counts['field_alignment'][0]['differing_fields'], ['constraint'])
-        slots, aligned = align_rules([gold], [gold, gold])
-        self.assertEqual(len(aligned), 1)
-        self.assertTrue(all(value == dict(tp=1, fp=1, fn=0) for value in slots.values()))
-        other = dict(gold, action='share', assignee='Recipient')
-        slots, aligned = align_rules([gold, other], [other, gold])
-        self.assertEqual([(row['expected'], row['predicted']) for row in aligned], [(0, 1), (1, 0)])
-        self.assertTrue(all(value['tp'] == 2 for value in slots.values()))
-        self.assertEqual(align_rules([], [gold])[0]['action'], dict(tp=0, fp=1, fn=0))
 
-    def test_reference_label_audit_honours_declared_aliases_and_alternative_rule_sets(self):
-        from xfed.evaluation import reference_label_compatibility
-        rule = dict(kind='obligation', action='delete', assignee='Provider', target='derived records')
-        case = dict(case_id='case', input_id='i', split='dev', gold=dict(rules=[rule]))
-        data = dict(policy=[case], inputs={'i':dict(contract_id='contract', clause=chunk(),
-                    context=[], policy_context=[])}, contexts={}, value_aliases={}, contract_aliases={}, action_aliases={})
-        report = reference_label_compatibility(data, 'dev')
-        self.assertEqual(report['operative_cases'], 1)
-        self.assertEqual(report['cases_with_no_literal_option'], 1)
-        self.assertEqual(report['details'][0]['unavailable_labels'][0]['field'], 'target')
-        data['value_aliases']['supplied data'] = 'derived records'
-        self.assertEqual(reference_label_compatibility(data, 'dev')['cases_with_no_literal_option'], 0)
-        data['value_aliases'].clear()
-        case['gold']['alternatives'] = [[dict(rule, target='supplied data')]]
-        report = reference_label_compatibility(data, 'dev')
-        self.assertEqual(report['cases_with_no_literal_option'], 0)
-        self.assertEqual(len(report['details']), 1)
-        self.assertEqual(rule['target'], 'derived records')
 
-    def test_reference_label_audit_preserves_word_boundaries_and_accepts_supplied_context(self):
-        from xfed.evaluation import reference_label_compatibility
-        rule = dict(kind='permission', action='use', assignee='Provider', target='Data')
-        item = dict(contract_id='contract', clause=chunk(text='Provider may use Metadata.'),
-                    context=[], policy_context=[])
-        data = dict(policy=[dict(case_id='case', input_id='i', split='dev', gold=dict(rules=[rule]))],
-                    inputs={'i':item}, contexts={}, value_aliases={}, contract_aliases={}, action_aliases={})
-        self.assertEqual(reference_label_compatibility(data, 'dev')['cases_with_no_literal_option'], 1)
-        data['contexts']['definition'] = dict(chunk('c2', 'Data means the supplied\nmeasurements.'), relationship='definition')
-        item['policy_context'] = ['definition']
-        self.assertEqual(reference_label_compatibility(data, 'dev')['cases_with_no_literal_option'], 0)
 
-    def test_duration_equivalence_preserves_units_calendar_scope_and_comparison_direction(self):
-        from xfed.evaluation import canonical_rule
-        data = dict(value_aliases={}, contract_aliases={}, action_aliases={})
-        rule = dict(kind='obligation', action='inform', assignee='Provider', target='Data')
-        def scored(value, unit=None, operator='lteq', event='discovery'):
-            condition = dict(leftOperand='elapsedTime', operator=operator, rightOperand=value)
-            if unit:
-                condition['unit'] = unit
-            return canonical_rule(dict(rule, constraint=[condition,
-                dict(leftOperand='event', operator='eq', rightOperand=event)]), data, 'contract')
-        self.assertEqual(scored('P3D'), scored('PT72H'))
-        self.assertEqual(scored('PT72H'), scored(72, 'hours'))
-        self.assertEqual(scored('PT72H'), scored('PT72H', 'hour'))
-        self.assertEqual(scored('PT1M0.5S'), scored('PT60.5S'))
-        self.assertEqual(scored(1.5, 'hours'), scored('PT90M'))
-        self.assertEqual(scored(1.0000004, 'hours'), scored('PT3600.00144S'))
-        self.assertNotEqual(scored(1.0000004, 'hours'), scored('PT1H'))
-        self.assertNotEqual(scored('PT72H'), scored('PT72H', 'day'))
-        self.assertNotEqual(scored('P1M'), scored('P30D'))
-        self.assertNotEqual(scored('P1Y'), scored('P365D'))
-        self.assertNotEqual(scored('PT72H'), scored('PT72H', operator='gteq'))
-        self.assertNotEqual(scored('PT72H'), scored('PT72H', event='notification sent'))
 
     def test_blind_review_packets_preserve_evidence_and_require_completed_human_annotations(self):
         from xfed.evaluation import apply_reviews, digest, load_reference, review_packet
@@ -1316,62 +1195,7 @@ class QualityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'evidence changed'):
             apply_reviews(data, packet)
 
-    def test_gated_evaluation_counts_excluded_rules_and_never_calls_policy_on_negatives(self):
-        from xfed.evaluation import load_reference, run_evaluation
-        class Runner(Client):
-            num_ctx = 131072
-            def preflight(self): pass
-            def reset_assignments(self): pass
-            def metadata(self): return dict(model=self.model)
-        def answer(value):
-            self.assertNotIn('contract_id', value)
-            return dict(label='NOT_RELEVANT')
-        client = Runner(answer)
-        report = run_evaluation(load_reference(ROOT), client, ROOT, policy_mode='gated')
-        metrics = report['metrics']['policy']['real/full_document']
-        self.assertEqual(metrics['outcomes'], dict(skipped_by_relevance=76))
-        self.assertEqual(metrics['canonical_rules']['recall'], 0)
-        self.assertEqual(metrics['operative']['generation_coverage'], 0)
-        self.assertEqual(metrics['all_abstain_baseline_accuracy'], 69 / 76)
-        self.assertIsNone(metrics['canonical_rules']['precision'])
-        self.assertFalse(report['quality_assessment']['reference_targets_verified'])
-        self.assertIn('does not re-evaluate PDF', report['evaluation_scope'])
-        with self.assertRaisesRegex(ValueError, 'requires both tasks'):
-            run_evaluation(load_reference(ROOT), client, ROOT, task='policy', policy_mode='gated')
 
-    def test_gated_policy_inputs_outside_the_classification_sample_receive_unscored_decisions(self):
-        from xfed.evaluation import load_reference, run_evaluation
-        class Runner(Client):
-            def preflight(self): pass
-            def reset_assignments(self): pass
-            def metadata(self): return dict(model=self.model)
-        data = load_reference(ROOT)
-        heading = next(case for case in data['classification'] if case['split'] == 'dev')
-        controls = next(case for case in data['policy'] if case['input_id'] == heading['input_id'])
-        uncovered = next(case for case in data['policy'] if case['case_id'] == 'contract_01:c000281')
-        data['classification'] = [case for case in data['classification'] if case['split'] == 'test'] + [heading]
-        data['policy'] = [case for case in data['policy'] if case['split'] == 'test'] + [controls, uncovered]
-        with TemporaryDirectory() as directory:
-            reference = Path(directory) / 'reference.json'
-            write_json(reference, data)
-            client = Runner(dict(label='NOT_RELEVANT'))
-            report = run_evaluation(data, client, ROOT, split='dev', policy_mode='gated', reference_path=reference)
-            self.assertEqual(report['progress']['classification']['completed'], 1)
-            self.assertEqual(report['progress']['policy']['completed'], 2)
-            routed = report['predictions']['policy'][uncovered['case_id']]
-            self.assertTrue(routed['skipped_by_relevance'])
-            self.assertNotIn('error', routed)
-            self.assertIsNone(routed['routing_classification']['benchmark_case_id'])
-            self.assertEqual(len(client.calls), 1)
-            self.assertEqual(report['metrics']['policy']['real/all_curated_cases']['failures'], 0)
-            with patch('xfed.policy_generation.generate_item', return_value=(None,
-                       dict(reason='Simulated missing rule.', outcome='abstained'), False)) as generate_item_mock:
-                report = run_evaluation(data, Runner(dict(label='RELEVANT')), ROOT,
-                                       split='dev', policy_mode='gated', reference_path=reference)
-            self.assertEqual(generate_item_mock.call_count, 1)
-            self.assertEqual(report['predictions']['policy'][uncovered['case_id']][
-                             'routing_classification']['prediction']['label'], 'RELEVANT')
-            self.assertEqual(report['metrics']['policy']['real/all_curated_cases']['canonical_rules']['recall'], 0)
 
     def test_routing_metrics_distinguish_uncertainty_from_lost_relevant_clauses(self):
         from xfed.evaluation import classification_metrics
@@ -1771,25 +1595,6 @@ class QualityTests(unittest.TestCase):
         example['action'] = 'modify'
         self.assertEqual(len(compile_plan(answer, 'contract', item)['odrlPolicy']['permission']), 2)
 
-    def test_logical_constraints_keep_or_distinct_from_and_and_preserve_order_invariance(self):
-        from xfed.evaluation import canonical_rule, load_reference
-        data = load_reference(ROOT)
-        purpose = dict(leftOperand='purpose', operator='eq', rightOperand='research')
-        approval = dict(leftOperand='approval', operator='eq', rightOperand='agreed by Customer')
-        item = dict(self.item, text='Provider may use supplied data for research or as agreed by Customer.')
-        answer = plan(item, 'permission', action='use', conditions=[{'or': [purpose, approval]}])
-        Draft202012Validator(response_schema(ROOT)).validate(answer)
-        output = compile_plan(answer, 'contract', item)
-        validate_fragment(output, 'contract', item, ROOT)
-        rule = dict(output['odrlPolicy']['permission'][0], kind='permission')
-        canonical = canonical_rule(rule, data, 'contract')
-        self.assertEqual(canonical, canonical_rule(dict(rule, constraint=[{'or': [approval, purpose]}]), data, 'contract'))
-        self.assertNotEqual(canonical, canonical_rule(dict(rule, constraint=[purpose, approval]), data, 'contract'))
-        self.assertEqual(canonical_rule(dict(rule, constraint=[{'and': [purpose, approval]}]), data, 'contract'),
-                         canonical_rule(dict(rule, constraint=[purpose, approval]), data, 'contract'))
-        answer['rules'][0]['conditions'] = [{'or': [purpose]}]
-        with self.assertRaises(ValidationError):
-            Draft202012Validator(response_schema(ROOT)).validate(answer)
 
     def test_free_access_and_plan_compliance_cannot_be_dropped_or_made_alternatives(self):
         item = dict(self.item, text='Provider may access supplied data at no charge for research in accordance with the Work Plan.')
@@ -1839,36 +1644,7 @@ class QualityTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             Draft202012Validator(response_schema(ROOT)).validate(answer)
 
-    def test_source_first_audit_requires_primary_quotes_and_supported_coverage(self):
-        from xfed.policy_evaluation import validate_inventory, validate_assessment
-        inventory = dict(requirements=[dict(statement='Provider deletes supplied data.',
-            evidence=[dict(chunk_id=self.item['chunk_id'], quote='Provider')])], uncertainties=[])
-        validate_inventory(inventory, self.item)
-        inventory['requirements'][0]['evidence'][0]['quote'] = 'Words absent from the clause'
-        with self.assertRaisesRegex(ValueError, 'source words'):
-            validate_inventory(inventory, self.item)
-        candidates = [dict(uid='r1')]
-        assessment = dict(rules=[dict(uid='r1', verdict='UNSUPPORTED', reason='Wrong actor')],
-            coverage=[dict(requirement=0, status='FULL', rule_uids=['r1'], reason='Claimed coverage')], inventory_issues=[])
-        with self.assertRaisesRegex(ValueError, 'Unsupported rules'):
-            validate_assessment(assessment, [dict(statement='Delete')], candidates)
-        assessment['coverage'][0]['status'] = 'PARTIAL'
-        validate_assessment(assessment, [dict(statement='Delete')], candidates)
 
-    def test_semantic_audit_counts_failed_cases_as_omissions_and_keeps_controls_separate(self):
-        from xfed.policy_evaluation import semantic_metrics
-        rows = [dict(requirements=2, generated_rules=2, assessment=dict(inventory_issues=[],
-                    rules=[dict(verdict='SUPPORTED'), dict(verdict='UNSUPPORTED')],
-                    coverage=[dict(status='FULL'), dict(status='PARTIAL')])),
-                dict(requirements=1, generated_rules=1, error='Audit unavailable'),
-                dict(requirements=0, generation_failed=True, generated_rules=0,
-                    assessment=dict(inventory_issues=[], rules=[], coverage=[]))]
-        result = semantic_metrics(rows)
-        self.assertEqual(result['complete_requirement_rate'], 1/3)
-        self.assertEqual(result['supported_rule_rate'], 1/3)
-        self.assertEqual(result['complete_operative_cases'], 0)
-        self.assertEqual(result['correct_controls'], 0)
-        self.assertEqual(result['audit_errors'], 1)
 
     def test_every_logical_access_branch_retains_its_required_qualification(self):
         item = dict(self.item, text='Provider may read supplied data at no charge for research.')
@@ -1939,28 +1715,6 @@ class QualityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unresolved actor role'):
             compile_plan(answer, 'contract', item)
 
-    def test_source_guards_override_a_falsely_confident_model_assessment(self):
-        from xfed.policy_evaluation import apply_source_guards
-        from xfed.policy_generation import rule_description
-        item = dict(self.item, text='Provider must notify Customer of incidents within 72 hours of discovery.')
-        answer = plan(item, action='notify', asset='incidents', conditions=[
-            dict(leftOperand='recipient', operator='eq', rightOperand='Customer'),
-            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT72H')])
-        fragment = compile_plan(answer, 'contract', item)
-        fragment['odrlPolicy']['obligation'][0]['assignee'] = 'Customer'
-        assessment = dict(rules=[dict(uid='r1', verdict='SUPPORTED', reason='Incorrect approval')],
-            coverage=[dict(requirement=0, status='FULL', rule_uids=['r1'], reason='Incorrect coverage')], inventory_issues=[])
-        checked, issues = apply_source_guards(assessment, fragment, item, 'contract')
-        self.assertIn('responsible actor', issues['r1'])
-        self.assertEqual(checked['rules'][0]['verdict'], 'UNSUPPORTED')
-        self.assertEqual(checked['coverage'][0]['status'], 'PARTIAL')
-        fragment['odrlPolicy']['obligation'][0]['assignee'] = 'Provider'
-        fragment['odrlPolicy']['obligation'][0]['constraint'][1]['operator'] = 'gteq'
-        checked, issues = apply_source_guards(assessment, fragment, item, 'contract')
-        self.assertIn('upper bound', issues['r1'])
-        description = rule_description('obligation', fragment['odrlPolicy']['obligation'][0])
-        self.assertIn('IS AT LEAST', description)
-        self.assertIn('No explicit price', description)
 
     def test_notifications_preserve_recipient_subject_trigger_and_quantitative_bound(self):
         item = dict(self.item, text='Provider must notify Customer of Incidents within 72 hours of becoming aware of the Incident.')

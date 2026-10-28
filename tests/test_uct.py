@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 from urllib.request import Request, urlopen
 
-from xfed import node_review, uct_evaluation
+from xfed import node_review
 from xfed.common import validate, write_json
 from xfed.policy_generation import complete_fragment
 from xfed.uct import (UCTWorkspace, assemble, check_contract, clause_inputs, extract_clause,
@@ -30,7 +30,7 @@ class UCTTests(unittest.TestCase):
         workspace = UCTWorkspace(ROOT)
         workspace.path = Path(temporary) / 'state.json'
         workspace.data = dict(document=deepcopy(self.document), revision=1, artifacts={}, generation=None,
-                              nodes=[], events=[], evaluation=None)
+                              nodes=[], events=[])
         return workspace
 
     def fragment(self, identifier='UCT-5.1'):
@@ -161,39 +161,8 @@ class UCTTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'depends_on'):
             node_review.check_decision(decision, self.document)
 
-    def test_benchmark_gold_frozen_separate_and_failures_count_as_omissions(self):
-        reference, cases = uct_evaluation.load_cases(ROOT)
-        self.assertEqual(len(cases), 57)
-        self.assertEqual({row['split'] for row in cases}, {'dev', 'test'})
-        case = next(row for row in cases if row['id'] == 'uct_dev_a/UCT-5.1')
-        missed = uct_evaluation.score(case, dict(classification=dict(label='NOT_RELEVANT'), policy=None), reference)
-        self.assertFalse(missed['relevance_correct'])
-        self.assertEqual(missed['fn'], 1)
-        self.assertFalse(missed['exact'])
-        control = next(row for row in cases if row['id'] == 'uct_dev_a/UCT-12.1')
-        failed = uct_evaluation.score(control, dict(failed=True), reference)
-        self.assertFalse(failed['exact'])
-        self.assertEqual(uct_evaluation.summary([], 6)['completed'], 0)
 
-    def test_benchmark_catches_extra_conditions_wrong_actor_and_wrong_deadline(self):
-        reference, cases = uct_evaluation.load_cases(ROOT)
-        case = next(row for row in cases if row['id'] == 'uct_dev_a/UCT-7.2')
-        gold = deepcopy(case['gold']['rules'][0]); gold.pop('kind'); gold['uid'] = 'r1'
-        policy = dict(odrlPolicy=dict(obligation=[gold]))
-        result = dict(classification=dict(label='RELEVANT'), policy=policy)
-        self.assertTrue(uct_evaluation.score(case, result, reference)['exact'])
-        for field, value in [('assignee', 'Someone else'), ('constraint', []), ('target', 'Other Data')]:
-            bad = deepcopy(result);bad['policy']['odrlPolicy']['obligation'][0][field] = value
-            scores = uct_evaluation.score(case, bad, reference)
-            self.assertFalse(scores['exact']);self.assertEqual(scores['fn'], 1);self.assertEqual(scores['fp'], 1)
 
-    def test_relevance_definitions_are_distinct_from_operative_rule_truth(self):
-        reference, cases = uct_evaluation.load_cases(ROOT)
-        for identifier in ('UCT-3.1', 'UCT-4.1', 'UCT-8.1'):
-            case = next(row for row in cases if row['id'] == 'uct_dev_a/' + identifier)
-            self.assertEqual(case['gold']['relevance'], 'RELEVANT')
-            self.assertEqual(case['gold']['rules'], [])
-        self.assertEqual(reference['revision_history'][0]['phase'], 'post_development_prediction_exposure')
 
     def test_partial_checkpoint_survives_cancel_without_mixed_policy_publication(self):
         client = SimpleNamespace(cancel=Event())
@@ -255,6 +224,23 @@ class UCTTests(unittest.TestCase):
                 self.assertEqual(error.exception.code, 400)
             finally:
                 server.shutdown();thread.join();server.server_close()
+
+    def test_retired_evaluation_requests_are_rejected_before_model_access(self):
+        pipeline = Pipeline(ROOT, 'http://127.0.0.1:11435')
+        with patch.object(pipeline, 'make_client') as factory:
+            with self.assertRaisesRegex(ValueError, 'classification'):
+                pipeline.start_evaluation(dict(task='policy'))
+            with self.assertRaisesRegex(ValueError, 'classification'):
+                pipeline.start_evaluation(dict(task='both'))
+            factory.assert_not_called()
+        with self.assertRaisesRegex(ValueError, 'Unknown UCT job'):
+            pipeline.start_uct(dict(action='evaluate'))
+
+    def test_classification_scores_unknown_labels_as_failed_cases(self):
+        from xfed.evaluation import classification_metrics
+        result = classification_metrics([dict(gold='RELEVANT', label='invalid')])
+        self.assertEqual(result['errors'], 1)
+        self.assertEqual(result['accuracy'], 0)
 
 
 if __name__ == '__main__':

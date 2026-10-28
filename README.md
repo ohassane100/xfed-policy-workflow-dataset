@@ -53,9 +53,8 @@ proposals. Node decisions can be scripted or requested from already running Olla
 **Generate / update affected clauses** reuses unchanged fragments and regenerates
 changed clauses and their declared dependents. Undeclared prose dependencies cannot
 be tracked automatically. Node acceptance is advisory and never deploys a policy.
-Drafts, decisions and history stay in ignored `tmp/uct_workspace/`; the separate
-synthetic UCT benchmark is `evaluation/uct_reference.json`. Its provisional strict
-and field scores must not be pooled with real-contract results.
+Drafts, decisions and history stay in ignored `tmp/uct_workspace/`.
+The **Evaluation** tab measures task 1.3 classification only.
 
 To use the university model through the existing tunnel while keeping scripts and
 reports local, run locally (no server changes or remote commands):
@@ -64,14 +63,11 @@ reports local, run locally (no server changes or remote commands):
 .venv/Scripts/python.exe -m xfed.ui --ollama-url http://127.0.0.1:11435
 ```
 
-CLI commands are in `run.md`; model configuration starts from
-`config/models.example.yaml`. Evaluation defaults to the complete independent
+Model configuration starts from
+`config/models.example.yaml`. Classification evaluation uses the complete exposed
 Contract 05 (Equinor Volve data licence); Contracts 01–03 are development material.
-See [evaluation/README.md](evaluation/README.md). Run focused tests with:
+See [evaluation/README.md](evaluation/README.md). Run regression tests with:
 
 ```bash
-python -m unittest discover -s "tests/1 preprocessing/1.3 relevance"
-python -m unittest discover -s "tests/1 preprocessing/1.4 enrichment"
-python -m unittest discover -s "tests/2 policy_generation"
-python -m unittest discover -s tests/ui
+python -m unittest discover -s tests -p "test_*.py"
 ```

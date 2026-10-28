@@ -24,8 +24,8 @@ from xfed.policy_generation import generate
 # The separate review stage is disabled; generation uses its clause evidence check.
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
 from xfed.evaluation import load_reference, reference_summary, run_evaluation
-from xfed.uct import UCTWorkspace, fingerprint
-from xfed import node_review, uct_evaluation
+from xfed.uct import UCTWorkspace
+from xfed import node_review
 
 
 STAGES = {
@@ -146,7 +146,7 @@ class Pipeline:
         saved = sorted((self.root / 'evaluation/runs').glob('*.json'), key=lambda path: path.stat().st_mtime, reverse=True)
         self.evaluation_report = next((value for path in saved
                                        if isinstance(value := read_json(path), dict) and value.get('split') == 'test'
-                                       and value.get('cohort') != 'synthetic_uct_v1'), None)
+                                       and value.get('task') == 'classification'), None)
         self._uct = None
         self._uct_lock = threading.Lock()
 
@@ -161,15 +161,12 @@ class Pipeline:
         state = self.uct.snapshot()
         state['consensus'] = node_review.consensus(state)
         state['profiles'] = node_review.NODE_PROFILES
-        reference = read_json(self.root / 'evaluation/uct_reference.json')
-        state['evaluation_reference_current'] = bool(reference and state.get('evaluation') and
-            state['evaluation'].get('source_hash') == fingerprint(reference))
         state['job'] = self.snapshot()
         return state
 
     def start_uct(self, request):
         action = request.get('action')
-        if action not in ('generate', 'review', 'evaluate'):
+        if action not in ('generate', 'review'):
             raise ValueError('Unknown UCT job.')
         mode = request.get('review_mode', 'simulated')
         if action == 'review' and mode not in ('simulated', 'ollama'):
@@ -211,17 +208,10 @@ class Pipeline:
                 else:
                     client = client_for()
                     client.preflight()
-                    if action == 'generate':
-                        self.uct.run(client, self.progress)
-                    else:
-                        report = uct_evaluation.run(self.root, client, request.get('split', 'dev'),
-                            request.get('limit'), self.progress, self.cancel)
-                        with self.uct.lock:
-                            self.uct.data['evaluation'] = report
-                            self.uct.persist()
+                    self.uct.run(client, self.progress)
                 self.update(status='cancelled' if self.cancel.is_set() else 'complete', message='UCT job finished')
             except (InterruptedError, Cancelled):
-                self.update(status='cancelled', message='UCT job cancelled; completed evaluation cases remain saved.')
+                self.update(status='cancelled', message='UCT job cancelled; completed clause work remains saved.')
             except Exception as error:
                 self.update(status='failed', message=str(error))
             finally:
@@ -453,12 +443,9 @@ class Pipeline:
     def start_evaluation(self, request):
         if request.get('split', 'test') != 'test':
             raise ValueError('The UI evaluates the test set only. Use the local CLI for development.')
-        options = dict(task=request.get('task', 'both'), split='test',
-                       policy_mode=request.get('policy_mode', 'isolated'))
-        if options['task'] not in ('classification', 'policy', 'both'):
-            raise ValueError('Choose a supported evaluation task.')
-        if options['policy_mode'] not in ('isolated', 'gated') or (options['policy_mode'] == 'gated' and options['task'] != 'both'):
-            raise ValueError('Gated policy evaluation requires both tasks; otherwise choose isolated.')
+        if request.get('task', 'classification') != 'classification' or 'policy_mode' in request:
+            raise ValueError('Only task 1.3 classification evaluation is supported.')
+        options = dict(task='classification', split='test')
         data = load_reference(self.root)
         client = self.make_client(request)
         with self.lock:
@@ -467,17 +454,14 @@ class Pipeline:
             self.cancel.clear()
             self.active_client = client
             self.evaluation_report = None
-            self.job = dict(status='running', contract='reference set', stage='2' if options['task'] == 'policy' else '1.3', mode='evaluation',
+            self.job = dict(status='running', contract='reference set', stage='1.3', mode='evaluation',
                             completed=0, total=0, message='Evaluating frozen references; pipeline outputs are preserved', log=[])
         threading.Thread(target=self.run_evaluation, args=(data, client, options), daemon=True).start()
         return self.snapshot()
 
     def run_evaluation(self, data, client, options):
         def progress(done, total, message):
-            if message.startswith(('Policy', 'Starting policy')):
-                self.update(stage='2')
-            elif message.startswith(('Classification', 'Starting classification')):
-                self.update(stage='1.3')
+            self.update(stage='1.3')
             self.progress(done, total, message)
 
         def completed(report):

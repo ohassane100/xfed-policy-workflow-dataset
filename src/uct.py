@@ -170,7 +170,9 @@ class UCTWorkspace:
         self.lock = RLock()
         self.running = False
         self.data = json.loads(self.path.read_text(encoding='utf-8')) if self.path.exists() else dict(
-            document=self.template(), revision=1, artifacts={}, generation=None, nodes=[], events=[], evaluation=None)
+            document=self.template(), revision=1, artifacts={}, generation=None, nodes=[], events=[])
+
+        self.data.pop('evaluation', None)
 
     def template(self):
         return check_contract(json.loads((self.root / 'config/uct_template.json').read_text(encoding='utf-8'))['contract'])
