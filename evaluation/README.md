@@ -24,10 +24,11 @@ The dashboard saves reports in ignored evaluation/runs/. Historical local report
 are preserved, but retired task reports are not loaded into the classification UI.
 Policy generation checks are separate; the Policy review tab remains a static demo.
 
-## Provisional policy reference
+## Reference policy set
 
-`policy_reference.json` is a ChatGPT/Codex-authored pilot covering 12 previously
-inspected clauses from Contracts 01–03. Ten cases are scored; an unfilled form
+`policy_reference.json` contains the reference policy set: a provisional pilot
+prepared using ChatGPT/Codex, covering 12 previously inspected clauses from
+Contracts 01–03. Ten cases are scored; an unfilled form
 note and the publication/objection clause await review and are excluded. The
 reference was authored from source before the current Qwen comparison. It is
 neither independently verified legal ground truth nor an unseen-agreement test.
