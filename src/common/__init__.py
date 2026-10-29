@@ -51,6 +51,61 @@ def constraint_branches(constraints):
     return result
 
 
+def constraint_truth(constraints, state, parameters=None):
+    """Three-valued evaluation of the supported comparison subset, not access control.
+
+    Missing values, unresolved parameters and unsupported operators stay unknown.
+    A false prohibition condition does not grant a permission.
+    """
+    def conjunction(values):
+        return False if False in values else None if None in values else True
+
+    def evaluate(entry):
+        for group in ('and', 'or', 'xone'):
+            if group in entry:
+                values = [evaluate(child) for child in entry[group]]
+                if group == 'and':
+                    return conjunction(values)
+                if group == 'or':
+                    return True if True in values else None if None in values else False
+                true_count = sum(value is True for value in values)
+                return False if true_count > 1 else None if None in values else true_count == 1
+        if entry['leftOperand'] not in state:
+            return None
+        left = state[entry['leftOperand']]
+        if 'rightOperandReference' in entry:
+            if entry['rightOperandReference'] not in (parameters or {}):
+                return None
+            right = parameters[entry['rightOperandReference']]
+        else:
+            right = entry['rightOperand']
+        operator = entry['operator']
+        if operator in ('eq', 'neq'):
+            same = left == right and (isinstance(left, bool) == isinstance(right, bool))
+            return same if operator == 'eq' else not same
+        if operator in ('isAnyOf', 'isNoneOf') and isinstance(right, list) and not isinstance(left, (list, dict)):
+            included = any(left == value and (isinstance(left, bool) == isinstance(value, bool)) for value in right)
+            return included if operator == 'isAnyOf' else not included
+        if operator == 'isAllOf' and isinstance(left, list) and isinstance(right, list):
+            return all(value in left for value in right)
+        if operator in ('lt', 'lteq', 'gt', 'gteq'):
+            from decimal import Decimal
+            def number(value):
+                if type(value) in (int, float):
+                    return Decimal(str(value))
+                duration = DURATION.fullmatch(value) if isinstance(value, str) else None
+                if duration and not (duration['years'] or duration['months']):
+                    return sum(Decimal(duration[key] or '0') * multiplier for key, multiplier in
+                               (('days', 86400), ('hours', 3600), ('minutes', 60), ('seconds', 1)))
+                return None
+            left, right = number(left), number(right)
+            if left is None or right is None:
+                return None
+            return {'lt': left < right, 'lteq': left <= right, 'gt': left > right, 'gteq': left >= right}[operator]
+        return None
+    return conjunction([evaluate(entry) for entry in constraints])
+
+
 def clause_number(text):
     match = CLAUSE.match(text)
     if not match:
@@ -98,6 +153,18 @@ def standalone_heading(chunk):
     return bool((text == heading or numbered_title) and len(text.split()) <= 14
                 and not re.search(r'\b(?:shall|must|may|means|is|are|will|can|only|not|no|without|'
                                   r'delete|retain|notify|disclose|provide|return|process)\b|[;:]\s*\S', text, re.I))
+
+
+def definition_only(chunk):
+    """A named definition without an operative statement creates no policy rule."""
+    text = chunk['text'].strip()
+    text = re.sub(r'^\s*\d+(?:\.\d+)*[.):]?\s*\n', '', text)
+    match = DEFINITION.match(text)
+    if not match:
+        return False
+    body = text[match.end():]
+    return not re.search(r'\b(?:shall|must|may|can|will|cannot|permitted|prohibited|required|'
+                         r'undertakes|obligation|only|entitled)\b|\b(?:has|have)\s+(?:the\s+)?right\b', body, re.I)
 
 
 def explicit_information_duty(chunk):

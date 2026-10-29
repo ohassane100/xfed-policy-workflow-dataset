@@ -13,7 +13,7 @@ from xfed.common import map_chunks, schema, validate
 from xfed.enrichment import ContextIndex
 from xfed.llm import OllamaConnectionError
 from xfed.policy import to_odrl
-from xfed.policy_generation import check_grounding, context_char_budget, request_value, rule_description, rules, summarize_error
+from xfed.policy_generation import check_grounding, context_char_budget, request_value, rule_description, rule_examples, rules, summarize_error
 
 
 def fingerprint(value):
@@ -70,14 +70,15 @@ def review_item(item, worker, prompt, contract, root, require_resolved=True):
     failure = None
     for attempt in range(2):
         try:
-            budget = context_char_budget(worker, prompt=prompt) - len(json.dumps(candidates, ensure_ascii=False)) - 512
+            bindings = [*item.get('parameter_bindings', []), *item.get('party_bindings', [])]
+            prepared = [dict(candidate, encoded_meaning=rule_description(candidate['rule_type'], candidate['rule'], bindings),
+                             example_evaluations=rule_examples(candidate['rule_type'], candidate['rule'])) for candidate in candidates]
+            budget = context_char_budget(worker, prompt=prompt) - len(json.dumps(prepared, ensure_ascii=False).encode('utf-8')) - 512
             budget -= len(json.dumps(response_schema, ensure_ascii=False).encode('utf-8'))
             value, supplied = request_value(contract, item, budget)
             if value is None or not supplied['context_complete']:
                 raise ValueError('Review evidence exceeds the safe input budget; increase context tokens.')
-            bindings = [*item.get('parameter_bindings', []), *item.get('party_bindings', [])]
-            value['candidate_rules'] = [dict(candidate, encoded_meaning=rule_description(
-                candidate['rule_type'], candidate['rule'], bindings)) for candidate in candidates]
+            value['candidate_rules'] = prepared
             value['parameter_bindings'] = item.get('parameter_bindings', [])
             value['party_bindings'] = item.get('party_bindings', [])
             system = prompt if failure is None else prompt + '\nRepair the response format: ' + failure

@@ -177,7 +177,7 @@ def score(reference, predictions, root=Path('.')):
             f1=2 * precision * recall / (precision + recall) if precision + recall else 0.0), cases=results)
 
 
-def run(reference, client, root, output):
+def run(reference, client, root, output, include_unreviewed=False):
     from xfed.policy_generation import generate
     predictions = dict(reference_sha256=reference['sha256'], model=client.model,
         model_digests=[worker.model_digest for worker in client.clients],
@@ -186,8 +186,11 @@ def run(reference, client, root, output):
             for folder in ('src', 'schemas', 'prompts') for path in (root / folder).rglob('*')
             if path.suffix in ('.py', '.json', '.md', '.html')}),
         scope='Isolated policy extraction using frozen supplied context; relevance routing and PDF extraction are not measured.', cases=[])
+    predictions['include_unreviewed'] = include_unreviewed
     def operation(case):
         row = dict(case_id=case['case_id'], source_sha256=case['source_sha256'])
+        if case['status'] != 'provisional' and not include_unreviewed:
+            return dict(row, policy=None, skipped='Excluded before tuning; no model request needed.')
         try:
             with client.for_chunk(case['case_id']) as worker:
                 policy, report = generate(dict(contract_id=case['contract_id'], items=[deepcopy(case['input'])]), worker, root)
@@ -220,6 +223,9 @@ def main():
     parser.add_argument('--base-url', default='http://127.0.0.1:11435')
     parser.add_argument('--model', default='qwen3.5:122b-a10b')
     parser.add_argument('--workers', type=int, choices=[1, 2, 3], default=1)
+    parser.add_argument('--think', choices=['on', 'off'], default='on')
+    parser.add_argument('--output-tokens', type=int, default=12288)
+    parser.add_argument('--include-unreviewed', action='store_true', help='Also run the pre-excluded diagnostic cases; never score them.')
     args = parser.parse_args()
     reference = load_reference(args.root, args.reference)
     if args.command == 'describe':
@@ -232,10 +238,10 @@ def main():
     else:
         from xfed.llm import OllamaPool
         pool = OllamaPool([args.base_url], args.model, workers_per_endpoint=args.workers,
-                          num_ctx=32768, num_predict=8192, timeout=900, think=False)
+                          num_ctx=32768, num_predict=args.output_tokens, timeout=900, think=args.think == 'on')
         try:
             pool.preflight()
-            run(reference, pool, args.root, args.output)
+            run(reference, pool, args.root, args.output, args.include_unreviewed)
         finally:
             pool.close()
 

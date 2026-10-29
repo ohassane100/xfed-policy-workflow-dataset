@@ -34,6 +34,10 @@ Stage 2 extracts atomic rules with source IDs, copies original evidence locally,
 checks each clause for unsupported rules and omissions with a fresh model request.
 One correction is allowed; rejected and partial clauses remain in the generation
 report. The check uses the same model.
+The model-facing grammar separates modalities, uses a small condition vocabulary,
+and lets explicit ONLY restrictions state allowed alternatives; code computes their
+forbidden complement. Source checks require explicit deadlines, time spans and
+resolved targets. They cover known patterns, not every legal construction.
 The saved `policy.json` uses the readable v2 schema: one `rules` list and one
 `sources` catalogue, including exact quotations and PDF locations. **Export ODRL**
 provides the compatibility representation. Old policy files remain readable.
@@ -42,6 +46,9 @@ are preserved. Schema simplification alone does not demonstrate better extractio
 Actor/asset labels must appear in cited source clauses. Unsupported rule groups are
 withheld together with their prerequisites; supported groups can remain as an
 explicit partial draft.
+Policy thinking Auto enables supported Qwen3.5 reasoning; classification Auto stays
+off when supported. UI and policy-pilot defaults reserve 12,288 output tokens in a 32,768-token
+context. Existing model configuration and explicit run settings take precedence.
 Evaluation saves predictions and provisional scores after each completed request;
 unfinished cases stay visible until final scoring.
 Relevant and uncertain clauses reach generation; classification exclusions are

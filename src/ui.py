@@ -130,7 +130,7 @@ class Pipeline:
         self.ollama_url = ollama_url.rstrip('/')
         self.worker_config = load_client(config) if config else None
         self.service_settings = getattr(self.worker_config, 'service', None)
-        self.defaults = dict(model=None, timeout=600, num_ctx=16384, num_predict=4096, think='auto',
+        self.defaults = dict(model=None, timeout=900, num_ctx=32768, num_predict=12288, think='auto',
                              relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1,
                              relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None, keep_alive='30m')
         if self.worker_config:

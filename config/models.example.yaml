@@ -3,10 +3,10 @@ relevance_classifier:
   provider: ollama
   base_url: http://localhost:11434
   model: llama3.1:70b
-  timeout: 300
-  num_ctx: 16384
-  num_predict: 4096
-  think: auto  # Disable optional policy thinking when the model supports it.
+  timeout: 900
+  num_ctx: 32768
+  num_predict: 12288
+  think: auto  # Prefer supported policy reasoning; classification stays separate.
   relevance_num_predict: 4096
   relevance_batch_size: 1
   relevance_compact: false

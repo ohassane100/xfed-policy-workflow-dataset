@@ -40,7 +40,9 @@ python -m xfed.policy_evaluation score --predictions tmp/policy-pilot.json --out
 ```
 
 This local runner uses the forwarded API, with no remote commands or private
-services. It tests isolated extraction using frozen context, including definitions
+services. Its defaults enable reasoning with 12,288 output tokens. Excluded cases
+are skipped unless `--include-unreviewed` is supplied; their scores remain excluded.
+It tests isolated extraction using frozen context, including definitions
 and no-rule cases; it does not measure relevance routing or PDF extraction.
 It records reference, code, input, PDF and model identities. Results are saved
 after each case; interim reports are labelled incomplete and missing cases count
@@ -60,3 +62,8 @@ to match predictions. Keep uncertain cases excluded until reviewed. For this sma
 project, combine this comparison with source inspection of important mismatches
 and focused regression tests for polarity, exceptions, clocks and binding scope.
 Do not build another model-jury system merely to obtain a higher score.
+
+Generation also gives its same-model reviewer small computed examples of purpose
+restrictions. Missing state, unresolved values and unsupported comparisons stay
+unknown. These examples check the encoded logic, not whether it matches the law
+or source; a false prohibition condition never grants a permission.

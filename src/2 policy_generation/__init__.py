@@ -9,12 +9,30 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator, ValidationError
 
-from xfed.common import DURATION, constraint_branches, constraint_leaves, map_chunks, schema, standalone_heading, validate
+from xfed.common import DURATION, constraint_branches, constraint_leaves, constraint_truth, definition_only, map_chunks, standalone_heading, validate
 from xfed.policy import odrl_schema, to_compact, verify_sources
 
 
 OPERATORS = ('eq', 'neq', 'lt', 'lteq', 'gt', 'gteq', 'isA', 'hasPart',
              'isPartOf', 'isAllOf', 'isAnyOf', 'isNoneOf')
+
+EXTRACTION_FIELDS = ('recipient', 'purpose', 'scope', 'compliance', 'security', 'event', 'elapsedTime',
+    'payAmount', 'approval', 'discretion', 'completeness', 'quality', 'format', 'regulatoryShorterPeriodRequired',
+    'spatial', 'dateTime', 'retention', 'quantity', 'frequency', 'duration', 'noticePeriod', 'leadTime',
+    'postponementDuration', 'postponementStart', 'ownership', 'attribution', 'encryption', 'impact')
+
+
+def source_time_terms(item):
+    terms = []
+    for clause in [item, *item.get('context', [])]:
+        text = ' '.join(clause['text'].split())
+        patterns = (r'\bwithout undue delay\b', r'\bFor the duration of [^,.;]{1,90}(?=,)',
+                    r'\bDuring [^,.;]{1,90},? and for (?:a )?subsequent period of [^,.;]{1,70}(?=,)')
+        for pattern in patterns:
+            for match in re.finditer(pattern, text, re.I):
+                if match[0] not in terms:
+                    terms.append(match[0])
+    return terms
 
 
 def rule_description(kind, rule, bindings=()):
@@ -37,6 +55,41 @@ def rule_description(kind, rule, bindings=()):
         if not operands & names:
             meaning += f' No explicit {label} constraint.'
     return meaning
+
+
+def rule_examples(kind, rule):
+    """Small mechanical illustrations of conditional prohibition semantics."""
+    if kind != 'prohibition':
+        return []
+    constraints = rule.get('constraint', [])
+    leaves = list(constraint_leaves(constraints))
+    if not any(entry['leftOperand'] == 'purpose' for entry in leaves):
+        return []
+    from itertools import product
+    base, variants = {}, {}
+    for entry in leaves:
+        if 'rightOperand' not in entry:
+            continue
+        field, value = entry['leftOperand'], entry['rightOperand']
+        values = value if isinstance(value, list) else [value]
+        if field in ('purpose', 'approval') and all(isinstance(part, (str, bool, int, float)) for part in values):
+            variants.setdefault(field, [])
+            for part in values:
+                if part not in variants[field]:
+                    variants[field].append(part)
+        elif entry['operator'] == 'eq':
+            base.setdefault(field, value)
+    for field in variants:
+        variants[field] = [*variants[field][:2], '__OTHER_UNSPECIFIED_VALUE__']
+    examples = []
+    for values in product(*(variants[field] for field in variants)):
+        state = dict(base, **dict(zip(variants, values)))
+        active = constraint_truth(constraints, state)
+        if active is not None:
+            examples.append(dict(state=state, prohibition_applies=active))
+        if len(examples) >= 9:
+            break
+    return examples
 
 
 def rules(policy):
@@ -258,6 +311,24 @@ def clause_decoder_schema(output_schema, item):
             for child in value:
                 evidence_ids(child)
     evidence_ids(decoder_schema)
+    # A small operand profile is easier to generate consistently than arbitrary
+    # property names. Qualitative timing is a source phrase, never a numeric
+    # duration comparison or an invented decomposition into separate periods.
+    comparison = decoder_schema['$defs']['comparison']['anyOf']
+    literal = deepcopy(comparison[0])
+    literal['properties']['leftOperand'] = dict(type='string', enum=list(EXTRACTION_FIELDS))
+    reference = deepcopy(comparison[1])
+    reference['properties']['leftOperand'] = dict(type='string', enum=list(EXTRACTION_FIELDS))
+    timing = deepcopy(literal)
+    timing['properties']['leftOperand'] = dict(type='string', const='timing')
+    timing['properties']['operator'] = dict(type='string', const='eq')
+    timing['properties']['rightOperand'] = dict(type='string', minLength=1)
+    terms = source_time_terms(item)
+    if terms and len(terms) <= 16:
+        timing['properties']['rightOperand']['enum'] = terms
+    for key in ('unit', 'dataType'):
+        timing['properties'].pop(key, None)
+    decoder_schema['$defs']['comparison']['anyOf'] = [literal, reference, timing]
     complexity = len(re.findall(r'\b(?:shall|must|may|can|will|and|or|nor)\b', item['text'], re.I))
     decoder_schema['properties']['rules']['maxItems'] = max(2, min(12, 2 + complexity))
     access_matches = list(re.finditer(r'\b(?:the\s+)?([A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,3})\s+shall\s+have\s+access\b', item['text']))
@@ -274,6 +345,31 @@ def clause_decoder_schema(output_schema, item):
         properties['action'] = dict(type='string', const='read')
         properties['actor'] = dict(type='string', const=access[1])
         properties['actor_role'] = dict(type='string', const='literal')
+    # The grammar encodes modality-specific structure instead of asking the
+    # model to remember which combinations are legal. Empty legacy arrays are
+    # accepted, but do not need to be emitted.
+    base = decoder_schema['properties']['rules']['items']
+    kinds = ([base['properties']['kind']['const']] if 'const' in base['properties']['kind']
+             else base['properties']['kind']['enum'])
+    variants = []
+    for kind in kinds:
+        variant = deepcopy(base)
+        variant['properties']['kind'] = dict(type='string', const=kind)
+        variant['required'] = [key for key in variant['required'] if key not in ('duties', 'remedies')]
+        for field, parent in (('duties', 'permission'), ('remedies', 'prohibition')):
+            if kind != parent:
+                variant['properties'][field] = dict(type='array', maxItems=0, items={})
+        if (kind == 'permission' and re.search(r'\baccess\b.{0,100}\bdepends on\b.{0,240}\bsecurity requirements\b',
+                                              ' '.join(item['text'].split()), re.I)
+                and not re.search(r'\b(?:shall|must)\s+(?:meet|comply|satisfy)\b', item['text'], re.I)):
+            # A simple eligibility condition needs no separate action/duty plan.
+            variant['properties']['duties'] = dict(type='array', maxItems=0, items={})
+        if kind == 'restriction':
+            variant['required'].append('allowed_when')
+        else:
+            variant['properties'].pop('allowed_when', None)
+        variants.append(variant)
+    decoder_schema['properties']['rules']['items'] = variants[0] if len(variants) == 1 else dict(anyOf=variants)
     return decoder_schema
 
 
@@ -297,6 +393,9 @@ def generate_answer(client, prompt, contract, item, output_schema, feedback=None
                              f"{supplied_clause['omitted_context_count']} context entries do not fit.")
         if feedback is not None:
             value = dict(correction=feedback, **value)
+        terms = source_time_terms(item)
+        if terms:
+            value['source_timing_phrases'] = terms
         try:
             answer = client.generate(prompt, value, decoder_schema, num_predict=output_limit,
                                      truncate=False, compact_json=True)
@@ -307,7 +406,7 @@ def generate_answer(client, prompt, contract, item, output_schema, feedback=None
                 last = getattr(client, 'last_request', None) or {}
                 if last.get('thinking_chars') and not last.get('answer_chars'):
                     raise ValueError(f'{error} Reasoning exhausted the budget without an answer; '
-                                     'use Policy thinking Auto or Off instead of repeating the request.') from error
+                                     'increase output tokens or turn Policy thinking Off instead of repeating the request.') from error
                 if output_retries == 0 and output_limit < maximum_output_limit:
                     output_limit = maximum_output_limit
                     output_retries += 1
@@ -407,7 +506,8 @@ def response_schema(root=Path('.')):
     metadata.pop('minProperties', None)
     atom = deepcopy(original['$defs']['atomicConstraint'])
     atom['properties'].pop('uid', None)
-    atom['properties']['operator'] = dict(type='string', enum=list(OPERATORS))
+    atom['properties']['operator'] = dict(type='string', enum=[operator for operator in OPERATORS
+        if operator not in ('isA', 'hasPart', 'isPartOf')])
     # Bounded, typed alternatives keep Ollama's grammar finite. Saved output
     # supports recursive ODRL logic; extraction needs only OR-of-AND branches.
     literal = dict(type=['string', 'number', 'boolean'])
@@ -438,8 +538,9 @@ def response_schema(root=Path('.')):
     # Decide modality before emitting actions/conditions. In an autoregressive
     # grammar, deciding prohibition last encourages double-negated predicates.
     rule = dict(type='object', additionalProperties=False,
-        required=['kind', *required, 'duties', 'remedies'], properties=dict(
-            kind=dict(type='string', enum=['permission', 'prohibition', 'obligation']), **properties,
+        required=['kind', *required], properties=dict(
+            kind=dict(type='string', enum=['permission', 'prohibition', 'obligation', 'restriction']), **properties,
+            allowed_when=dict(constraint, minItems=1),
             duties=dict(type='array', items=duty), remedies=dict(type='array', items=duty)))
     return dict(type='object', additionalProperties=False, required=['rules', 'unrepresented', 'reason'],
         **{'$defs': definitions},
@@ -453,6 +554,10 @@ def response_schema(root=Path('.')):
 
 def compile_plan(answer, contract, item, rejected=None):
     """Resolve source IDs, check legacy quotes and deterministically build ODRL."""
+    answer = deepcopy(answer)
+    for value in answer['rules']:
+        value.setdefault('duties', [])
+        value.setdefault('remedies', [])
     def normalized(text):
         # Typographic apostrophes and line-wrapped whitespace do not change a
         # literal party/asset name. Keep all words and logical connectors.
@@ -516,6 +621,14 @@ def compile_plan(answer, contract, item, rejected=None):
         # Labels must still be literal source text; no new party/asset is inferred.
         cited = [normalized(clause['text']) for clause in [item, *item['context']]
                  if clause['chunk_id'] in cited_ids]
+        if re.match(r'^(?:(?:all|any|the)\s+)?(?:such|this|these|that|those)\b', normalized(value['asset'])):
+            raise ValueError('Resolve the asset antecedent to its explicit source name; '
+                             'such records and this information are not standalone targets.')
+        if re.search(r'\b(?:necessary for|in accordance with|subject to|upon request|unless|provided that|'
+                     r'in connection with|in relation to|that might|discovered in|for all|for any)\b',
+                     normalized(value['asset'])):
+            raise ValueError('Keep the asset as its explicit noun label. Move necessity, compliance, '
+                             'triggers and exceptions into this rule\'s conditions, not its asset name.')
         for field in ('actor', 'asset', 'issuer'):
             if field == 'actor' and value.get('actor_role', 'literal') != 'literal':
                 continue
@@ -524,6 +637,15 @@ def compile_plan(answer, contract, item, rejected=None):
                 raise ValueError('Rule ' + field + ' must use a literal label from its cited evidence; '
                                  'cite the supplied definition instead of inventing a label.')
         primary = normalized(item['text'])
+        # Custom actions retain their source verb rather than selecting a
+        # plausible but different operation (e.g. establish vs implement).
+        canonical = {'read', 'delete', 'notify', 'inform', 'report', 'provideaccess',
+                     'keepconfidential', 'obtainapproval', 'requestdelay', 'distribute', 'reproduce'}
+        verb = re.match(r'[A-Z]?[a-z]+', value['action'])
+        if (verb and value['action'].casefold() not in canonical
+                and re.search(r'\b(?:shall|must|may|can|will)\b', primary)
+                and not re.search(r'\b' + re.escape(verb[0].casefold().removesuffix('e')) + r'\w*\b', primary)):
+            raise ValueError('Custom action must retain a verb in the PRIMARY clause: ' + value['action'])
         if re.search(r'\b(?:shall|must|may|can)\b|\b(?:is|are)\s+permitted\b', primary):
             primary_actions = {
                 'notify': r'\b(?:notif\w*|inform\w*|report\w*|aware\w*)\b',
@@ -536,6 +658,74 @@ def compile_plan(answer, contract, item, rejected=None):
                                  'Do not extract a parent/context duty or turn a request into obtaining approval.')
         leaves = list(constraint_leaves(value['conditions']))
         branches = constraint_branches(value['conditions'])
+        missing = []
+        # Preserve explicit source time spans without making the LLM invent
+        # calendar boundaries or reason about a multi-period Boolean expression.
+        period = re.search(r'\b(for the duration of [^,.;]{1,90}),', primary)
+        shared_period = re.search(r'\b(during [^,.;]{1,90},? and for (?:a )?subsequent period of [^,.;]{1,70}),', primary)
+        only_statement = re.search(r'\b(?:shall|must|may|can)\s+(?:only\s+|be\s+\w+\s+only\b)', primary)
+        restriction_sentence = (primary[primary.rfind('.', 0, only_statement.start()) + 1:].split('.', 1)[0]
+                                if only_statement else '')
+        if (value.get('kind') == 'restriction' and shared_period and only_statement
+                and primary.rfind('.', 0, only_statement.start()) > shared_period.end()
+                and shared_period[1] not in restriction_sentence
+                and not re.search(r'\b(?:same|that|this|above)\s+period\b', restriction_sentence)
+                and any(condition['leftOperand'].casefold() == 'timing'
+                    and normalized(str(condition.get('rightOperand', ''))) == shared_period[1] for condition in leaves)):
+            missing.append('Do not carry the earlier sentence\'s confidentiality/storage period into the separate ONLY use rule. '
+                           'Retain its allowed_when purposes and agreement exception; conditions must reflect its own applicability.')
+        required_period = (period[1] if period and kind == 'permission' else
+                           shared_period[1] if shared_period and value['action'].casefold() in ('keepconfidential', 'store') else None)
+        if required_period and not all(any(
+                condition['leftOperand'].casefold() == 'timing' and condition['operator'] == 'eq'
+                and normalized(str(condition.get('rightOperand', ''))) == required_period for condition in branch)
+                for branch in branches):
+            missing.append('Retain the complete source period as timing eq ' + repr(required_period) + ' on this rule.')
+        if (value['action'].casefold() == 'maintain' and re.search(r'\bmaintain\s+complete\b', primary)
+                and not all(re.search(r'\bcomplete\b', normalized(json.dumps([value['asset'], branch]))) for branch in branches)):
+            missing.append('Retain the explicit complete-records quality requirement in the asset or a completeness condition.')
+        if kind == 'permission' and value['action'].casefold() in ('provideaccess', 'grantaccess', 'grant'):
+            recipient = re.search(r'\bmay\s+grant\s+(?:(?:the|a|an)\s+)?([A-Z][\w-]*(?:\s+[A-Z][\w-]*)?)'
+                                  r'.{0,140}\baccess\b', ' '.join(item['text'].split()))
+            if recipient and not all(any(condition['leftOperand'].casefold() == 'recipient'
+                    and normalized(str(condition.get('rightOperand', ''))).removeprefix('the ') == normalized(recipient[1])
+                    for condition in branch) for branch in branches):
+                missing.append('The grant must retain recipient eq ' + repr(recipient[1]) + '.')
+            if 'sole discretion' in primary and not all(any(
+                    condition['leftOperand'].casefold() == 'discretion'
+                    and 'discretion' in normalized(str(condition.get('rightOperand', '')))
+                    for condition in branch) for branch in branches):
+                missing.append('Retain the source sole-discretion qualification on the grant.')
+            if (re.search(r'\baccess\b.{0,100}\bdepends on\b.{0,240}\bsecurity requirements\b', primary)
+                    and not all(any(condition['leftOperand'].casefold() in ('security', 'compliance')
+                        and 'security' in normalized(str(condition.get('rightOperand', '')))
+                        for condition in branch) for branch in branches)):
+                missing.append('Retain the continuing security prerequisite as a condition of the grant.')
+        if value['action'].casefold() in ('notify', 'inform', 'report'):
+            named = re.search(r'\b(?:notify|inform)\s+(?:(?:the|all|each)\s+)?([A-Z][\w-]*)\s+'
+                              r'(?:of|about|without|within|regarding|that)\b', item['text'])
+            if named and not all(any(condition['leftOperand'].casefold() == 'recipient' for condition in branch)
+                                 for branch in branches):
+                missing.append('Retain the explicit notification recipient.')
+            if 'without undue delay' in primary and not all(any(
+                    condition['leftOperand'].casefold() == 'timing' and condition['operator'] == 'eq'
+                    and normalized(str(condition.get('rightOperand', ''))) == 'without undue delay'
+                    for condition in branch) for branch in branches):
+                missing.append('Retain qualitative timing eq without undue delay on every notification branch.')
+            bound = re.search(r'\bwithin\s+(\d+)\s*(?:\([^)]*\)\s*)?(hours?|days?)\b', primary)
+            if bound:
+                maximum = Decimal(bound[1]) * (3600 if bound[2].startswith('hour') else 86400)
+                def source_upper_bound(condition):
+                    duration = DURATION.fullmatch(str(condition.get('rightOperand', '')))
+                    return (condition['leftOperand'].casefold() == 'elapsedtime'
+                        and condition['operator'] in ('lt', 'lteq') and duration and not (duration['years'] or duration['months'])
+                        and sum(Decimal(duration[key] or '0') * multiplier for key, multiplier in
+                            (('days', 86400), ('hours', 3600), ('minutes', 60), ('seconds', 1))) <= maximum)
+                if not all(any(source_upper_bound(condition) for condition in branch) for branch in branches):
+                    missing.append('Retain the explicit within-period upper bound on every branch: elapsedTime lteq '
+                                   + ('PT' + bound[1] + 'H' if bound[2].startswith('hour') else 'P' + bound[1] + 'D') + '.')
+        if missing:
+            raise ValueError(' '.join(missing))
         if (kind == 'obligation' and 'security requirements' in normalized(value['asset'])
                 and re.search(r'\baccess\b.{0,100}\b(?:depends on|subject to|only if|conditional on)\b', primary)
                 and not re.search(r'\b(?:shall|must)\s+(?:meet|comply|satisfy|maintain)\b', primary)):
@@ -664,7 +854,9 @@ def compile_plan(answer, contract, item, rejected=None):
         if kind == 'prohibition':
             scope = ' '.join(cited)
             exceptions = r'\b(?:unless|except|without|outside|other than|non[- ]|unauthori[sz]ed|unapproved)\b'
-            if re.search(r'\b(?:not|nor|no)\b', scope) and not re.search(exceptions, scope):
+            only_limit = re.search(r'\b(?:shall|must|may|can)\s+(?:only\s+(?:be\s+)?(?:used?|shared?|disclosed?)|'
+                                   r'be\s+(?:used|shared|disclosed)\s+only)\b', primary)
+            if re.search(r'\b(?:not|nor|no)\b', primary) and not re.search(exceptions, primary) and not only_limit:
                 for condition in leaves:
                     if (condition['leftOperand'].casefold() in ('purpose', 'recipient')
                             and condition['operator'] in ('neq', 'isNoneOf')):
@@ -695,6 +887,28 @@ def compile_plan(answer, contract, item, rejected=None):
         kind = value['kind']
         start = len(traces)
         try:
+            if kind == 'restriction':
+                # A source's ONLY limitation is not a conditional permission.
+                # The model states positive allowed alternatives; code takes
+                # their complement, retaining all independent applicability terms.
+                if not re.search(r'\b(?:shall|must|may|can)\s+(?:only\s+(?:be\s+)?(?:used?|shared?|disclosed?)|'
+                                 r'be\s+(?:used|shared|disclosed)\s+only)\b', normalized(item['text'])):
+                    raise ValueError('restriction requires an explicit ONLY use/share/disclosure limitation in PRIMARY.')
+                if not value.get('allowed_when'):
+                    raise ValueError('A restriction needs positive allowed_when alternatives.')
+                def complement(entry):
+                    for group, opposite in (('and', 'or'), ('or', 'and')):
+                        if group in entry:
+                            return {opposite: [complement(child) for child in entry[group]]}
+                    inverse = dict(eq='neq', neq='eq', lt='gteq', lteq='gt', gt='lteq', gteq='lt',
+                                   isAnyOf='isNoneOf', isNoneOf='isAnyOf')
+                    if entry.get('operator') not in inverse:
+                        raise ValueError('This allowed_when operator cannot be complemented faithfully.')
+                    return dict(entry, operator=inverse[entry['operator']])
+                value['conditions'] = [*value['conditions'], *[complement(part) for part in value['allowed_when']]]
+                kind = 'prohibition'
+            elif value.get('allowed_when'):
+                raise ValueError('allowed_when belongs only to an explicit restriction, not an ordinary permission.')
             # A named example is already covered by an otherwise identical rule
             # on its general asset. Do not turn it into a second independent rule.
             for other in answer['rules']:
@@ -845,6 +1059,10 @@ def generate_item(item, client, prompt, contract, request_schema, root):
         diagnostics['deterministic_no_rule'] = 'explanatory_faq_requires_review'
         return result(None, 'Explanatory FAQ with external guidance and no explicit must/shall requirement; '
                       'review source status before creating independent contract rules.', outcome='abstained_needs_review')
+    if definition_only(item):
+        diagnostics['deterministic_no_rule'] = 'definition_without_operative_terms'
+        return result(None, 'A definition without operative requirements creates no independent rule.',
+                      outcome='abstained_needs_review')
 
     for attempt in range(2):
         try:
@@ -950,7 +1168,7 @@ def generate_odrl(document, client, root=Path('.'), progress=None, classified=No
         'profile': 'http://www.w3.org/ns/odrl/2/core',
     }, traceability=[])
     report = dict(contract_id=contract, status='draft', clauses=[],
-                  generation_strategy='source_ids_with_same_model_check_v3')
+                  generation_strategy='typed_source_rules_with_compiled_restrictions_v4')
     if classified is not None:
         validate(classified, 3, root)
         originals = {chunk['chunk_id']: chunk for chunk in classified['chunks']}
