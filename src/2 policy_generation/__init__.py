@@ -10,6 +10,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, ValidationError
 
 from xfed.common import DURATION, constraint_branches, constraint_leaves, map_chunks, schema, standalone_heading, validate
+from xfed.policy import odrl_schema, to_compact, verify_sources
 
 
 OPERATORS = ('eq', 'neq', 'lt', 'lteq', 'gt', 'gteq', 'isA', 'hasPart',
@@ -393,7 +394,7 @@ def response_schema(root=Path('.')):
         required=['chunk_id'], properties=dict(chunk_id=text)))
     evidence = dict(anyOf=[dict(type='object', additionalProperties=False, required=['primary', 'supporting'],
         properties=dict(primary=text, supporting=dict(type='array', items=text))), legacy_evidence])
-    original = schema(5, root)
+    original = odrl_schema(root)
     def inline(value):
         if isinstance(value, list):
             return [inline(child) for child in value]
@@ -934,7 +935,7 @@ def generate_item(item, client, prompt, contract, request_schema, root):
             feedback = dict(feedback=diagnostics['correction_reason'], previous_plan=diagnostics.get('rule_plan'))
 
 
-def generate(document, client, root=Path('.'), progress=None, classified=None):
+def generate_odrl(document, client, root=Path('.'), progress=None, classified=None):
     validate(document, 4, root)
     chunk_ids = [item['chunk_id'] for item in document['items']]
     if len(chunk_ids) != len(set(chunk_ids)):
@@ -1040,3 +1041,21 @@ def generate(document, client, root=Path('.'), progress=None, classified=None):
     elif report['summary']['abstained_needs_review']:
         report['status'] = 'draft_with_abstentions'
     return validate(output, 5, root), report
+
+
+def generate(document, client, root=Path('.'), progress=None, classified=None):
+    """Generate the readable v2 document; ODRL remains an explicit export."""
+    output, report = generate_odrl(document, client, root, progress, classified)
+    if output is None:
+        return None, report
+    chunks = (classified or {}).get('chunks') or [
+        clause for item in document['items'] for clause in [item, *item['context']]]
+    compact = to_compact(output, chunks, root)
+    if classified:
+        verify_sources(compact, classified['chunks'])
+    pdf = Path(root) / 'contracts' / document['contract_id'] / 'input/contract.pdf'
+    if pdf.is_file():
+        import hashlib
+        compact['document'] = dict(sha256=hashlib.sha256(pdf.read_bytes()).hexdigest())
+    report['policy_format'] = '2.0'
+    return validate(compact, 5, root), report

@@ -30,10 +30,15 @@ Rerunning a stage invalidates its downstream outputs.
 
 Ollama is used for relevance classification (1.3) and policy creation (2); enrichment (1.4) resolves context deterministically.
 
-Stage 2 extracts atomic rules with source IDs, copies original evidence locally, compiles ODRL, then
+Stage 2 extracts atomic rules with source IDs, copies original evidence locally, compiles ODRL internally, then
 checks each clause for unsupported rules and omissions with a fresh model request.
 One correction is allowed; rejected and partial clauses remain in the generation
 report. The check uses the same model.
+The saved `policy.json` uses the readable v2 schema: one `rules` list and one
+`sources` catalogue, including exact quotations and PDF locations. **Export ODRL**
+provides the compatibility representation. Old policy files remain readable.
+Optional OSDU metadata, unresolved parameters/parties, prerequisites and remedies
+are preserved. Schema simplification alone does not demonstrate better extraction.
 Actor/asset labels must appear in cited source clauses. Unsupported rule groups are
 withheld together with their prerequisites; supported groups can remain as an
 explicit partial draft.

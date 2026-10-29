@@ -12,6 +12,7 @@ from jsonschema import Draft202012Validator, ValidationError
 from xfed.common import map_chunks, schema, validate
 from xfed.enrichment import ContextIndex
 from xfed.llm import OllamaConnectionError
+from xfed.policy import to_odrl
 from xfed.policy_generation import check_grounding, context_char_budget, request_value, rule_description, rules, summarize_error
 
 
@@ -133,6 +134,7 @@ def review(policy, enriched, classified, client, root=Path('.'), progress=None, 
     validate(classified, 3, root)
     if policy is not None:
         validate(policy, 5, root)
+        policy = to_odrl(policy, root)
     contract = classified['contract_id']
     if enriched['contract_id'] != contract or (policy and policy['contract_id'] != contract):
         raise ValueError('Review inputs must belong to the same contract.')

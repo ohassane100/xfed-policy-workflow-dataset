@@ -1,0 +1,2099 @@
+{
+  "version": "policy-pilot-v2-2026-10-29",
+  "status": "AI-authored provisional reference; not legally or independently validated",
+  "author": {
+    "system": "ChatGPT/Codex assistant in this conversation",
+    "model_version": "not recorded by the client",
+    "method": "Read primary clauses, supplied context and selected PDF pages; authored expected rules directly in v2, without reading Qwen predictions for this run."
+  },
+  "scope": "12 previously inspected development clauses from Contracts 01-03. Not full agreements and not an unseen test. Frozen before the current Qwen comparison.",
+  "matching": "Exact normalized structure, with duration normalization and order-independent AND/OR. Mismatches may be equivalent representations; this measures agreement, not legal accuracy.",
+  "cases": [
+    {
+      "case_id": "contract_01:c000281",
+      "contract_id": "contract_01",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000281",
+        "text": "5.3.2\nThe Data Holder may unilaterally implement appropriate technical and organisational protection\nsolutions, such as a software update, if they do not negatively affect the User under this Contract.",
+        "source": {
+          "pages": [
+            29
+          ],
+          "block_ids": [
+            "b000469"
+          ]
+        },
+        "clause_id": "5.3.2",
+        "parent_clause_id": "5.3",
+        "context": [
+          {
+            "chunk_id": "c000279",
+            "clause_id": "5.3",
+            "heading": "5.3",
+            "text": "5.3\nProtective measures taken by the Trade Secret Holder",
+            "source": {
+              "pages": [
+                29
+              ],
+              "block_ids": [
+                "b000467"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000262",
+            "clause_id": "5",
+            "heading": "5.",
+            "text": "5.\n(if the Data made available by the Data Holder upon request of the User must be protected\nas trade secrets) Protection of trade secrets\n1. Trade secrets sharing – Data Holders cannot, in principle, refuse a Data access request under\nthe Data Act solely on the basis that certain Data are considered to be protected as a trade secret,\nas this would subvert the intended effects of the Data Act.\nSee clauses 5.1.\nTrade secrets – However, if the Data Holder identifies that certain Data covered by this Contract\nare protected as trade secrets, as defined by Directive (EU) 2016/9438 (referred to as the ‘Trade\nSecrets Directive’), they are entitled to certain rights, primarily to continue to preserve the\nconfidentiality of the secrets in question.\nUnder Article 2(1) of the Trade Secret Directive, the term ‘Trade Secret’ means information\nwhich meets three requirements: (a) it is secret in the sense that it is not, as a body or in the\nprecise configuration and assembly of its components, generally known among or readily\naccessible to persons within the circles that normally deal with the kind of information in\nquestion; (b) it has commercial value because it is secret; and (c) it has been subject to reasonable\nsteps under the circumstances, by the person lawfully in control of the information, to keep it\nsecret.\nA ‘Trade Secret Holder’ means any natural or legal person lawfully controlling such a Trade\nSecret.\nData can only be identified as trade secrets if they are protected as such by the Data Holder or\nthe Trade Secret Holder when a data access request is made in accordance with Article 4 of the\nData Act.\nSee clause 5.1.1.\n2. Initial identification of trade secrets – The Data Holders’ rights in respect of trade secrets are\n– initially – only applicable if and to the extent the Data protected as trade secrets is identified\nin the Contract.\nSee clause 5.1.2.\n3. During the Contract – The Data Holders’ rights in respect of trade secrets could, however, also\napply during the Contract, regarding new Data to be made available.\nSee clause 5.1.3.\n4. Audit rights – In order to preserve the confidentiality of the Data protected as trade secrets,\nwhile not interfering with each others’ activities, certain audit rights by means of involving\nindependent third parties may be considered, including mechanisms in the case of disagreements\nrelated to the results of the audit report. The Parties may use alternative measures to audits.\nSee clause 5.2.3.\n5. Trade Secret Holder rights (1/4) – The Data Holder (or third-party Trade Secret Holder) may\nagree with the User on requirements to preserve the confidentiality of the trade secrets as a\ncondition for sharing those identified trade secrets, such as taking certain proportionate technical\nand organisational measures.\nSee clauses 5.2 and 5.3.\n6. Trade Secret Holder rights (2/4) – If the initial measures do not suffice, the Trade Secret\nHolder may, on a case-by-case basis, for specific and identified Data protected as trade secrets,\neither unilaterally increase the level of the measures, or request that additional measures are\nagreed with the User. If there is no agreement on the necessary measures, the Data Holder may\nsuspend the sharing of specific Data protected as trade secrets, under the conditions set out in\nthe Data Act.\nSee clause 5.4.1.\n7. Trade Secret Holder rights (3/4) – The trade secret holder may also, on a case-by-case basis,\nrefuse to share specific, identified trade secrets, solely in exceptional circumstances and under\nthe conditions set out in the Data Act.\nSee clause 5.4.2.\n8. Trade Secret Holder rights (4/4) – The Trade Secret Holder may withhold or suspend data\nsharing if the User breaches their obligations related to the protection of trade secrets.\nSee clause 5.4.3.\n9. Retention of Data containing Identified Trade Secrets – If the Data Holder withholds or\nsuspends data sharing in accordance with clauses 5.4.1, 5.4.2 or 5.4.3, the Data Holder will still\nbe obliged to keep the related Data containing Identified Trade Secrets readily available by\nretaining them until such time as they can be shared within scope of the Contract.\nSee clause 5.6.\n10. Third-party identified Trade Secret Holder – If the Trade Secret Holder is a third party, the\nData Holder must make sure that clause 5 also protects their trade secrets and obtain all relevant\nauthorisations by said third party Trade Secret Holder.\nSee clause 5.1.2.",
+            "source": {
+              "pages": [
+                25,
+                26,
+                27
+              ],
+              "block_ids": [
+                "b000415",
+                "b000416",
+                "b000417",
+                "b000418",
+                "b000419",
+                "b000422",
+                "b000423",
+                "b000424",
+                "b000425",
+                "b000426",
+                "b000427",
+                "b000428",
+                "b000429",
+                "b000430",
+                "b000431",
+                "b000432",
+                "b000433",
+                "b000434",
+                "b000435",
+                "b000436",
+                "b000437",
+                "b000438",
+                "b000439",
+                "b000441",
+                "b000442",
+                "b000443",
+                "b000444"
+              ]
+            },
+            "relationship": "parent"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "c479b8d57fb90dd77b7ce727f7105bce365e6556753b2d2c38391cc91cb2f1f8",
+      "source_sha256": "83ee1a2ceecc2a0770591312d951ca67185257a48fa34fdfe63fd4b23c9f750f",
+      "notes": "The software update is an example, not a second rule. This clause concerns implementing protection solutions rather than granting a general data-use right.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_01",
+        "id": "urn:xfed:contract_01:reference:c000281",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_01:c000281:reference:1",
+            "kind": "permission",
+            "actor": "The Data Holder",
+            "action": "implement",
+            "asset": "appropriate technical and organisational protection solutions",
+            "conditions": [
+              {
+                "field": "impact",
+                "op": "eq",
+                "value": "do not negatively affect the User under this Contract"
+              }
+            ],
+            "source": "c000281"
+          }
+        ],
+        "sources": {
+          "c000281": {
+            "chunk_id": "c000281",
+            "clause_id": "5.3.2",
+            "text": "5.3.2\nThe Data Holder may unilaterally implement appropriate technical and organisational protection\nsolutions, such as a software update, if they do not negatively affect the User under this Contract.",
+            "pages": [
+              29
+            ],
+            "block_ids": [
+              "b000469"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_01:c000307",
+      "contract_id": "contract_01",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000307",
+        "text": "(a)\nuse the Data to develop a connected product that competes with the Product, nor share\nthe Data with a third party for that purpose;",
+        "source": {
+          "pages": [
+            31
+          ],
+          "block_ids": [
+            "b000504"
+          ]
+        },
+        "clause_id": "6.2.1(a)",
+        "parent_clause_id": "6.2.1",
+        "context": [
+          {
+            "chunk_id": "c000306",
+            "clause_id": "6.2.1",
+            "text": "6.2.1\nThe User undertakes not to engage in the following:",
+            "source": {
+              "pages": [
+                31
+              ],
+              "block_ids": [
+                "b000503"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000305",
+            "clause_id": "6.2",
+            "heading": "6.2",
+            "text": "6.2\nRestrictions on the use and sharing of Data",
+            "source": {
+              "pages": [
+                31
+              ],
+              "block_ids": [
+                "b000502"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000302",
+            "clause_id": "6",
+            "heading": "6.",
+            "text": "6.\n(if the Data are made available by the Data Holder upon request of the User) Data use by\nthe User",
+            "source": {
+              "pages": [
+                31
+              ],
+              "block_ids": [
+                "b000499"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000306",
+            "clause_id": "6.2.1",
+            "text": "The User undertakes not to engage in the following:",
+            "source": {
+              "pages": [
+                31
+              ],
+              "block_ids": [
+                "b000503"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "c479b8d57fb90dd77b7ce727f7105bce365e6556753b2d2c38391cc91cb2f1f8",
+      "source_sha256": "76ca3b706abac3d369084ab69b166d706cd39dcb69a9c132880ca6f52a5b7dd9",
+      "notes": "Source-first AI interpretation; no independent legal review.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_01",
+        "id": "urn:xfed:contract_01:reference:c000307",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_01:c000307:reference:1",
+            "kind": "prohibition",
+            "actor": "The User",
+            "action": "use",
+            "asset": "the Data",
+            "conditions": [
+              {
+                "field": "purpose",
+                "op": "eq",
+                "value": "develop a connected product that competes with the Product"
+              }
+            ],
+            "context": [
+              "c000306"
+            ],
+            "source": "c000307"
+          },
+          {
+            "id": "contract_01:c000307:reference:2",
+            "kind": "prohibition",
+            "actor": "The User",
+            "action": "share",
+            "asset": "the Data",
+            "conditions": [
+              {
+                "field": "recipient",
+                "op": "eq",
+                "value": "a third party"
+              },
+              {
+                "field": "purpose",
+                "op": "eq",
+                "value": "develop a connected product that competes with the Product"
+              }
+            ],
+            "context": [
+              "c000306"
+            ],
+            "source": "c000307"
+          }
+        ],
+        "sources": {
+          "c000307": {
+            "chunk_id": "c000307",
+            "clause_id": "6.2.1(a)",
+            "text": "(a)\nuse the Data to develop a connected product that competes with the Product, nor share\nthe Data with a third party for that purpose;",
+            "pages": [
+              31
+            ],
+            "block_ids": [
+              "b000504"
+            ]
+          },
+          "c000306": {
+            "chunk_id": "c000306",
+            "clause_id": "6.2.1",
+            "text": "6.2.1\nThe User undertakes not to engage in the following:",
+            "pages": [
+              31
+            ],
+            "block_ids": [
+              "b000503"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_01:c000465",
+      "contract_id": "contract_01",
+      "status": "needs_review",
+      "input": {
+        "chunk_id": "c000465",
+        "text": "3.4.3\nPlease note: cannot be a gatekeeper\nunder Article 3 of Regulation (EU)\n2022/1925",
+        "source": {
+          "pages": [
+            48
+          ],
+          "block_ids": [
+            "b000746"
+          ]
+        },
+        "clause_id": "3.4.3",
+        "context": [],
+        "unresolved_references": [
+          "Article 3: external legal reference"
+        ]
+      },
+      "pdf_sha256": "c479b8d57fb90dd77b7ce727f7105bce365e6556753b2d2c38391cc91cb2f1f8",
+      "source_sha256": "fb6d2b26bcf1939f001a9b256933478889950e9f553796e3ae9531f0c292643e",
+      "notes": "Unfilled access-request form note, with no identified third party in the supplied clause. Excluded from scoring until its intended operative status is reviewed; do not invent an actor or import external law.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_01",
+        "id": "urn:xfed:contract_01:reference:c000465",
+        "type": "Set",
+        "rules": [],
+        "sources": {}
+      }
+    },
+    {
+      "case_id": "contract_01:c001287",
+      "contract_id": "contract_01",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c001287",
+        "text": "1.4.2\nThe Provider must notify the Customer of any Incidents. The Provider must notify without\nundue delay and in any event within 72 (seventy-two) hours of becoming aware of the Incident,\nunless regulatory obligations require a warning or similar notification within a shorter period.",
+        "source": {
+          "pages": [
+            151
+          ],
+          "block_ids": [
+            "b002315"
+          ]
+        },
+        "clause_id": "1.4.2",
+        "parent_clause_id": "1.4",
+        "context": [
+          {
+            "chunk_id": "c001285",
+            "clause_id": "1.4",
+            "heading": "1.4 Notifications",
+            "text": "1.4 Notifications",
+            "source": {
+              "pages": [
+                151
+              ],
+              "block_ids": [
+                "b002313"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c001268",
+            "clause_id": "1",
+            "heading": "1. Security and Business Continuity",
+            "text": "1. Security and Business Continuity",
+            "source": {
+              "pages": [
+                150
+              ],
+              "block_ids": [
+                "b002290"
+              ]
+            },
+            "relationship": "parent"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "c479b8d57fb90dd77b7ce727f7105bce365e6556753b2d2c38391cc91cb2f1f8",
+      "source_sha256": "f538e7c3c1d38001b8ba4326ccffeb4ccda44669f2057643feed03691bed4851",
+      "notes": "Source-first AI interpretation; no independent legal review.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_01",
+        "id": "urn:xfed:contract_01:reference:c001287",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_01:c001287:reference:1",
+            "kind": "obligation",
+            "actor": "The Provider",
+            "action": "notify",
+            "asset": "any Incidents",
+            "conditions": [
+              {
+                "field": "recipient",
+                "op": "eq",
+                "value": "the Customer"
+              },
+              {
+                "field": "event",
+                "op": "eq",
+                "value": "becoming aware of the Incident"
+              },
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "without undue delay"
+              },
+              {
+                "field": "elapsedTime",
+                "op": "lteq",
+                "value": "PT72H"
+              },
+              {
+                "any": [
+                  {
+                    "field": "regulatoryShorterPeriodRequired",
+                    "op": "eq",
+                    "value": false
+                  },
+                  {
+                    "all": [
+                      {
+                        "field": "regulatoryShorterPeriodRequired",
+                        "op": "eq",
+                        "value": true
+                      },
+                      {
+                        "field": "elapsedTime",
+                        "op": "lteq",
+                        "parameter": "shorter_period"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "source": "c001287"
+          }
+        ],
+        "sources": {
+          "c001287": {
+            "chunk_id": "c001287",
+            "clause_id": "1.4.2",
+            "text": "1.4.2\nThe Provider must notify the Customer of any Incidents. The Provider must notify without\nundue delay and in any event within 72 (seventy-two) hours of becoming aware of the Incident,\nunless regulatory obligations require a warning or similar notification within a shorter period.",
+            "pages": [
+              151
+            ],
+            "block_ids": [
+              "b002315"
+            ]
+          }
+        },
+        "parameters": {
+          "shorter_period": {
+            "label": "shorter period",
+            "type": "duration",
+            "source": "c001287"
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_02:c000204",
+      "contract_id": "contract_02",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000204",
+        "text": "b. Contractor shall notify Company without undue delay of any apparent errors,\ndiscrepancies, or inconsistencies discovered in Company Provided Information\nthat might affect performance, cost, or timely completion of the Work.",
+        "source": {
+          "pages": [
+            15
+          ],
+          "block_ids": [
+            "b000222",
+            "b000223"
+          ]
+        },
+        "clause_id": "5.1.4(b)",
+        "parent_clause_id": "5.1.4",
+        "context": [
+          {
+            "chunk_id": "c000202",
+            "clause_id": "5.1.4",
+            "text": "5.1.4.",
+            "source": {
+              "pages": [
+                15
+              ],
+              "block_ids": [
+                "b000220"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000196",
+            "clause_id": "5.1",
+            "text": "5.1.\nGeneral",
+            "source": {
+              "pages": [
+                14
+              ],
+              "block_ids": [
+                "b000213"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000195",
+            "clause_id": "5",
+            "heading": "5. PERFORMANCE OF WORK",
+            "text": "5. PERFORMANCE OF WORK",
+            "source": {
+              "pages": [
+                14
+              ],
+              "block_ids": [
+                "b000212"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000086",
+            "text": "Contractor has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Contractor’ means the entity identified as Contractor in that Call-Off Order.",
+            "source": {
+              "pages": [
+                6
+              ],
+              "block_ids": [
+                "b000100"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000079",
+            "text": "Company has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Company’ means the entity identified as Company in that Call-Off Order.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000088"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000111",
+            "text": "Work means all elements of the activities to be performed by or on behalf of Contractor under an\nindividual Call-Off Order, whether or not specifically described therein, including everything that\nmay be reasonably inferred from such Call-Off Order as needing to be done by or on behalf of\nContractor in order for Contractor to fulfill all its duties, obligations, and responsibilities under such\nCall-Off Order.  Particular Work includes the provision of equipment, materials, personnel, other\nresources, and Goods, as applicable, to perform technical and other services in relation to\nexploration, development, production, and other drilling- or well-related operations of Company or\nCompany’s Affiliates.",
+            "source": {
+              "pages": [
+                8,
+                9
+              ],
+              "block_ids": [
+                "b000127",
+                "b000130"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "7bfd7fcdd36eedd44fc0bd998f49f70508ef8c53d91b148738422675c8b6187d",
+      "source_sha256": "4cf769651c8e930b4321ceba7b7b2c41357e6ac20cd731d3fcf3d007c07b9725",
+      "notes": "Source-first AI interpretation; no independent legal review.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_02",
+        "id": "urn:xfed:contract_02:reference:c000204",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_02:c000204:reference:1",
+            "kind": "obligation",
+            "actor": "Contractor",
+            "action": "notify",
+            "asset": "any apparent errors, discrepancies, or inconsistencies discovered in Company Provided Information",
+            "conditions": [
+              {
+                "field": "recipient",
+                "op": "eq",
+                "value": "Company"
+              },
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "without undue delay"
+              },
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "that might affect performance, cost, or timely completion of the Work"
+              }
+            ],
+            "source": "c000204"
+          }
+        ],
+        "sources": {
+          "c000204": {
+            "chunk_id": "c000204",
+            "clause_id": "5.1.4(b)",
+            "text": "b. Contractor shall notify Company without undue delay of any apparent errors,\ndiscrepancies, or inconsistencies discovered in Company Provided Information\nthat might affect performance, cost, or timely completion of the Work.",
+            "pages": [
+              15
+            ],
+            "block_ids": [
+              "b000222",
+              "b000223"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_02:c000245",
+      "contract_id": "contract_02",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000245",
+        "text": "5.2.8.\nContractor shall maintain complete maintenance and repair records for all Goods\nrepaired or serviced in relation to the Work and will make all such records available to\nCompany or its authorized representatives upon request.",
+        "source": {
+          "pages": [
+            18
+          ],
+          "block_ids": [
+            "b000274"
+          ]
+        },
+        "clause_id": "5.2.8",
+        "parent_clause_id": "5.2",
+        "context": [
+          {
+            "chunk_id": "c000232",
+            "clause_id": "5.2",
+            "text": "5.2.\nGoods-Related Provisions\nWith regard to Call-Off Orders which include the supply of Goods in relation to the Work, the\nfollowing additional provisions apply:",
+            "source": {
+              "pages": [
+                17
+              ],
+              "block_ids": [
+                "b000261",
+                "b000262"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000195",
+            "clause_id": "5",
+            "heading": "5. PERFORMANCE OF WORK",
+            "text": "5. PERFORMANCE OF WORK",
+            "source": {
+              "pages": [
+                14
+              ],
+              "block_ids": [
+                "b000212"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000086",
+            "text": "Contractor has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Contractor’ means the entity identified as Contractor in that Call-Off Order.",
+            "source": {
+              "pages": [
+                6
+              ],
+              "block_ids": [
+                "b000100"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000079",
+            "text": "Company has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Company’ means the entity identified as Company in that Call-Off Order.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000088"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000096",
+            "text": "Goods means any materials or other goods to be provided by any of the members of Contractor\nGroup in relation to Work and that will be subject to a transfer of title to Company, together, as\napplicable, with any associated items such as software, firmware, special tools or installation/\nremoval aids, spare parts, and operating and maintenance manuals.  Chemicals and other\nconsumable substances that any member of Contractor Group will itself use in the performance of\nthe Work and which will thereby be dissipated or spent are not considered as Goods.",
+            "source": {
+              "pages": [
+                7
+              ],
+              "block_ids": [
+                "b000111"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000111",
+            "text": "Work means all elements of the activities to be performed by or on behalf of Contractor under an\nindividual Call-Off Order, whether or not specifically described therein, including everything that\nmay be reasonably inferred from such Call-Off Order as needing to be done by or on behalf of\nContractor in order for Contractor to fulfill all its duties, obligations, and responsibilities under such\nCall-Off Order.  Particular Work includes the provision of equipment, materials, personnel, other\nresources, and Goods, as applicable, to perform technical and other services in relation to\nexploration, development, production, and other drilling- or well-related operations of Company or\nCompany’s Affiliates.",
+            "source": {
+              "pages": [
+                8,
+                9
+              ],
+              "block_ids": [
+                "b000127",
+                "b000130"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000175",
+            "clause_id": "4.1.3",
+            "text": "Upon:",
+            "source": {
+              "pages": [
+                13
+              ],
+              "block_ids": [
+                "b000192"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "7bfd7fcdd36eedd44fc0bd998f49f70508ef8c53d91b148738422675c8b6187d",
+      "source_sha256": "1ffd16d176c58fbe4e198003f3152f03518471a41cfd19e97d8577d9704bd1ab",
+      "notes": "Source-first AI interpretation; no independent legal review.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_02",
+        "id": "urn:xfed:contract_02:reference:c000245",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_02:c000245:reference:1",
+            "kind": "obligation",
+            "actor": "Contractor",
+            "action": "maintain",
+            "asset": "complete maintenance and repair records",
+            "conditions": [
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "for all Goods repaired or serviced in relation to the Work"
+              }
+            ],
+            "source": "c000245"
+          },
+          {
+            "id": "contract_02:c000245:reference:2",
+            "kind": "obligation",
+            "actor": "Contractor",
+            "action": "provideAccess",
+            "asset": "complete maintenance and repair records",
+            "conditions": [
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "for all Goods repaired or serviced in relation to the Work"
+              },
+              {
+                "field": "recipient",
+                "op": "isAnyOf",
+                "value": [
+                  "Company",
+                  "its authorized representatives"
+                ]
+              },
+              {
+                "field": "event",
+                "op": "eq",
+                "value": "upon request"
+              }
+            ],
+            "source": "c000245"
+          }
+        ],
+        "sources": {
+          "c000245": {
+            "chunk_id": "c000245",
+            "clause_id": "5.2.8",
+            "text": "5.2.8.\nContractor shall maintain complete maintenance and repair records for all Goods\nrepaired or serviced in relation to the Work and will make all such records available to\nCompany or its authorized representatives upon request.",
+            "pages": [
+              18
+            ],
+            "block_ids": [
+              "b000274"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_02:c000452",
+      "contract_id": "contract_02",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000452",
+        "text": "14.8.\nIn addition, Company may grant Contractor, in its sole discretion, direct electronic access to\nCompany’s ERP system.  Such direct access, if granted, depends on Contractor meeting and\ncontinuing to meet all security requirements deemed appropriate by Company.  Failure by\nContractor to meet any such security requirements will result in Contractor being denied direct\naccess to Company’s ERP system.",
+        "source": {
+          "pages": [
+            34
+          ],
+          "block_ids": [
+            "b000494"
+          ]
+        },
+        "clause_id": "14.8",
+        "parent_clause_id": "14",
+        "context": [
+          {
+            "chunk_id": "c000429",
+            "clause_id": "14",
+            "heading": "14. PRICING, INVOICING, AND PAYMENT",
+            "text": "14. PRICING, INVOICING, AND PAYMENT",
+            "source": {
+              "pages": [
+                32
+              ],
+              "block_ids": [
+                "b000469"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000086",
+            "text": "Contractor has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Contractor’ means the entity identified as Contractor in that Call-Off Order.",
+            "source": {
+              "pages": [
+                6
+              ],
+              "block_ids": [
+                "b000100"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000079",
+            "text": "Company has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Company’ means the entity identified as Company in that Call-Off Order.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000088"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000798",
+            "text": "System means a collection of electro-mechanical devices that work together to store, retrieve, and\nmanipulate data and information under control of a program.  The term includes computers known\nas mainframe computers, host computers, control systems, mini-computers, distributed computer\nenvironments, personal computers, workstations, personal data assistants, and other similar\ndevices (including smartphones and tablets).",
+            "source": {
+              "pages": [
+                64
+              ],
+              "block_ids": [
+                "b000876"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "7bfd7fcdd36eedd44fc0bd998f49f70508ef8c53d91b148738422675c8b6187d",
+      "source_sha256": "3552fc5d1136de5ca59d48aad67e65eb890aa904fbc3bf75577e3d466acbf1e5",
+      "notes": "Discretion to grant access is not a duty or an unconditional Contractor access right. The final sentence explicitly denies access on security failure. The requirement itself is not invented as an independent unconditional duty.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_02",
+        "id": "urn:xfed:contract_02:reference:c000452",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_02:c000452:reference:1",
+            "kind": "permission",
+            "actor": "Company",
+            "action": "provideAccess",
+            "asset": "Company’s ERP system",
+            "conditions": [
+              {
+                "field": "recipient",
+                "op": "eq",
+                "value": "Contractor"
+              },
+              {
+                "field": "discretion",
+                "op": "eq",
+                "value": "in its sole discretion"
+              },
+              {
+                "field": "security",
+                "op": "eq",
+                "value": "Contractor meeting and continuing to meet all security requirements deemed appropriate by Company"
+              }
+            ],
+            "source": "c000452"
+          },
+          {
+            "id": "contract_02:c000452:reference:2",
+            "kind": "prohibition",
+            "actor": "Contractor",
+            "action": "read",
+            "asset": "Company’s ERP system",
+            "conditions": [
+              {
+                "field": "security",
+                "op": "eq",
+                "value": "Failure by Contractor to meet any such security requirements"
+              }
+            ],
+            "source": "c000452"
+          }
+        ],
+        "sources": {
+          "c000452": {
+            "chunk_id": "c000452",
+            "clause_id": "14.8",
+            "text": "14.8.\nIn addition, Company may grant Contractor, in its sole discretion, direct electronic access to\nCompany’s ERP system.  Such direct access, if granted, depends on Contractor meeting and\ncontinuing to meet all security requirements deemed appropriate by Company.  Failure by\nContractor to meet any such security requirements will result in Contractor being denied direct\naccess to Company’s ERP system.",
+            "pages": [
+              34
+            ],
+            "block_ids": [
+              "b000494"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_02:c000716",
+      "contract_id": "contract_02",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000716",
+        "text": "Confidential Information means any business or technical information of Company or of any of\nthe other members of Company Group, including business plans; forecasts; contracting\nprocedures; maintenance records; procedures, methods, and technical information related to\nproprietary processes or products; cost information; marketing or business-related information;\nasset details; and strategic plans; disclosed to or discovered by Contractor in connection with\nthis Agreement, any Call-Off Order, or performance of the Work under any Call-Off Order.",
+        "source": {
+          "pages": [
+            58
+          ],
+          "block_ids": [
+            "b000785"
+          ]
+        },
+        "parent_clause_id": "30.1",
+        "context": [
+          {
+            "chunk_id": "c000715",
+            "clause_id": "30.1",
+            "text": "30.1.\nFor purposes of this Article 30:",
+            "source": {
+              "pages": [
+                58
+              ],
+              "block_ids": [
+                "b000784"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000714",
+            "clause_id": "30",
+            "heading": "30. CONFIDENTIALITY",
+            "text": "30. CONFIDENTIALITY",
+            "source": {
+              "pages": [
+                58
+              ],
+              "block_ids": [
+                "b000783"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000076",
+            "text": "Call-Off Order means a specific contractual agreement established between Company or one of\nits Affiliates and Contractor or one of its Affiliates in accordance with the terms of Article 4 for the\nperformance of particular Work by Contractor or its Affiliate, in the form set out in the Exhibit entitled\n‘Example Call-Off Order’, as identified in Article 1.1, or in such other form as Company and\nContractor may agree.  The generic term ‘Call-Off Order’, as used herein, will include similar\ndocuments entitled ‘Work Order’, ‘Scope of Work (SOW)’, ‘Purchase Order’, ‘Service Order’, and\nthe like that are also used by Company or its Affiliates for the above-described purpose.  Provided\nalways that a purchase order or other document used in accordance with Article 4.2 to address the\nperformance of particular Work under a Call-Off Order forms part of that Call-Off Order and does\nnot constitute a separate contractual agreement.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000085"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000082",
+            "text": "Company Group means, with regard to an individual Call-Off Order, any or all of: (i) Company and\nits Affiliates; (ii) Coventurers in relation to the Work and their Affiliates; (iii) Company’s other\ncontractors (other than members of Contractor Group) and their subcontractors of any tier who are\nengaged directly or indirectly by Company to perform work or services for the project to which the\nWork relates or are otherwise present during Contractor’s performance of the Work, and their\nAffiliates; and (iv) the respective agents of any of the entities addressed in (i) through (iii) above;\nall the foregoing being ‘members of Company Group’.",
+            "source": {
+              "pages": [
+                6
+              ],
+              "block_ids": [
+                "b000091"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000086",
+            "text": "Contractor has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Contractor’ means the entity identified as Contractor in that Call-Off Order.",
+            "source": {
+              "pages": [
+                6
+              ],
+              "block_ids": [
+                "b000100"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000074",
+            "text": "Agreement has the meaning provided in the Preamble, and it comprises the items set out in Article\n1.1.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000083"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000079",
+            "text": "Company has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Company’ means the entity identified as Company in that Call-Off Order.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000088"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000111",
+            "text": "Work means all elements of the activities to be performed by or on behalf of Contractor under an\nindividual Call-Off Order, whether or not specifically described therein, including everything that\nmay be reasonably inferred from such Call-Off Order as needing to be done by or on behalf of\nContractor in order for Contractor to fulfill all its duties, obligations, and responsibilities under such\nCall-Off Order.  Particular Work includes the provision of equipment, materials, personnel, other\nresources, and Goods, as applicable, to perform technical and other services in relation to\nexploration, development, production, and other drilling- or well-related operations of Company or\nCompany’s Affiliates.",
+            "source": {
+              "pages": [
+                8,
+                9
+              ],
+              "block_ids": [
+                "b000127",
+                "b000130"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "7bfd7fcdd36eedd44fc0bd998f49f70508ef8c53d91b148738422675c8b6187d",
+      "source_sha256": "01e76ba3335095d94aa7c2cc89fd3cee840ae52135f236b61190a22a09a82e42",
+      "notes": "Source-first AI interpretation; no independent legal review.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_02",
+        "id": "urn:xfed:contract_02:reference:c000716",
+        "type": "Set",
+        "rules": [],
+        "sources": {}
+      }
+    },
+    {
+      "case_id": "contract_03:c000007",
+      "contract_id": "contract_03",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000007",
+        "text": "Background: Material contributions or Intellectual Property Rights, know-how and\ninformation that a Party brings to the Project. The Background provided by the individual\nParty is specified in Appendix 3.",
+        "source": {
+          "pages": [
+            2
+          ],
+          "block_ids": [
+            "b000039"
+          ]
+        },
+        "parent_clause_id": "1",
+        "context": [
+          {
+            "chunk_id": "c000005",
+            "clause_id": "1",
+            "heading": "1",
+            "text": "1\nDefinitions",
+            "source": {
+              "pages": [
+                2
+              ],
+              "block_ids": [
+                "b000037"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000604",
+            "heading": "Appendix 3: Background",
+            "text": "Appendix 3: Background",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001056"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000605",
+            "text": "As to UNIVERSITETET I STAVANGER, it is agreed between the Parties that, to the best of their\nknowledge, no Background is needed by another Party for implementation of the Project or\nutilisation of that other Party’s Results.",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001057"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000606",
+            "text": "As to NORCE, it is agreed between the Parties that, to the best of their knowledge no Background is\nneeded by another Party for implementation of the Project or utilisation of that other Party’s Results.",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001058"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000607",
+            "text": "As to INSTITUTT FOR ENERGITEKNIKK, it is agreed between the Parties that, to the best of their\nknowledge no Background is needed by another Party for implementation of the Project or utilisation\nof that other Party’s Results.",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001059"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000608",
+            "text": "As to UNIVERSITETET I BERGEN, UiB is the sole owner of previously developed and granted\nBackground Patents governing the use of CO2 for production of methane from Hydrates and for\nFoam EOR with associated CO2 storage.",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001060"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000609",
+            "text": "As to LANDMARK GRAPHICS, Landmark Graphics maintains and retains full ownership of its\nBackground and makes no contribution, license, or non-assertion right to a Project or Parties of the\nCollaboration Agreement, unless explicitly agreed for a particular Project in a signed R&D Contract.\nNothing in this Collaboration Agreement limits Landmark Graphics’ activities alone or with others\nregarding developing technology related to the scopes of the Work Plans.  If Landmark Graphics’ in-\nkind contribution is in the form of software solutions, applicable terms for academic/research use\nwill apply and be provided at the time of distribution/access.",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001061"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000610",
+            "text": "As to SCHLUMBERGER, it is agreed between the Parties that, to the best of their knowledge: The\nfollowing Background is hereby identified for the Project. Specific limitations and/or conditions shall\nbe as mentioned:",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001062"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000611",
+            "text": "Describe Background\nSpecific limitations and/or\nconditions for implementation",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001063"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000612",
+            "text": "Specific limitations and/or\nconditions for Commercial\nUtilisation\nDELFI Cloud-based\nsolutions, Including the\nPetrotechnical Suite (Petrel,\nTechlog, Eclipse, etc.)",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001064"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000613",
+            "text": "User rights for the purpose of\nimplementation of the Project is\nsubjected to IP, licensing, and\ncopyrights",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001065"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000614",
+            "text": "Project Results obtained\nthrough Schlumberger’s\nsolutions are for research\npurposes as per project’s\ndescription",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001066"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000615",
+            "text": "As to EQUNIOR, it is agreed between the Parties that, to the best of their knowledge, no Background\nis needed by another Party for implementation of the Project or utilisation of that other Party’s\nResults.",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001067"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000616",
+            "text": "As to VÅR ENERGI, it is agreed between the Parties that, to the best of their knowledge, no\nBackground is needed by another Party for implementation of the Project or utilisation of that other\nParty’s Results.",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001068"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000617",
+            "text": "As to DNO, it is agreed between the Parties that, to the best of their knowledge, no Background is\nneeded by another Party for implementation of the Project or utilisation of that other Party’s Results.",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001069"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000618",
+            "text": "As to OKEA, it is agreed between the Parties that, to the best of their knowledge, no Background is\nneeded by another Party for implementation of the Project or utilisation of that other Party’s Results.",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001070"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000619",
+            "text": "«NCS2030» - Research Council project no. 331644",
+            "source": {
+              "pages": [
+                89
+              ],
+              "block_ids": [
+                "b001071"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000620",
+            "text": "Side 35 av 35",
+            "source": {
+              "pages": [
+                90
+              ],
+              "block_ids": [
+                "b001072"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000621",
+            "text": "As to AKER BP, it is agreed between the Parties that, to the best of their knowledge, no Background\nis needed by another Party for implementation of the Project or utilisation of that other Party’s\nResults.",
+            "source": {
+              "pages": [
+                90
+              ],
+              "block_ids": [
+                "b001073"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000622",
+            "text": "As to WINTERSHALL DEA NORGE AS, it is agreed between the Parties that, to the best of their\nknowledge, no Background is needed by another Party for implementation of the Project or\nutilisation of that other Party’s Results.",
+            "source": {
+              "pages": [
+                90
+              ],
+              "block_ids": [
+                "b001074"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000623",
+            "text": "«NCS2030» - Research Council project no. 331644",
+            "source": {
+              "pages": [
+                90
+              ],
+              "block_ids": [
+                "b001075"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c000020",
+            "text": "Intellectual Property Rights: All rights to technical solutions, methods, processes and\nprocedures, regardless of whether or not these are or may be patented. This also includes\nall copyrights and other rights to trademarks, design, plant species, databases, integrated\ncircuit layout designs, drawings, specifications, prototypes, company confidential\ninformation and the like.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000052"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000028",
+            "text": "Project Results: All results produced or achieved through the work carried out under the\nProject, including Intellectual Property Rights, regardless of whether or not the results are\nprotected by law.",
+            "source": {
+              "pages": [
+                4
+              ],
+              "block_ids": [
+                "b000060"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000029",
+            "text": "R&D Contract: Agreement relating to a Project between the Project Owner and the Funding\nAuthority that comprises a written agreement, general terms and conditions for R&D\nProjects, as well as the Project Description and any supplementary documents, and is\nincluded as Appendix 1.",
+            "source": {
+              "pages": [
+                4
+              ],
+              "block_ids": [
+                "b000061"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000022",
+            "text": "Project: The overall activities covered by the R&D Contract. The terms Project and Research\nCentre are used interchangeably.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000054"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "6c6747152e55ac4ce2db2b43f1ad49ecea06622c39c714f66a6b3415d2825fb5",
+      "source_sha256": "aa53480693942b3138d5f1b7c1cf69a8f6059808226866646caac86cc9bf5199",
+      "notes": "Source-first AI interpretation; no independent legal review.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_03",
+        "id": "urn:xfed:contract_03:reference:c000007",
+        "type": "Set",
+        "rules": [],
+        "sources": {}
+      }
+    },
+    {
+      "case_id": "contract_03:c000119",
+      "contract_id": "contract_03",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000119",
+        "text": "10.4\nFor the duration of the Project Period, the Parties shall have access at no charge to the\nBackground necessary for the implementation of their own work in the Project in\naccordance with the Work Plan.",
+        "source": {
+          "pages": [
+            11
+          ],
+          "block_ids": [
+            "b000166"
+          ]
+        },
+        "clause_id": "10.4",
+        "parent_clause_id": "10",
+        "context": [
+          {
+            "chunk_id": "c000115",
+            "clause_id": "10",
+            "text": "10\nBackground",
+            "source": {
+              "pages": [
+                11
+              ],
+              "block_ids": [
+                "b000163"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000027",
+            "text": "Project Period: The time span during which the Project is to be performed, as specified in\nthe R&D Contract and Section 2.",
+            "source": {
+              "pages": [
+                4
+              ],
+              "block_ids": [
+                "b000059"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000007",
+            "text": "Background: Material contributions or Intellectual Property Rights, know-how and\ninformation that a Party brings to the Project. The Background provided by the individual\nParty is specified in Appendix 3.",
+            "source": {
+              "pages": [
+                2
+              ],
+              "block_ids": [
+                "b000039"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000033",
+            "text": "Work Plan: Annual plan that specifies obligations and contributions of the Parties within\nthe Project.",
+            "source": {
+              "pages": [
+                4
+              ],
+              "block_ids": [
+                "b000065"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000022",
+            "text": "Project: The overall activities covered by the R&D Contract. The terms Project and Research\nCentre are used interchangeably.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000054"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "6c6747152e55ac4ce2db2b43f1ad49ecea06622c39c714f66a6b3415d2825fb5",
+      "source_sha256": "7c0c183047dd847e0842b73fd7f672be01ab7333b50ff3d74faf282ae95b50b3",
+      "notes": "Source-first AI interpretation; no independent legal review.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_03",
+        "id": "urn:xfed:contract_03:reference:c000119",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_03:c000119:reference:1",
+            "kind": "permission",
+            "actor": "the Parties",
+            "action": "read",
+            "asset": "the Background",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "For the duration of the Project Period"
+              },
+              {
+                "field": "payAmount",
+                "op": "eq",
+                "value": 0
+              },
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "necessary for the implementation of their own work in the Project"
+              },
+              {
+                "field": "compliance",
+                "op": "eq",
+                "value": "in accordance with the Work Plan"
+              }
+            ],
+            "context": [
+              "c000007",
+              "c000027",
+              "c000033"
+            ],
+            "source": "c000119"
+          }
+        ],
+        "sources": {
+          "c000119": {
+            "chunk_id": "c000119",
+            "clause_id": "10.4",
+            "text": "10.4\nFor the duration of the Project Period, the Parties shall have access at no charge to the\nBackground necessary for the implementation of their own work in the Project in\naccordance with the Work Plan.",
+            "pages": [
+              11
+            ],
+            "block_ids": [
+              "b000166"
+            ]
+          },
+          "c000007": {
+            "chunk_id": "c000007",
+            "text": "Background: Material contributions or Intellectual Property Rights, know-how and\ninformation that a Party brings to the Project. The Background provided by the individual\nParty is specified in Appendix 3.",
+            "pages": [
+              2
+            ],
+            "block_ids": [
+              "b000039"
+            ]
+          },
+          "c000027": {
+            "chunk_id": "c000027",
+            "text": "Project Period: The time span during which the Project is to be performed, as specified in\nthe R&D Contract and Section 2.",
+            "pages": [
+              4
+            ],
+            "block_ids": [
+              "b000059"
+            ]
+          },
+          "c000033": {
+            "chunk_id": "c000033",
+            "text": "Work Plan: Annual plan that specifies obligations and contributions of the Parties within\nthe Project.",
+            "pages": [
+              4
+            ],
+            "block_ids": [
+              "b000065"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_03:c000148",
+      "contract_id": "contract_03",
+      "status": "needs_review",
+      "input": {
+        "chunk_id": "c000148",
+        "text": "13.5\nNotification of plans for publication of Project Results shall be submitted to all Parties by\nthe Party that has generated the relevant Project Results. Parties have a deadline of 30 days\nfrom the date on which the notification was issued to object and request postponement of\nthe publication.",
+        "source": {
+          "pages": [
+            13
+          ],
+          "block_ids": [
+            "b000175"
+          ]
+        },
+        "clause_id": "13.5",
+        "parent_clause_id": "13",
+        "child_clause_ids": [
+          "13.5.1",
+          "13.5.2"
+        ],
+        "context": [
+          {
+            "chunk_id": "c000143",
+            "clause_id": "13",
+            "text": "13\nPublication",
+            "source": {
+              "pages": [
+                13
+              ],
+              "block_ids": [
+                "b000175"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000149",
+            "clause_id": "13.5.1",
+            "text": "13.5.1\nAn objection is justified if (a) the protection of the objecting Party's Project Results or\nBackground would be adversely affected, (b) the objecting Party’s legitimate interests in\nrelation to the Projects Results or Background would be significantly harmed, or c) the\nproposed publication includes Confidential Information of the objecting Party. The\nobjection must include a precise request for necessary modifications.",
+            "source": {
+              "pages": [
+                13
+              ],
+              "block_ids": [
+                "b000175"
+              ]
+            },
+            "relationship": "other"
+          },
+          {
+            "chunk_id": "c000152",
+            "clause_id": "13.5.2",
+            "text": "13.5.2\nThe objecting Party can request a publication delay of not more than 90 calendar days from\nthe time it raises such an objection. After 90 calendar days the publication is permitted,\nprovided that the objections of the objecting Party have been addressed.",
+            "source": {
+              "pages": [
+                14
+              ],
+              "block_ids": [
+                "b000178"
+              ]
+            },
+            "relationship": "other"
+          },
+          {
+            "chunk_id": "c000012",
+            "text": "Confidential Information: Background or any other information disclosed by one Party to\nthe other Party(ies) under or in connection with this Collaboration Agreement.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000044"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000028",
+            "text": "Project Results: All results produced or achieved through the work carried out under the\nProject, including Intellectual Property Rights, regardless of whether or not the results are\nprotected by law.",
+            "source": {
+              "pages": [
+                4
+              ],
+              "block_ids": [
+                "b000060"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000007",
+            "text": "Background: Material contributions or Intellectual Property Rights, know-how and\ninformation that a Party brings to the Project. The Background provided by the individual\nParty is specified in Appendix 3.",
+            "source": {
+              "pages": [
+                2
+              ],
+              "block_ids": [
+                "b000039"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000022",
+            "text": "Project: The overall activities covered by the R&D Contract. The terms Project and Research\nCentre are used interchangeably.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000054"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": [
+          "date: ambiguous definition"
+        ]
+      },
+      "pdf_sha256": "6c6747152e55ac4ce2db2b43f1ad49ecea06622c39c714f66a6b3415d2825fb5",
+      "source_sha256": "a7027aff7e5777c9acbba12f44d75178a1e2e7f2cacbc4bb7b8cea22cf298bb9",
+      "notes": "Provisional draft only: the combined objection/postponement rights, child qualifications and source actor wording admit multiple encodings. Excluded from aggregate scoring pending review. No independent child publication right is attributed to this primary clause.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_03",
+        "id": "urn:xfed:contract_03:reference:c000148",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_03:c000148:reference:1",
+            "kind": "obligation",
+            "actor": "the Party that has generated the relevant Project Results",
+            "action": "notify",
+            "asset": "plans for publication of Project Results",
+            "conditions": [
+              {
+                "field": "recipient",
+                "op": "eq",
+                "value": "all Parties"
+              }
+            ],
+            "source": "c000148"
+          },
+          {
+            "id": "contract_03:c000148:reference:2",
+            "kind": "permission",
+            "actor": "Parties",
+            "action": "object",
+            "asset": "the publication",
+            "conditions": [
+              {
+                "field": "elapsedTime",
+                "op": "lteq",
+                "value": "P30D"
+              },
+              {
+                "field": "event",
+                "op": "eq",
+                "value": "the date on which the notification was issued"
+              },
+              {
+                "any": [
+                  {
+                    "field": "impact",
+                    "op": "eq",
+                    "value": "the protection of the objecting Party's Project Results or Background would be adversely affected"
+                  },
+                  {
+                    "field": "impact",
+                    "op": "eq",
+                    "value": "the objecting Party’s legitimate interests in relation to the Projects Results or Background would be significantly harmed"
+                  },
+                  {
+                    "field": "content",
+                    "op": "eq",
+                    "value": "the proposed publication includes Confidential Information of the objecting Party"
+                  }
+                ]
+              },
+              {
+                "field": "request",
+                "op": "eq",
+                "value": "a precise request for necessary modifications"
+              }
+            ],
+            "context": [
+              "c000149"
+            ],
+            "source": "c000148"
+          },
+          {
+            "id": "contract_03:c000148:reference:3",
+            "kind": "permission",
+            "actor": "Parties",
+            "action": "requestDelay",
+            "asset": "the publication",
+            "conditions": [
+              {
+                "field": "elapsedTime",
+                "op": "lteq",
+                "value": "P30D"
+              },
+              {
+                "field": "event",
+                "op": "eq",
+                "value": "the date on which the notification was issued"
+              },
+              {
+                "field": "postponementDuration",
+                "op": "lteq",
+                "value": "P90D"
+              },
+              {
+                "field": "postponementStart",
+                "op": "eq",
+                "value": "the time it raises such an objection"
+              },
+              {
+                "field": "eligibility",
+                "op": "eq",
+                "value": "An objection is justified under clause 13.5.1 and must include a precise request for necessary modifications"
+              }
+            ],
+            "context": [
+              "c000149",
+              "c000152"
+            ],
+            "source": "c000148"
+          }
+        ],
+        "sources": {
+          "c000148": {
+            "chunk_id": "c000148",
+            "clause_id": "13.5",
+            "text": "13.5\nNotification of plans for publication of Project Results shall be submitted to all Parties by\nthe Party that has generated the relevant Project Results. Parties have a deadline of 30 days\nfrom the date on which the notification was issued to object and request postponement of\nthe publication.",
+            "pages": [
+              13
+            ],
+            "block_ids": [
+              "b000175"
+            ]
+          },
+          "c000149": {
+            "chunk_id": "c000149",
+            "clause_id": "13.5.1",
+            "text": "13.5.1\nAn objection is justified if (a) the protection of the objecting Party's Project Results or\nBackground would be adversely affected, (b) the objecting Party’s legitimate interests in\nrelation to the Projects Results or Background would be significantly harmed, or c) the\nproposed publication includes Confidential Information of the objecting Party. The\nobjection must include a precise request for necessary modifications.",
+            "pages": [
+              13
+            ],
+            "block_ids": [
+              "b000175"
+            ]
+          },
+          "c000152": {
+            "chunk_id": "c000152",
+            "clause_id": "13.5.2",
+            "text": "13.5.2\nThe objecting Party can request a publication delay of not more than 90 calendar days from\nthe time it raises such an objection. After 90 calendar days the publication is permitted,\nprovided that the objections of the objecting Party have been addressed.",
+            "pages": [
+              14
+            ],
+            "block_ids": [
+              "b000178"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_03:c000154",
+      "contract_id": "contract_03",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000154",
+        "text": "14.1\nDuring the Project Period, and for a subsequent period of three years, the Parties are under\nobligation to keep confidential any Confidential Information disclosed to them in\nconnection with the Project and store this information in a secure manner. Confidential\nInformation shall only be used to perform Project tasks and to utilise Project Results, or as\nagreed with or presupposed by the disclosing Party.",
+        "source": {
+          "pages": [
+            14
+          ],
+          "block_ids": [
+            "b000178"
+          ]
+        },
+        "clause_id": "14.1",
+        "parent_clause_id": "14",
+        "context": [
+          {
+            "chunk_id": "c000153",
+            "clause_id": "14",
+            "text": "14\nConfidentiality",
+            "source": {
+              "pages": [
+                14
+              ],
+              "block_ids": [
+                "b000178"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000012",
+            "text": "Confidential Information: Background or any other information disclosed by one Party to\nthe other Party(ies) under or in connection with this Collaboration Agreement.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000044"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000028",
+            "text": "Project Results: All results produced or achieved through the work carried out under the\nProject, including Intellectual Property Rights, regardless of whether or not the results are\nprotected by law.",
+            "source": {
+              "pages": [
+                4
+              ],
+              "block_ids": [
+                "b000060"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000027",
+            "text": "Project Period: The time span during which the Project is to be performed, as specified in\nthe R&D Contract and Section 2.",
+            "source": {
+              "pages": [
+                4
+              ],
+              "block_ids": [
+                "b000059"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000022",
+            "text": "Project: The overall activities covered by the R&D Contract. The terms Project and Research\nCentre are used interchangeably.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000054"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "6c6747152e55ac4ce2db2b43f1ad49ecea06622c39c714f66a6b3415d2825fb5",
+      "source_sha256": "fa4635e5eecf2663adece5321b66fad6ee574aace7a9cd3b9a2e5d2c70156cad",
+      "notes": "The shared three-year period applies to confidentiality and secure storage. The separate purpose restriction retains the disclosing-party agreement exception; it is not automatically assigned the same period.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_03",
+        "id": "urn:xfed:contract_03:reference:c000154",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_03:c000154:reference:1",
+            "kind": "obligation",
+            "actor": "the Parties",
+            "action": "keepConfidential",
+            "asset": "any Confidential Information",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "During the Project Period, and for a subsequent period of three years"
+              },
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "disclosed to them in connection with the Project"
+              }
+            ],
+            "context": [
+              "c000012",
+              "c000027"
+            ],
+            "source": "c000154"
+          },
+          {
+            "id": "contract_03:c000154:reference:2",
+            "kind": "obligation",
+            "actor": "the Parties",
+            "action": "store",
+            "asset": "any Confidential Information",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "During the Project Period, and for a subsequent period of three years"
+              },
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "disclosed to them in connection with the Project"
+              },
+              {
+                "field": "security",
+                "op": "eq",
+                "value": "in a secure manner"
+              }
+            ],
+            "context": [
+              "c000012",
+              "c000027"
+            ],
+            "source": "c000154"
+          },
+          {
+            "id": "contract_03:c000154:reference:3",
+            "kind": "prohibition",
+            "actor": "the Parties",
+            "action": "use",
+            "asset": "Confidential Information",
+            "conditions": [
+              {
+                "field": "purpose",
+                "op": "isNoneOf",
+                "value": [
+                  "perform Project tasks",
+                  "utilise Project Results"
+                ]
+              },
+              {
+                "field": "approval",
+                "op": "neq",
+                "value": "agreed with or presupposed by the disclosing Party"
+              }
+            ],
+            "context": [
+              "c000012"
+            ],
+            "source": "c000154"
+          }
+        ],
+        "sources": {
+          "c000154": {
+            "chunk_id": "c000154",
+            "clause_id": "14.1",
+            "text": "14.1\nDuring the Project Period, and for a subsequent period of three years, the Parties are under\nobligation to keep confidential any Confidential Information disclosed to them in\nconnection with the Project and store this information in a secure manner. Confidential\nInformation shall only be used to perform Project tasks and to utilise Project Results, or as\nagreed with or presupposed by the disclosing Party.",
+            "pages": [
+              14
+            ],
+            "block_ids": [
+              "b000178"
+            ]
+          },
+          "c000012": {
+            "chunk_id": "c000012",
+            "text": "Confidential Information: Background or any other information disclosed by one Party to\nthe other Party(ies) under or in connection with this Collaboration Agreement.",
+            "pages": [
+              3
+            ],
+            "block_ids": [
+              "b000044"
+            ]
+          },
+          "c000027": {
+            "chunk_id": "c000027",
+            "text": "Project Period: The time span during which the Project is to be performed, as specified in\nthe R&D Contract and Section 2.",
+            "pages": [
+              4
+            ],
+            "block_ids": [
+              "b000059"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

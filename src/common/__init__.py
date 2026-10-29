@@ -133,6 +133,9 @@ def schema(stage, root=Path('.')):
 
 def validate(value, stage, root=Path('.')):
     from jsonschema import Draft202012Validator
+    if stage == 5:
+        from xfed.policy import validate_odrl, validate_policy
+        return (validate_odrl if 'odrlPolicy' in value else validate_policy)(value, root)
     Draft202012Validator(schema(stage, root)).validate(value)
     return value
 

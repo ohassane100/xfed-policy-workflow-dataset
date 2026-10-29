@@ -21,6 +21,7 @@ from xfed.enrichment import enrich
 from xfed.llm import OllamaPool, load_client
 from xfed.llm.service import OllamaServicePool, nvidia_gpus
 from xfed.policy_generation import generate
+from xfed.policy import to_odrl
 # The separate review stage is disabled; generation uses its clause evidence check.
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
 from xfed.evaluation import load_reference, reference_summary, run_evaluation
@@ -31,7 +32,7 @@ STAGES = {
     '1.2': ('1 preprocessing/1.2 segmentation/contract_chunks.json', 2, 'chunks'),
     '1.3': ('1 preprocessing/1.3 relevance/classified_chunks.json', 3, 'chunks'),
     '1.4': ('1 preprocessing/1.4 enrichment/enriched_relevance.json', 4, 'items'),
-    '2': ('2 policy_generation/policy.json', 5, 'traceability'),
+    '2': ('2 policy_generation/policy.json', 5, 'rules'),
     # '3': ('3 policy_review/policy_review.json', 6, 'clause_reviews'),
 }
 PREFERRED_MODELS = ['qwen3.5:27b', 'qwen3.5:35b', 'qwen3.5:9b', 'gemma3:27b', 'llama3.1:70b']
@@ -210,7 +211,7 @@ class Pipeline:
                 except Exception as exc:
                     error = str(exc).splitlines()[0]
             stages[stage] = dict(ready=value is not None and error is None,
-                                 count=len(value.get(records, [])) if isinstance(value, dict) else 0,
+                                 count=len(value.get(records, value.get('traceability', []))) if isinstance(value, dict) else 0,
                                  error=error, run=meta.get(stage))
         classified = read_json(self.path(contract, '1.3'), {})
         labels = dict.fromkeys(['RELEVANT', 'NOT_RELEVANT', 'NEEDS_CONTEXT'], 0)
@@ -670,6 +671,11 @@ def handler(pipeline):
                         if value is None:
                             self.send(dict(error='No completed output for this stage.'), 404)
                         else:
+                            if query.get('format') == ['odrl']:
+                                if query['stage'][0] != '2':
+                                    raise ValueError('ODRL export is available for policy creation only.')
+                                validate(value, 5, pipeline.root)
+                                value = to_odrl(value, pipeline.root)
                             self.send(value)
                 else:
                     self.send(dict(error='Not found'), 404)

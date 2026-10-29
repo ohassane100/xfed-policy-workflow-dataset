@@ -21,12 +21,14 @@ from xfed.common import map_chunks, write_json
 from xfed.enrichment import ContextIndex, enrich
 from xfed.llm import OllamaClient, OllamaConnectionError, OllamaPool
 from xfed.llm.service import OllamaServicePool, nvidia_gpus
-from xfed.policy_generation import (clause_decoder_schema, compile_plan, complete_fragment, generate, generate_answer, generate_item,
+from xfed.policy_generation import (clause_decoder_schema, compile_plan, complete_fragment, generate_odrl as generate, generate_answer, generate_item,
                                     response_schema, summarize_error, validate_fragment)
 from jsonschema import Draft202012Validator, ValidationError
 from xfed.policy_review import conflicts, review
 from xfed.relevance import classify, classify_batch
 from xfed.ui import CachedClient, Pipeline
+from xfed.policy import to_compact, to_odrl, validate_policy, verify_sources
+from xfed.policy_evaluation import load_reference as load_policy_reference, score as score_policies, signatures
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,6 +97,93 @@ class QualityTests(unittest.TestCase):
         self.item = dict(chunk(), context=[])
         self.classified = dict(contract_id='contract', chunks=[dict(chunk(), classification=dict(label='RELEVANT'))])
         self.enriched = dict(contract_id='contract', items=[self.item])
+
+    def test_public_generation_returns_readable_policy_with_exact_pdf_locations(self):
+        from xfed.policy_generation import generate as generate_readable
+        output, report = generate_readable(self.enriched, PlanClient(plan(self.item)), ROOT, classified=self.classified)
+        self.assertEqual(output['version'], '2.0')
+        self.assertNotIn('odrlPolicy', output)
+        self.assertEqual(output['rules'][0]['actor'], 'Provider')
+        self.assertEqual(output['sources']['c1']['pages'], [1])
+        self.assertEqual(output['sources']['c1']['text'], self.item['text'])
+        self.assertEqual(report['policy_format'], '2.0')
+        self.assertEqual(verify_sources(output, self.classified['chunks']), 1)
+
+    def test_readable_export_preserves_nested_rules_logic_bindings_and_metadata(self):
+        old = fragment(self.item, 'permission')
+        old['odrlPolicy']['@type'] = 'Set'
+        parent = old['odrlPolicy']['permission'][0]
+        parent['assignee'] = 'party-unknown'
+        parent['constraint'] = [{'or': [
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperandReference='period'),
+            dict(leftOperand='payAmount', operator='eq', rightOperand=0, dataType='number', unit='EUR', uid='condition')]}]
+        duty = dict(uid='d1', action='notify', assignee='Provider', target='supplied data')
+        parent['duty'] = [duty]
+        ban = dict(uid='r2', action='share', target='supplied data', assignee='Provider', remedy=[dict(duty, uid='d2')])
+        old['odrlPolicy']['prohibition'] = [ban]
+        source = deepcopy(old['traceability'][0]['sourceClauses'])
+        old['traceability'].extend(dict(ruleUid=uid, ruleType=kind, sourceClauses=deepcopy(source))
+                                  for uid, kind in [('d1', 'duty'), ('r2', 'prohibition'), ('d2', 'duty')])
+        old['parameterBindings'] = [dict(uid='period', label='required period', dataType='duration', status='unresolved', sourceClauses=deepcopy(source))]
+        old['partyBindings'] = [dict(uid='party-unknown', role='requester', status='unresolved', sourceClauses=deepcopy(source))]
+        old['osdu'] = dict(legal=dict(legaltags=['source-tag'], otherRelevantDataCountries=['NO']))
+        compact = to_compact(old, [self.item], ROOT)
+        self.assertEqual(len(compact['sources']), 1)
+        self.assertEqual(compact['rules'][0]['requires'][0]['id'], 'd1')
+        exported = to_odrl(compact, ROOT)
+        for value in (old, exported):
+            value['traceability'].sort(key=lambda row: row['ruleUid'])
+        self.assertEqual(old, exported)
+
+    def test_readable_policy_rejects_broken_links_duplicate_rules_and_unbound_values(self):
+        compact = to_compact(fragment(self.item), [self.item], ROOT)
+        for mutation in ('source', 'duplicate', 'parameter', 'page', 'quote'):
+            value = deepcopy(compact)
+            if mutation == 'source':
+                value['rules'][0]['source'] = 'missing'
+            elif mutation == 'duplicate':
+                value['rules'].append(deepcopy(value['rules'][0]))
+            elif mutation == 'parameter':
+                value['rules'][0]['conditions'] = [dict(field='elapsedTime', op='lteq', parameter='missing')]
+            elif mutation == 'page':
+                value['sources']['c1']['pages'] = [2]
+            else:
+                value['sources']['c1']['text'] = 'Invented contract quotation'
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                validate_policy(value, ROOT)
+                verify_sources(value, self.classified['chunks'])
+
+    def test_policy_comparison_counts_omissions_failures_and_reversed_conditions(self):
+        reference = load_policy_reference(ROOT)
+        predictions = dict(reference_sha256=reference['sha256'], cases=[
+            dict(case_id=case['case_id'], source_sha256=case['source_sha256'], policy=deepcopy(case['expected']))
+            for case in reference['cases']])
+        exact = score_policies(reference, predictions, ROOT)
+        self.assertEqual(exact['exact_rule_agreement']['f1'], 1)
+        self.assertEqual(exact['totals']['complete_clauses'], 10)
+        changed = deepcopy(predictions)
+        incident = next(row for row in changed['cases'] if row['case_id'] == 'contract_01:c001287')
+        incident['policy']['rules'][0]['conditions'][3]['op'] = 'gteq'
+        result = score_policies(reference, changed, ROOT)
+        self.assertEqual(result['totals']['matched'], exact['totals']['matched'] - 1)
+        self.assertEqual(result['totals']['core_matched'], exact['totals']['core_matched'])
+        changed['cases'] = [row for row in changed['cases'] if row['case_id'] != 'contract_03:c000119']
+        self.assertEqual(score_policies(reference, changed, ROOT)['totals']['failures'], 1)
+        empty = dict(reference_sha256=reference['sha256'], cases=[])
+        result = score_policies(reference, empty, ROOT)
+        self.assertEqual(result['exact_rule_agreement']['recall'], 0)
+        self.assertEqual(result['totals']['failures'], 10)
+        self.assertEqual(result['totals']['correct_no_rule'], 0)
+
+    def test_policy_comparison_ignores_order_and_equivalent_fixed_durations(self):
+        reference = load_policy_reference(ROOT)
+        policy = deepcopy(next(case['expected'] for case in reference['cases'] if case['case_id'] == 'contract_01:c001287'))
+        changed = deepcopy(policy)
+        changed['rules'][0]['conditions'][3]['value'] = 'P3D'
+        changed['rules'][0]['conditions'].reverse()
+        self.assertEqual(signatures(policy), signatures(changed))
+        changed['rules'][0]['conditions'] = [dict(all=changed['rules'][0]['conditions'])]
+        self.assertEqual(signatures(policy), signatures(changed))
 
     def test_parent_restrictions_include_referenced_provision(self):
         parent = chunk('c1', '1. Research use is subject to clause 8.', clause_id='1')
