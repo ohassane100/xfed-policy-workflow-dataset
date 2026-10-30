@@ -677,11 +677,28 @@ def compile_plan(answer, contract, item, rejected=None):
             value['asset'] = label
             if condition not in value['conditions']: value['conditions'].append(condition)
         for condition in list(constraint_leaves(value['conditions'])):
+            wording = condition.get('rightOperand')
+            if isinstance(wording, str):
+                # Bind descriptive labels to explicit source phrases, never
+                # to an authoring reference or an evaluator's expected answer.
+                consent = re.sub(r'^agreed by\s+', '', wording, flags=re.I)
+                if (condition['leftOperand'] == 'approval' and consent != wording
+                        and consent.casefold().endswith('prior written consent')
+                        and any(normalized(consent) in span for span in cited)
+                        and not any(normalized(wording) in span for span in cited)):
+                    condition['rightOperand'] = consent
+                legal = re.search(r'\bunless (disclosure|retention) is required by law\b', normalized(item['text']))
+                if (legal and condition['leftOperand'] == 'compliance'
+                        and normalized(wording) in ('required by law', legal[1] + ' is required by law', legal[1] + ' required by law')):
+                    condition['rightOperand'] = legal[1] + ' required by law'
             # A verbatim numeric deadline is not qualitative timing. Preserve
             # its local Boolean position while compiling the explicit clock.
             wording = condition.get('rightOperand')
             relative = (re.fullmatch(r'within\s+(\d+)\s+(hours?|days?)\s+(?:after|of|from)\s+(.+?)[.]?', wording.strip(), re.I)
                         if isinstance(wording, str) else None)
+            if (relative and condition['leftOperand'].casefold() == 'timing'
+                    and re.search(r'\b(?:unless|except|provided that|subject to)\b', relative[3], re.I)):
+                raise ValueError('Separate the numeric deadline and its trigger from the source exception; do not hide an exception inside a timing label.')
             if (condition['leftOperand'].casefold() == 'timing' and condition['operator'] == 'eq'
                     and relative and any(normalized(wording) in span for span in cited)
                     and not (relative[2].lower().startswith('day') and any('business day' in span for span in cited))):
@@ -722,6 +739,12 @@ def compile_plan(answer, contract, item, rejected=None):
         leaves = list(constraint_leaves(value['conditions']))
         branches = constraint_branches(value['conditions'])
         missing = []
+        legal = re.search(r'\bunless (disclosure|retention) is required by law\b', primary)
+        if legal and ((kind == 'prohibition' and value['action'] == 'share' and legal[1] == 'disclosure')
+                      or (kind == 'obligation' and value['action'] == 'delete' and legal[1] == 'retention')):
+            if not all(any(c['leftOperand'] == 'compliance' and c['operator'] == 'neq'
+                           and c.get('rightOperand') == legal[1] + ' required by law' for c in branch) for branch in branches):
+                missing.append('Preserve the explicit legal exception in every branch: compliance neq ' + legal[1] + ' required by law.')
         shared_exception = re.search(r'\bshall not,\s*without (.{1,120}?(?:consent|approval)),\s*'
             r'(?:divulge|disclose|share)\b[^.]+?\bor,?\s*except to the extent (.{1,160}?),\s*make any use\b', primary)
         if shared_exception and kind == 'prohibition' and value['action'].casefold() == 'use':

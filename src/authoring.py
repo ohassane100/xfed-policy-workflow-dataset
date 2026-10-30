@@ -1,4 +1,4 @@
-"""Guided contracts: document authoring and a separate, source-bound reference.
+"""Data Contract Template (DCT): authoring and a separate source-bound reference.
 
 No extraction stage imports this module or reads its saved authoring/reference
 files. Only the rendered PDF enters stages 1.1 through 2.
@@ -16,15 +16,19 @@ from xfed.policy import validate_policy, verify_sources
 from xfed.policy_evaluation import component_comparison, normalized
 
 
-VERSION = 'guided-2'
-SUPPORTED_VERSIONS = ('guided-1', VERSION)
+VERSION = 'dct-1'
+SUPPORTED_VERSIONS = ('guided-1', 'guided-2', 'guided-3', VERSION)
+STORAGE_COUNTRIES = ('Norway', 'Sweden', 'Denmark', 'Finland', 'Iceland', 'Germany', 'France', 'Netherlands')
 DEFAULTS = dict(title='Data Collaboration Agreement', provider='North Research Institute',
     recipient='Harbour Analytics', data='Research Dataset', purpose='joint research',
     read=True, purpose_limit=True, sharing_limit=True, consent_exception=True,
     confidentiality=True, secure_storage=True, deletion=True, delete_days=30,
-    notification=True, notify_hours=72)
+    notification=True, notify_hours=72, encryption=False, storage_limit=False,
+    storage_countries=['Norway', 'Sweden'], legal_disclosure=False, legal_retention=False)
+ADVANCED = ('encryption', 'storage_limit', 'storage_countries', 'legal_disclosure', 'legal_retention')
 FLAGS = ('read', 'purpose_limit', 'sharing_limit', 'consent_exception', 'confidentiality',
-         'secure_storage', 'deletion', 'notification')
+         'secure_storage', 'deletion', 'notification', 'encryption', 'storage_limit',
+         'legal_disclosure', 'legal_retention')
 
 
 def digest(value):
@@ -32,8 +36,10 @@ def digest(value):
 
 
 def validate_terms(value):
+    if isinstance(value, dict) and set(value) == set(DEFAULTS) - set(ADVANCED):
+        value = dict(DEFAULTS, **value)  # Saved v1/v2 forms remain usable.
     if not isinstance(value, dict) or set(value) != set(DEFAULTS):
-        raise ValueError('Provide all guided fields and no additional fields.')
+        raise ValueError('Provide all DCT fields and no additional fields.')
     value = deepcopy(value)
     for key in ('title', 'provider', 'recipient', 'data', 'purpose'):
         text = value[key]
@@ -46,12 +52,17 @@ def validate_terms(value):
             raise ValueError(key + ' must name an entity or purpose rather than repeat a defined role.')
     for key in FLAGS:
         if type(value[key]) is not bool: raise ValueError(key + ' must be true or false.')
+    countries = value['storage_countries']
+    if (not isinstance(countries, list) or not 1 <= len(countries) <= 4
+            or any(not isinstance(c, str) or c not in STORAGE_COUNTRIES for c in countries)
+            or len(set(countries)) != len(countries)):
+        raise ValueError('Choose 1 to 4 distinct storage countries from: ' + ', '.join(STORAGE_COUNTRIES) + '.')
     for key, maximum in (('delete_days', 3650), ('notify_hours', 168)):
         if type(value[key]) is not int or not 1 <= value[key] <= maximum:
             raise ValueError(key + ' must be a whole number from 1 to ' + str(maximum) + '.')
     if normalized(value['provider']) == normalized(value['recipient']):
         raise ValueError('Provider and Recipient must be distinct parties.')
-    if not any(value[key] for key in FLAGS if key != 'consent_exception'):
+    if not any(value[key] for key in FLAGS if key not in ('consent_exception', 'legal_disclosure', 'legal_retention')):
         raise ValueError('Select at least one policy term.')
     return value
 
@@ -85,28 +96,42 @@ def draft(terms):
     clause('2.2', 'Each Party bears its own administrative expenses.')
     if any(t[k] for k in ('read', 'purpose_limit', 'sharing_limit')): clause('3', 'Access, use and sharing')
     if t['read']:
-        clause('3.1', 'Recipient may read Data for the Permitted Purpose.',
+        clause('3.1', 'Recipient may read Data for Permitted Purpose.',
                rule('permission', 'read', conditions=[condition('purpose', 'Permitted Purpose')]))
     if t['purpose_limit']:
-        clause('3.2', 'Recipient must not use Data for any purpose other than the Permitted Purpose.',
+        clause('3.2', 'Recipient must not use Data for any purpose other than Permitted Purpose.',
                rule('prohibition', 'use', conditions=[condition('purpose', 'Permitted Purpose', 'neq')]))
     if t['sharing_limit']:
         exception = " without Provider's prior written consent" if t['consent_exception'] else ''
+        if t['legal_disclosure']: exception += ', unless disclosure is required by law'
         conditions = [condition('recipient', 'third party')]
         if t['consent_exception']: conditions.append(condition('approval', "Provider's prior written consent", 'neq'))
+        if t['legal_disclosure']: conditions.append(condition('compliance', 'disclosure required by law', 'neq'))
         clause('3.3', 'Recipient must not share Data with any third party' + exception + '.',
                rule('prohibition', 'share', conditions=conditions))
-    if t['confidentiality'] or t['secure_storage']: clause('4', 'Information protection')
+    if any(t[k] for k in ('confidentiality', 'secure_storage', 'encryption', 'storage_limit')):
+        clause('4', 'Information protection')
     if t['confidentiality']:
         clause('4.1', 'Recipient must keep Data confidential.', rule('obligation', 'keepConfidential'))
     if t['secure_storage']:
         clause('4.2', 'Recipient must store Data in a secure manner.',
                rule('obligation', 'store', conditions=[condition('security', 'secure')]))
+    if t['encryption']:
+        clause('4.3', 'Recipient must encrypt Data using AES-256.',
+               rule('obligation', 'encrypt', conditions=[condition('security', 'AES-256')]))
+    if t['storage_limit']:
+        countries = ' or '.join(t['storage_countries'])
+        clause('4.4', 'Recipient must not store Data in any country other than ' + countries + '.',
+               rule('prohibition', 'store', conditions=[condition('spatial', t['storage_countries'], 'isNoneOf')]))
     if t['deletion'] or t['notification']: clause('5', 'Deletion and incident notification')
     if t['deletion']:
-        clause('5.1', f"Recipient must delete Data within {t['delete_days']} days after termination of this Agreement.",
-               rule('obligation', 'delete', conditions=[condition('elapsedTime', 'P' + str(t['delete_days']) + 'D', 'lteq'),
-                                                      condition('event', 'termination')]))
+        conditions = [condition('elapsedTime', 'P' + str(t['delete_days']) + 'D', 'lteq'), condition('event', 'termination')]
+        exception = ''
+        if t['legal_retention']:
+            exception = ', unless retention is required by law'
+            conditions.append(condition('compliance', 'retention required by law', 'neq'))
+        clause('5.1', f"Recipient must delete Data within {t['delete_days']} days after termination of this Agreement{exception}.",
+               rule('obligation', 'delete', conditions=conditions))
     if t['notification']:
         clause('5.2', f"Recipient must notify Provider of any Incident within {t['notify_hours']} hours after becoming aware of the Incident.",
                rule('obligation', 'notify', asset='Incident', conditions=[condition('recipient', 'Provider'),
@@ -170,7 +195,7 @@ def render_pdf(terms):
 def create(root, terms):
     terms = validate_terms(terms)
     pdf = render_pdf(terms)
-    identifier = 'guided_' + uuid4().hex[:12]
+    identifier = 'dct_' + uuid4().hex[:12]
     base = Path(root) / 'contracts' / identifier
     reference = draft(terms)
     reference.update(contract_id=identifier, pdf_sha256=hashlib.sha256(pdf).hexdigest())
@@ -186,7 +211,7 @@ def create(root, terms):
 def load(base):
     base = Path(base)
     if not (base / 'authoring.json').is_file() or not (base / 'reference.json').is_file():
-        raise ValueError('This contract has no guided-authoring reference.')
+        raise ValueError('This contract has no DCT authoring reference.')
     manifest = json.loads((base / 'authoring.json').read_text(encoding='utf-8'))
     reference = json.loads((base / 'reference.json').read_text(encoding='utf-8'))
     if (manifest['template_version'] not in SUPPORTED_VERSIONS or reference['template_version'] != manifest['template_version']
@@ -194,9 +219,9 @@ def load(base):
             or digest(reference) != manifest['reference_sha256']
             or hashlib.sha256((base / 'input/contract.pdf').read_bytes()).hexdigest() != manifest['pdf_sha256']
             or reference['pdf_sha256'] != manifest['pdf_sha256']):
-        raise ValueError('Guided terms, reference or source PDF changed; create a new contract revision.')
+        raise ValueError('DCT terms, reference or source PDF changed; create a new contract revision.')
     if reference['contract_id'] != base.name:
-        raise ValueError('Guided reference belongs to another contract.')
+        raise ValueError('DCT reference belongs to another contract.')
     return manifest, reference
 
 
@@ -232,12 +257,19 @@ def canonical(policy, terms):
             if field == 'approval' and label in consents: return "Provider's prior written consent"
             if field == 'security' and label in ('secure', 'securely', 'in a secure manner', 'secure manner', 'secure storage'):
                 return 'secure'
+            if field in ('security', 'encryption') and label in ('aes-256', 'aes 256', 'using aes-256'):
+                return 'AES-256'
+            if field == 'compliance' and label in ('disclosure required by law', 'disclosure is required by law'):
+                return 'disclosure required by law'
+            if field == 'compliance' and label in ('retention required by law', 'retention is required by law'):
+                return 'retention required by law'
             if field in ('event', 'timing') and label in events: return events[label]
             return v
         if isinstance(value, list): result['value'] = [mapped(v) for v in value]
         elif 'value' in result: result['value'] = mapped(value)
         if field == 'scope' and result.get('value') == 'Permitted Purpose': result['field'] = 'purpose'
         if field == 'timing' and result.get('value') in ('termination', 'incident awareness'): result['field'] = 'event'
+        if field == 'encryption' and result.get('value') == 'AES-256': result['field'] = 'security'
         scalar = result.get('value')
         inferred = ('duration' if field == 'elapsedtime' and isinstance(scalar, str) and re.fullmatch(r'P[\dYMDTHS.]+', scalar, re.I)
                     else 'boolean' if type(scalar) is bool else 'number' if type(scalar) in (int, float)
@@ -262,7 +294,7 @@ def canonical(policy, terms):
 
 def evaluate(base, policy, chunks, root):
     manifest, reference = load(base)
-    terms = manifest['terms']
+    terms = dict(DEFAULTS, **manifest['terms'])
     expected_rules = reference['rules']
     expected_sources = {c['clause_id']: dict(chunk_id='authored:' + c['clause_id'], clause_id=c['clause_id'],
         text=c['clause_id'] + ' ' + c['text']) for c in reference['clauses'] if any(r['source'] == c['clause_id'] for r in expected_rules)}
@@ -281,7 +313,7 @@ def evaluate(base, policy, chunks, root):
             raise ValueError('Segmented clause differs from the frozen authored document: ' + cid)
     verify_sources(actual, chunks)
     expected, actual = canonical(expected, terms), canonical(actual, terms)
-    clause_ids = [r['source'] for r in expected_rules]
+    clause_ids = list(dict.fromkeys(r['source'] for r in expected_rules))
     actual_clauses = {r['id']: original[actual['sources'][r['source']]['chunk_id']].get('clause_id') for r in actual['rules']}
     comparisons, matched = [], 0
     for clause in dict.fromkeys([*clause_ids, *actual_clauses.values()]):
@@ -304,12 +336,20 @@ def evaluate(base, policy, chunks, root):
         scenarios += [('3.2', 'Permitted purpose', dict(purpose='Permitted Purpose'), False),
                       ('3.2', 'Other purpose', dict(purpose='other purpose'), True)]
     if terms['sharing_limit']:
-        scenarios += [('3.3', 'Third party without consent', dict(recipient='third party', approval='absent'), True),
-                      ('3.3', 'Internal recipient', dict(recipient='Recipient', approval='absent'), False)]
-        scenarios.append(('3.3', 'Third party with consent', dict(recipient='third party', approval="Provider's prior written consent"), not terms['consent_exception']))
+        scenarios += [('3.3', 'Third party without consent', dict(recipient='third party', approval='absent', compliance='not required'), True),
+                      ('3.3', 'Internal recipient', dict(recipient='Recipient', approval='absent', compliance='not required'), False)]
+        scenarios.append(('3.3', 'Third party with consent', dict(recipient='third party', approval="Provider's prior written consent", compliance='not required'), not terms['consent_exception']))
+        if terms['legal_disclosure']:
+            scenarios += [('3.3', 'Legally required disclosure without consent', dict(recipient='third party', approval='absent', compliance='disclosure required by law'), False),
+                          ('3.3', 'Legally required disclosure with consent', dict(recipient='third party', approval="Provider's prior written consent", compliance='disclosure required by law'), False)]
+    if terms['storage_limit']:
+        scenarios += [('4.4', 'Storage in ' + country, dict(spatial=country), False) for country in terms['storage_countries']]
+        outside = next(c for c in STORAGE_COUNTRIES if c not in terms['storage_countries'])
+        scenarios.append(('4.4', 'Storage outside permitted countries', dict(spatial=outside), True))
     for clause, label, state, expected_result in scenarios:
         bans = [r for r in actual['rules'] if actual_clauses[r['id']] == clause and r['kind'] == 'prohibition'
-                and r['actor'] == 'Recipient' and r['asset'] == 'Data' and r['action'] == ('use' if clause == '3.2' else 'share')]
+                and r['actor'] == 'Recipient' and r['asset'] == 'Data'
+                and r['action'] == {'3.2': 'use', '3.3': 'share', '4.4': 'store'}[clause]]
         values = [constraint_truth([odrl_condition(c) for c in r.get('conditions', [])], state) for r in bans]
         result = True if any(v is True for v in values) else None if not values or any(v is None for v in values) else False
         probes.append(dict(clause_id=clause, scenario=label, expected_prohibition_applies=expected_result,
@@ -325,15 +365,41 @@ def evaluate(base, policy, chunks, root):
                        and r['asset'] == ('Data' if action == 'delete' else 'Incident')]
         for amount, expected_result, label in ((value, True, 'At deadline'), (value + 1, False, 'Beyond deadline')):
             duration = ('P' if suffix == 'D' else 'PT') + str(amount) + suffix
-            state = dict(elapsedTime=duration, event=event, recipient='Provider')
+            state = dict(elapsedTime=duration, event=event, recipient='Provider', compliance='not required')
             values = [constraint_truth([odrl_condition(c) for c in r.get('conditions', [])], state) for r in obligations]
             result = False if any(v is False for v in values) else None if not values or any(v is None for v in values) else True
             probes.append(dict(clause_id=clause, scenario=label + ' / ' + action, criterion='deadline satisfaction',
                                expected_satisfied=expected_result, actual_satisfied=result, passed=result is expected_result))
-    return dict(protocol='guided_source_reference_v1', scope='Generated contracts only; template meanings and aliases, not arbitrary-contract legal accuracy.',
+        if action == 'delete' and terms['legal_retention']:
+            # Check the exception separately: an exempt duty is not a missed deadline.
+            state = dict(elapsedTime='P0D', event='termination', compliance='retention required by law')
+            values = [constraint_truth([odrl_condition(c) for c in r.get('conditions', [])], state) for r in obligations]
+            result = True if any(v is True for v in values) else None if not values or any(v is None for v in values) else False
+            probes.append(dict(clause_id=clause, scenario='Legally required retention', criterion='exception applicability',
+                               expected_obligation_applies=False, actual_obligation_applies=result, passed=result is False))
+    if terms['encryption']:
+        encryption = [r for r in actual['rules'] if actual_clauses[r['id']] == '4.3' and r['kind'] == 'obligation'
+                      and r['actor'] == 'Recipient' and r['asset'] == 'Data' and r['action'] == 'encrypt']
+        for algorithm, expected_result in (('AES-256', True), ('plaintext', False)):
+            values = [constraint_truth([odrl_condition(c) for c in r.get('conditions', [])], dict(security=algorithm)) for r in encryption]
+            result = False if any(v is False for v in values) else None if not values or any(v is None for v in values) else True
+            probes.append(dict(clause_id='4.3', scenario='Encryption / ' + algorithm, criterion='algorithm satisfaction',
+                               expected_satisfied=expected_result, actual_satisfied=result, passed=result is expected_result))
+    alignments = [row for clause in comparisons for row in clause['alignment']]
+    diagnostics = dict(missing_rules=sum(len(c['missing_reference_rule_ids']) for c in comparisons),
+        extra_rules=sum(len(c['unmatched_prediction_rule_ids']) for c in comparisons),
+        mismatched_rules=sum(not row['complete_agreement'] for row in alignments),
+        wrong_parties=sum(not row['components']['actor'] or row['components'].get('issuer') is False for row in alignments),
+        wrong_actions=sum(not row['components']['action'] for row in alignments),
+        condition_mismatches=sum(not row['components']['conditions'] for row in alignments),
+        failed_deadline_checks=sum(not c['passed'] for c in probes if c.get('criterion') == 'deadline satisfaction'),
+        failed_exception_checks=sum(not c['passed'] for c in probes if c.get('criterion') == 'exception applicability'
+                                   or 'consent' in c['scenario'].lower() or 'legally required disclosure' in c['scenario'].lower()))
+    return dict(protocol='dct_source_reference_v1', scope='DCT contracts only; template meanings and aliases, not arbitrary-contract legal accuracy.',
         complete=True, contract_id=reference['contract_id'], template_version=reference['template_version'],
         terms_sha256=manifest['terms_sha256'], pdf_sha256=manifest['pdf_sha256'], reference_sha256=manifest['reference_sha256'],
+        policy_sha256=digest(policy),
         expected_rules=count, extracted_rules=predicted, matched_rules=matched, precision=precision, recall=recall,
         f1=2 * precision * recall / (precision + recall) if precision + recall else 0,
         complete_policy=matched == count == predicted, routed_operative_clauses=sum(c in routing for c in clause_ids),
-        expected_operative_clauses=len(clause_ids), clauses=comparisons, behavior_checks=probes)
+        expected_operative_clauses=len(clause_ids), clauses=comparisons, behavior_checks=probes, diagnostics=diagnostics)

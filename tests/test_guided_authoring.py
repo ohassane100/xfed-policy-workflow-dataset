@@ -13,6 +13,7 @@ from threading import Thread
 from urllib.request import Request, urlopen
 
 from xfed import authoring
+from xfed.policy import readable_rules
 from xfed.common import write_json
 from xfed.extraction import extract_document
 from xfed.segmentation import segment
@@ -95,6 +96,8 @@ class GuidedTests(unittest.TestCase):
             result = authoring.evaluate(self.base, policy, self.chunks, self.root)
             self.assertLess(result['f1'], 1, mutation)
             self.assertFalse(result['complete_policy'], mutation)
+            if mutation == 'actor': self.assertEqual(result['diagnostics']['wrong_parties'], 1)
+            if mutation == 'duplicate': self.assertEqual(result['diagnostics']['extra_rules'], 1)
 
     def test_missing_policy_and_unselected_consent_are_not_false_passes(self):
         result = authoring.evaluate(self.base, None, self.chunks, self.root)
@@ -153,6 +156,74 @@ class GuidedTests(unittest.TestCase):
         self.assertNotEqual(revision['contract'], self.created['contract'])
         self.assertEqual((self.base / 'input/contract.pdf').read_bytes(), before)
 
+    def test_advanced_terms_preserve_exceptions_geography_and_encryption(self):
+        terms = dict(authoring.DEFAULTS, encryption=True, storage_limit=True, legal_disclosure=True,
+                     legal_retention=True, delete_days=7, notify_hours=24)
+        self.created = authoring.create(self.root, terms)
+        self.base = self.root / 'contracts' / self.created['contract']
+        self.document = extract_document(self.base / 'input/contract.pdf', self.created['contract'], self.root)
+        self.chunks = segment(self.document, self.root)['chunks']
+        self.reference = authoring.load(self.base)[1]
+        policy = self.reference_policy()
+        result = authoring.evaluate(self.base, policy, self.chunks, self.root)
+        self.assertEqual(result['expected_rules'], 9)
+        self.assertTrue(result['complete_policy'])
+        self.assertEqual(len(result['behavior_checks']), 17)
+        self.assertTrue(all(c['passed'] for c in result['behavior_checks']))
+        clauses = {c.get('clause_id'): c['text'] for c in self.chunks}
+        self.assertIn('unless disclosure is required by law', clauses['3.3'])
+        self.assertIn('unless retention is required by law', clauses['5.1'])
+        self.assertIn('Norway or Sweden', clauses['4.4'])
+        for clause, mutation in (('3.3', 'drop_exception'), ('5.1', 'drop_exception'),
+                                 ('4.4', 'reverse_countries'), ('4.3', 'drop_algorithm')):
+            changed = deepcopy(policy)
+            rule = next(r for r in changed['rules'] if r['source'] == next(c['chunk_id'] for c in self.chunks if c.get('clause_id') == clause))
+            if mutation == 'drop_exception': rule['conditions'] = [c for c in rule['conditions'] if c['field'] != 'compliance']
+            elif mutation == 'reverse_countries': rule['conditions'][0]['op'] = 'isAnyOf'
+            else: rule.pop('conditions')
+            compared = authoring.evaluate(self.base, changed, self.chunks, self.root)
+            self.assertEqual(compared['matched_rules'], 8, clause)
+            self.assertTrue(any(not c['passed'] for c in compared['behavior_checks'] if c['clause_id'] == clause), clause)
+            if mutation == 'drop_exception': self.assertGreater(compared['diagnostics']['failed_exception_checks'], 0)
+
+    def test_readable_view_preserves_the_actual_json_boolean_logic_and_source(self):
+        policy = self.reference_policy()
+        rule = next(r for r in policy['rules'] if r['action'] == 'share')
+        rule['conditions'] = [dict(any=rule['conditions'])]
+        row = next(r for r in readable_rules(policy) if r['id'] == rule['id'])
+        self.assertIn('must not share Data', row['summary'])
+        self.assertIn('At least one of', row['conditions'][0])
+        self.assertEqual(row['rule'], rule)
+        self.assertEqual(row['source'], policy['sources'][rule['source']])
+        self.assertEqual(row['source']['clause_id'], '3.3')
+        rule['conditions'] = [dict(exactly_one=rule['conditions'][0]['any'])]
+        row = next(r for r in readable_rules(policy) if r['id'] == rule['id'])
+        self.assertIn('Exactly one of', row['conditions'][0])
+        deletion = next(r for r in readable_rules(policy) if r['rule']['action'] == 'delete')
+        self.assertIn('30 days', deletion['conditions'][0])
+
+    def test_legacy_forms_and_frozen_references_keep_their_meaning(self):
+        legacy = {k: v for k, v in authoring.DEFAULTS.items() if k not in authoring.ADVANCED}
+        self.assertEqual(authoring.validate_terms(legacy), authoring.DEFAULTS)
+        manifest = json.loads((self.base / 'authoring.json').read_text())
+        reference = deepcopy(self.reference)
+        reference['template_version'] = 'guided-2'
+        manifest.update(template_version='guided-2', terms=legacy, terms_sha256=authoring.digest(legacy),
+                        reference_sha256=authoring.digest(reference))
+        write_json(self.base / 'authoring.json', manifest)
+        write_json(self.base / 'reference.json', reference)
+        self.assertTrue(authoring.evaluate(self.base, self.reference_policy(), self.chunks, self.root)['complete_policy'])
+        self.assertEqual(authoring.load(self.base)[0]['terms'], legacy)
+        self.assertEqual(Pipeline(self.root, 'http://127.0.0.1:11435').guided_result(self.created['contract'])['clauses'], reference['clauses'])
+
+    def test_advanced_country_values_are_bounded_and_inactive_exceptions_add_no_rules(self):
+        for invalid in ([], ['Norway', 'Norway'], ['Unknown'], 'Norway', [True], list(authoring.STORAGE_COUNTRIES)):
+            with self.assertRaises(ValueError): authoring.validate_terms(dict(authoring.DEFAULTS, storage_countries=invalid))
+        terms = dict(authoring.DEFAULTS, sharing_limit=False, deletion=False, legal_disclosure=True, legal_retention=True)
+        draft = authoring.draft(terms)
+        self.assertFalse(any('required by law' in c['text'] for c in draft['clauses']))
+        self.assertEqual(len(draft['rules']), 5)
+
     def test_full_pipeline_calls_do_not_receive_authoring_or_reference_payloads(self):
         policy = self.reference_policy()
         pipeline = Pipeline(self.root, 'http://127.0.0.1:11435')
@@ -175,6 +246,16 @@ class GuidedTests(unittest.TestCase):
         report = json.loads((self.base / 'output/guided_evaluation.json').read_text(encoding='utf-8'))
         self.assertEqual(report['matched_rules'], 7)
         self.assertEqual(report['routed_operative_clauses'], 7)
+        preview = pipeline.guided_result(self.created['contract'])['policy_preview']
+        self.assertEqual(len(preview), 7)
+        for row in preview:
+            self.assertEqual(row['source']['text'], next(c['text'] for c in self.chunks if c['chunk_id'] == row['source']['chunk_id']))
+            self.assertTrue(row['source']['pages'])
+        changed = deepcopy(policy)
+        changed['rules'].pop()
+        write_json(pipeline.path(self.created['contract'], '2'), changed)
+        with self.assertRaisesRegex(ValueError, 'changed after evaluation'):
+            pipeline.guided_result(self.created['contract'])
         pipeline.invalidate(self.created['contract'], '1.1')
         self.assertFalse((self.base / 'output/guided_evaluation.json').exists())
 

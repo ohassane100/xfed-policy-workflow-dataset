@@ -78,12 +78,15 @@ project, combine this comparison with source inspection of important mismatches
 and focused regression tests for polarity, exceptions, clocks and binding scope.
 Do not build another model-jury system merely to obtain a higher score.
 
-Guided authoring keeps selected terms and a hashed reference outside the input
+DCT authoring keeps selected terms and a hashed reference outside the input
 PDF. After the normal stages 1.1 through 2, `guided_evaluation.json` compares
 complete rules, operative-clause routing and consent/deadline scenarios. Explicit
 template role/name aliases and Boolean equivalence are allowed; missing conditions
 and extra rules still fail. This measures the supported generated contracts,
 not arbitrary-contract accuracy. Changing terms creates a new contract revision.
+Diagnostics separate missing/extra rules from aligned rule mismatches and failed
+exception/deadline checks. Encryption, country and legal-exception probes are
+enabled only when those DCT terms are selected.
 
 Generation also gives its same-model reviewer small computed examples of purpose
 restrictions. Missing state, unresolved values and unsupported comparisons stay

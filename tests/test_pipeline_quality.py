@@ -448,6 +448,28 @@ class QualityTests(unittest.TestCase):
         self.assertIsNotNone(output)
         self.assertFalse(any(c['leftOperand']=='quality' for c in output['odrlPolicy']['obligation'][0]['constraint']))
 
+    def test_source_legal_exception_labels_are_consistent_without_weakening_polarity(self):
+        item = dict(self.item, text="Recipient must not share Data with any third party without Owner's prior written consent, unless disclosure is required by law.")
+        answer = plan(item, 'prohibition', actor='Recipient', action='share', asset='Data', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='third party'),
+            dict(leftOperand='approval', operator='neq', rightOperand="agreed by Owner's prior written consent"),
+            dict(leftOperand='compliance', operator='neq', rightOperand='required by law')])
+        compiled = compile_plan(answer, 'contract', item)['odrlPolicy']['prohibition'][0]['constraint']
+        self.assertIn(dict(leftOperand='approval', operator='neq', rightOperand="Owner's prior written consent"), compiled)
+        self.assertIn(dict(leftOperand='compliance', operator='neq', rightOperand='disclosure required by law'), compiled)
+        for change in ('missing', 'reversed', 'bypass'):
+            broken = deepcopy(answer)
+            if change == 'missing': broken['rules'][0]['conditions'].pop()
+            elif change == 'reversed': broken['rules'][0]['conditions'][-1]['operator'] = 'eq'
+            else: broken['rules'][0]['conditions'][-1] = {'or': [broken['rules'][0]['conditions'][-1], dict(leftOperand='purpose', operator='eq', rightOperand='other purpose')]}
+            with self.assertRaisesRegex(ValueError, 'legal exception'):
+                compile_plan(broken, 'contract', item)
+        item = dict(self.item, text='Recipient must delete Data within 14 days after termination, unless retention is required by law.')
+        answer = plan(item, actor='Recipient', action='delete', asset='Data', conditions=[
+            dict(leftOperand='timing', operator='eq', rightOperand='within 14 days after termination, unless retention is required by law')])
+        with self.assertRaisesRegex(ValueError, 'Separate the numeric deadline'):
+            compile_plan(answer, 'contract', item)
+
     def test_source_deadline_and_qualitative_timing_are_required_not_just_checked_when_present(self):
         item = dict(self.item, text='Provider must notify Customer of Incidents without undue delay within 36 hours of awareness.')
         answer = plan(item, action='notify', asset='Incidents', conditions=[

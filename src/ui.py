@@ -21,7 +21,7 @@ from xfed.enrichment import enrich
 from xfed.llm import OllamaPool, load_client
 from xfed.llm.service import OllamaServicePool, nvidia_gpus
 from xfed.policy_generation import generate
-from xfed.policy import to_odrl
+from xfed.policy import to_odrl, readable_rules, validate_policy, verify_sources
 # The separate review stage is disabled; generation uses its clause evidence check.
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
 from xfed.evaluation import load_reference, reference_summary, run_evaluation
@@ -238,9 +238,17 @@ class Pipeline:
         if evaluation and (evaluation.get('pdf_sha256') != manifest['pdf_sha256']
                            or evaluation.get('reference_sha256') != manifest['reference_sha256']):
             raise ValueError('Saved evaluation belongs to another contract revision. Run the pipeline again.')
+        policy = read_json(self.path(contract, '2'))
+        if evaluation and evaluation.get('policy_sha256') and evaluation['policy_sha256'] != authoring.digest(policy):
+            raise ValueError('Saved policy changed after evaluation. Run the pipeline again.')
+        if policy:
+            validate_policy(policy, self.root)
+            if policy.get('document', {}).get('sha256') != manifest['pdf_sha256']:
+                raise ValueError('Saved policy belongs to another source PDF. Run the pipeline again.')
+            verify_sources(policy, read_json(self.path(contract, '1.3'))['chunks'])
         return dict(contract=contract, terms=manifest['terms'], title=reference['title'],
-                    expected_rules=len(reference['rules']),
-                    evaluation=evaluation)
+                    expected_rules=len(reference['rules']), clauses=reference['clauses'],
+                    evaluation=evaluation, policy_preview=readable_rules(policy) if policy else [])
 
     def make_client(self, request):
         available = {m['name']: m for m in self.models()}
@@ -673,7 +681,7 @@ def handler(pipeline):
                         devices, gpu_error = [], str(error)
                     self.send(dict(contracts=pipeline.contracts(), ollama_url=pipeline.ollama_url,
                                    contract_titles={c: read_json(pipeline.base(c) / 'authoring.json', {}).get('terms', {}).get('title', c)
-                                                    for c in pipeline.contracts() if c.startswith('guided_')},
+                                                    for c in pipeline.contracts() if (pipeline.base(c) / 'authoring.json').is_file()},
                                    model_defaults=pipeline.defaults,
                                    gpu_devices=devices if pipeline.service_settings is not None else [],
                                    gpu_detection_error=gpu_error, max_workers=32 if pipeline.service_settings is not None else 3,

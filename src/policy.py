@@ -231,3 +231,38 @@ def verify_sources(value, chunks):
             if key in source and source[key] != chunk.get('source', {}).get(key):
                 raise ValueError('Policy source location does not match the original clause.')
     return len(value['sources'])
+
+
+def readable_rules(value):
+    """Explain the saved JSON deterministically; never regenerate its meaning."""
+    import re
+    labels = dict(recipient='Recipient', purpose='Purpose', spatial='Storage country',
+                  elapsedTime='Elapsed time from the stated trigger', event='Trigger',
+                  approval='Approval', compliance='Legal condition', security='Security', encryption='Encryption')
+    operators = dict(eq='is', neq='is not', lt='is less than', lteq='is at most', gt='is more than',
+                     gteq='is at least', isAnyOf='is one of', isNoneOf='is none of', isAllOf='includes all of')
+    def literal(item):
+        if isinstance(item, str):
+            match = re.fullmatch(r'P(\d+)D|PT(\d+)H', item)
+            if match:
+                amount, unit = (match[1], 'day') if match[1] else (match[2], 'hour')
+                return amount + ' ' + unit + ('' if amount == '1' else 's')
+            return item
+        return json.dumps(item, ensure_ascii=False)
+    def condition(item):
+        for group, description in (('all', 'All of'), ('any', 'At least one of'), ('exactly_one', 'Exactly one of')):
+            if group in item:
+                return description + ': (' + '; '.join(condition(child) for child in item[group]) + ')'
+        right = ('unresolved parameter ' + item['parameter'] if 'parameter' in item else literal(item['value']))
+        return labels.get(item['field'], item['field']) + ' ' + operators.get(item['op'], item['op']) + ' ' + right
+    def explain(rule):
+        modality = dict(permission='may', prohibition='must not', obligation='must').get(rule.get('kind'), 'must')
+        operation = ('keep ' + rule['asset'] + ' confidential' if rule['action'] == 'keepConfidential'
+                     else 'provide access to ' + rule['asset'] if rule['action'] == 'provideAccess'
+                     else re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', rule['action']).lower() + ' ' + rule['asset'])
+        return dict(id=rule['id'], summary=rule['actor'] + ' ' + modality + ' ' + operation + '.',
+                    conditions=[condition(item) for item in rule.get('conditions', [])],
+                    source=deepcopy(value['sources'][rule['source']]), rule=deepcopy(rule),
+                    requires=[explain(child) for child in rule.get('requires', [])],
+                    remedies=[explain(child) for child in rule.get('remedies', [])])
+    return [explain(rule) for rule in value['rules']]
