@@ -678,6 +678,11 @@ def compile_plan(answer, contract, item, rejected=None):
             if condition not in value['conditions']: value['conditions'].append(condition)
         for condition in list(constraint_leaves(value['conditions'])):
             wording = condition.get('rightOperand')
+            source_text = ' '.join(item['text'].split())
+            malformed_days = re.fullmatch(r'PT(\d+)D', wording) if isinstance(wording, str) else None
+            if (condition['leftOperand'] in ('elapsedTime', 'postponementDuration') and malformed_days
+                    and re.search(r'\b'+malformed_days[1]+r'\s+(?:calendar\s+)?days?\b', source_text, re.I)):
+                wording = condition['rightOperand'] = 'P'+malformed_days[1]+'D'
             if (condition['leftOperand'] == 'completeness' and condition['operator'] == 'eq' and wording is True
                     and re.search(r'\bmaintain\s+complete\b', normalized(item['text']))):
                 condition['rightOperand'] = 'complete'
@@ -687,6 +692,22 @@ def compile_plan(answer, contract, item, rejected=None):
                          or (re.fullmatch(r'P\d+D', wording) and condition.get('unit', '').casefold() in ('d', 'day', 'days')))):
                 condition.pop('unit')  # The ISO duration already carries this same unit.
             if isinstance(wording, str):
+                if (condition['leftOperand'] == 'security' and condition['operator'] in ('eq', 'neq')
+                        and normalized(wording) in ('met', 'not met') and 'Security Requirements' in source_text):
+                    condition['rightOperand'] = 'Security Requirements'
+                    if normalized(wording) == 'not met': condition['operator'] = 'neq' if condition['operator'] == 'eq' else 'eq'
+                scopes = list(re.finditer(r'\b(for all processing of [^.;]{1,200})', source_text, re.I))
+                if (condition['leftOperand'] == 'scope' and condition['operator'] == 'eq' and len(scopes) == 1
+                        and normalized(wording) == normalized(scopes[0][1]).removeprefix('for all ')):
+                    condition['rightOperand'] = scopes[0][1]
+                signed = re.search(r'\bafter (this Agreement is signed)\b', source_text, re.I)
+                if condition['leftOperand'] == 'event' and normalized(wording) == 'agreement is signed' and signed:
+                    condition['rightOperand'] = signed[1]
+                if value['action'].casefold() == 'attribute' and re.search(r'\bwhen publishing\b', source_text, re.I):
+                    if condition['leftOperand'] == 'attribution' and any(normalized(wording) in span for span in cited):
+                        condition['leftOperand'] = 'recipient'
+                    if condition['leftOperand'] == 'event' and normalized(wording) == 'publishing':
+                        condition.update(leftOperand='timing', rightOperand='when publishing')
                 # Bind descriptive labels to explicit source phrases, never
                 # to an authoring reference or an evaluator's expected answer.
                 consent = re.sub(r'^agreed by\s+', '', wording, flags=re.I)
@@ -712,7 +733,7 @@ def compile_plan(answer, contract, item, rejected=None):
                     condition.update(leftOperand='compliance', rightOperand='no Confidential Information disclosed')
                 confirmations = list(re.finditer(r'\bif (.{1,120}?) has confirmed no objection\b', source_text, re.I))
                 confirmed = confirmations[0] if len(confirmations) == 1 else None
-                if confirmed and normalized(wording) in {'confirmed no objection', *[normalized(confirmed[1] + suffix) for suffix in
+                if confirmed and normalized(wording) in {'confirmed no objection', normalized('confirmed no objection by '+confirmed[1]), *[normalized(confirmed[1] + suffix) for suffix in
                         (' has confirmed no objection', ' confirmed no objection', ' confirmation of no objection')]}:
                     condition.update(leftOperand='approval', rightOperand=confirmed[1] + ' confirmation of no objection')
                 addressed = re.search(r"\bif (.{1,120}?['\u2019]s) objections have been addressed\b", source_text, re.I)
@@ -861,8 +882,8 @@ def compile_plan(answer, contract, item, rejected=None):
                 and not all(re.search(r'\bcomplete\b', normalized(json.dumps([value['asset'], branch]))) for branch in branches)):
             missing.append('Retain the explicit complete-records quality requirement in the asset or a completeness condition.')
         if kind == 'permission' and value['action'].casefold() in ('provideaccess', 'grantaccess', 'grant'):
-            recipient = re.search(r'\bmay\s+grant\s+(?:(?:the|a|an)\s+)?([A-Z][\w-]*(?:\s+[A-Z][\w-]*)?)'
-                                  r'.{0,140}\baccess\b', ' '.join(item['text'].split()))
+            recipient = re.search(r'\bmay\s+grant\s+(?:(?:the|a|an)\s+)?(.{1,120}?)(?:,\s+(?:in|at)\s+[^,]{1,100},)?\s+'
+                                  r'(?:(?:direct|electronic)\s+)*access\b', ' '.join(item['text'].split()))
             if recipient and not all(any(condition['leftOperand'].casefold() == 'recipient'
                     and normalized(str(condition.get('rightOperand', ''))).removeprefix('the ') == normalized(recipient[1])
                     for condition in branch) for branch in branches):
@@ -872,6 +893,9 @@ def compile_plan(answer, contract, item, rejected=None):
                     and 'discretion' in normalized(str(condition.get('rightOperand', '')))
                     for condition in branch) for branch in branches):
                 missing.append('Retain the source sole-discretion qualification on the grant.')
+            if 'direct electronic access' in primary and not all(any(c['leftOperand'] == 'scope' and c['operator'] == 'eq'
+                    and normalized(str(c.get('rightOperand', ''))) == 'direct electronic access' for c in branch) for branch in branches):
+                missing.append('Retain scope eq direct electronic access on this specifically limited grant.')
             if (re.search(r'\baccess\b.{0,100}\bdepends on\b.{0,240}\bsecurity requirements\b', primary)
                     and not all(any(condition['leftOperand'].casefold() in ('security', 'compliance')
                         and 'security' in normalized(str(condition.get('rightOperand', '')))
@@ -1029,10 +1053,10 @@ def compile_plan(answer, contract, item, rejected=None):
                              'Split the source-supported alternatives into separate rule branches or mark the '
                              'unrepresentable qualification for review; do not require both alternatives.')
         for condition in leaves:
-            if (condition['leftOperand'].casefold() == 'elapsedtime'
+            if (condition['leftOperand'].casefold() in ('elapsedtime', 'postponementduration')
                     and isinstance(condition.get('rightOperand'), str)
                     and not DURATION.fullmatch(condition['rightOperand'])):
-                raise ValueError('elapsedTime requires an ISO 8601 duration or a number with units; '
+                raise ValueError(condition['leftOperand']+' requires an ISO 8601 duration or a number with units; '
                                  'preserve qualitative wording such as without undue delay in a timing constraint.')
         if kind == 'prohibition':
             scope = ' '.join(cited)
@@ -1246,6 +1270,13 @@ def generate_item(item, client, prompt, contract, request_schema, root):
     if definition_only(item):
         diagnostics['deterministic_no_rule'] = 'definition_without_operative_terms'
         return result(None, 'A definition without operative requirements creates no independent rule.',
+                      outcome='abstained_needs_review')
+    if (re.search(r'\bretains? ownership\b', item['text'], re.I)
+            and re.search(r'\b(?:transfers no|does not transfer) ownership\b', item['text'], re.I)
+            and not re.search(r'\b(?:must|shall|may|can|required|entitled|access|use|shar\w*|disclos\w*|publish\w*|store|delete|notify|provide|grant|submit)\b', item['text'], re.I)):
+        diagnostics['deterministic_no_rule'] = 'ownership_declaration_requires_review'
+        return result(None, 'Ownership allocation remains in the source contract and requires review, not an independent information-handling operation. '
+                      'A statement that this agreement transfers no ownership does not prohibit the parties from making future transfers.',
                       outcome='abstained_needs_review')
 
     for attempt in range(2):

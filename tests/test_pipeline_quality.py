@@ -634,6 +634,69 @@ class QualityTests(unittest.TestCase):
         self.assertIsNotNone(output)
         self.assertGreater(len(client.calls), 0)
 
+    def test_three_word_grantee_security_bundle_and_access_mode(self):
+        item = dict(self.item, text="Provider may grant Bergen Applied Analytics direct electronic access to Registry at Provider's sole discretion, provided Bergen Applied Analytics meets the Security Requirements.")
+        answer = plan(item, 'permission', actor='Provider', action='provideAccess', asset='Registry', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Bergen Applied Analytics'),
+            dict(leftOperand='security', operator='eq', rightOperand='met'),
+            dict(leftOperand='discretion', operator='eq', rightOperand='sole discretion'),
+            dict(leftOperand='scope', operator='eq', rightOperand='direct electronic access')])
+        encoded = compile_plan(answer,'contract',item)['odrlPolicy']['permission'][0]['constraint']
+        self.assertEqual(encoded[0]['rightOperand'], 'Bergen Applied Analytics')
+        self.assertEqual(encoded[1]['rightOperand'], 'Security Requirements')
+        answer['rules'][0]['conditions'][0]['rightOperand']='Bergen Applied'
+        with self.assertRaisesRegex(ValueError,'Bergen Applied Analytics'): compile_plan(answer,'contract',item)
+        answer['rules'][0]['conditions'][0]['rightOperand']='Bergen Applied Analytics'
+        answer['rules'][0]['conditions'].pop()
+        with self.assertRaisesRegex(ValueError,'direct electronic access'): compile_plan(answer,'contract',item)
+        answer['rules'][0]['conditions'].append(dict(leftOperand='scope',operator='eq',rightOperand='direct electronic access'))
+        comma = dict(item, text='Provider may grant Bergen Applied Analytics, in its sole discretion, direct electronic access to Registry provided the Security Requirements are met.')
+        self.assertIsNotNone(compile_plan(answer,'contract',comma))
+
+    def test_source_bound_day_durations_scope_attribution_and_signature_events(self):
+        from xfed.common import constraint_truth
+        item = dict(self.item,text='Provider may request a delay of Results of no more than 90 days, within 30 days after publication notice.')
+        answer = plan(item,'permission',actor='Provider',action='requestDelay',asset='Results',conditions=[
+            dict(leftOperand='elapsedTime',operator='lteq',rightOperand='PT30D'),
+            dict(leftOperand='postponementDuration',operator='lteq',rightOperand='PT90D')])
+        encoded=compile_plan(answer,'contract',item)['odrlPolicy']['permission'][0]['constraint']
+        self.assertTrue(constraint_truth(encoded,dict(elapsedTime='P30D',postponementDuration='P90D',event='publication notice')))
+        answer['rules'][0]['conditions'][1]['rightOperand']='PT45D'
+        with self.assertRaisesRegex(ValueError,'postponementDuration requires'): compile_plan(answer,'contract',item)
+        item=dict(self.item,text='Recipient must maintain complete Records for all processing of Data performed under this Agreement.')
+        answer=plan(item,actor='Recipient',action='maintain',asset='Records',conditions=[
+            dict(leftOperand='completeness',operator='eq',rightOperand='complete'),
+            dict(leftOperand='scope',operator='eq',rightOperand='processing of Data performed under this Agreement')])
+        encoded=compile_plan(answer,'contract',item)['odrlPolicy']['obligation'][0]['constraint']
+        self.assertEqual(encoded[1]['rightOperand'],'for all processing of Data performed under this Agreement')
+        item=dict(self.item,text='Recipient must attribute Provider when publishing Results.')
+        answer=plan(item,actor='Recipient',action='attribute',asset='Results',conditions=[
+            dict(leftOperand='attribution',operator='eq',rightOperand='Provider'),dict(leftOperand='event',operator='eq',rightOperand='publishing')])
+        encoded=compile_plan(answer,'contract',item)['odrlPolicy']['obligation'][0]['constraint']
+        self.assertTrue(constraint_truth(encoded,dict(recipient='Provider',timing='when publishing')))
+        item=dict(self.item,text='Provider must share Data with Recipient within 5 days after this Agreement is signed.')
+        answer=plan(item,actor='Provider',action='share',asset='Data',conditions=[
+            dict(leftOperand='recipient',operator='eq',rightOperand='Recipient'),dict(leftOperand='elapsedTime',operator='lteq',rightOperand='P5D'),
+            dict(leftOperand='event',operator='eq',rightOperand='Agreement is signed')])
+        encoded=compile_plan(answer,'contract',item)['odrlPolicy']['obligation'][0]['constraint']
+        self.assertTrue(constraint_truth(encoded,dict(recipient='Recipient',elapsedTime='P5D',event='this Agreement is signed')))
+
+    def test_ownership_declaration_does_not_invent_operations_or_hide_mixed_duties(self):
+        text='Each Party retains ownership of the materials it contributes. This Agreement transfers no ownership of Data or Background.'
+        item=dict(self.item,text=text)
+        client=PlanClient(dict(rules=[],reason='Ownership declaration.',unrepresented=[]))
+        output,entry,failed=generate_item(item,client,'prompt','contract',response_schema(ROOT),ROOT)
+        self.assertIsNone(output)
+        self.assertFalse(failed)
+        self.assertEqual(client.calls,[])
+        self.assertEqual(entry['deterministic_no_rule'],'ownership_declaration_requires_review')
+        mixed=dict(item,text=text+' Provider must delete Data.')
+        output,_,failed=generate_item(mixed,PlanClient(plan(mixed,asset='Data',conditions=[])),'prompt','contract',response_schema(ROOT),ROOT)
+        self.assertFalse(failed)
+        self.assertIsNotNone(output)
+        explicit=dict(item,text='Recipient must not transfer ownership of Data.')
+        self.assertIsNotNone(compile_plan(plan(explicit,'prohibition',actor='Recipient',action='transferOwnership',asset='Data',conditions=[]),'contract',explicit))
+
     def test_transitive_definitions_are_resolved_without_order_dependence(self):
         data = [chunk('c1', 'Provider may use Material.'),
                 chunk('c2', 'Material means SensitiveDataset.', clause_id='2'),

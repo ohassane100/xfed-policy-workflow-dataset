@@ -301,8 +301,13 @@ class GuidedTests(unittest.TestCase):
         self.assertEqual(authoring.validate_terms(legacy_v2), authoring.DEFAULTS)
         for change in (dict(delivery_days=0), dict(certificate_days=True), dict(error_hours=169),
                        dict(data_description='Recipient must share all data.'),
-                       dict(authorized_access=True, authorized_users=authoring.DEFAULTS['recipient'])):
+                       dict(authorized_access=True, authorized_users=authoring.DEFAULTS['recipient']),
+                       dict(attribution=True, results=authoring.DEFAULTS['data']),
+                       dict(error_reporting=True, documentation=authoring.DEFAULTS['data'])):
             with self.assertRaises(ValueError): authoring.validate_terms(dict(authoring.DEFAULTS, **change))
+        legacy_names = authoring.canonical(dict(rules=[dict(kind='permission', actor='Recipient', action='read', asset='Error')]),
+                                           dict(authoring.DEFAULTS, data='Error'))
+        self.assertEqual(legacy_names['rules'][0]['asset'], 'Data')
 
     def test_classification_scores_all_frozen_chunks_and_guards_evidence(self):
         chunks = [dict(deepcopy(c['chunk']), classification=dict(label=c['label'])) for c in self.reference['classification']]

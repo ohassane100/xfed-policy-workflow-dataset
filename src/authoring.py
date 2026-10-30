@@ -98,9 +98,9 @@ def validate_terms(value):
         except ValueError:
             raise ValueError(key + ' must be a valid YYYY-MM-DD date.') from None
     if value['project_end'] < value['project_start']: raise ValueError('Project end must be on or after project start.')
-    active_assets = ['data', *[field for field, enabled in (('platform', 'platform_access'), ('records', 'records_access'),
-                                                          ('background', 'background_access'), ('results', 'publication'),
-                                                          ('documentation', 'provider_delivery'), ('certificate', 'deletion_certificate')) if value[enabled]]]
+    active_assets = ['data', *[field for field, enabled in (('platform', value['platform_access']), ('records', value['records_access']),
+        ('background', value['background_access']), ('results', value['publication'] or value['attribution']),
+        ('documentation', value['provider_delivery'] or value['error_reporting']), ('certificate', value['deletion_certificate'])) if enabled]]
     if len({normalized(value[k]) for k in active_assets}) != len(active_assets):
         raise ValueError('Selected resources must have distinct names.')
     if normalized(value['provider']) == normalized(value['recipient']):
@@ -388,8 +388,8 @@ def canonical(policy, terms):
     if terms.get('authorized_access'):
         parties.update({key(terms['authorized_users']): 'Authorized Users', 'authorized users': 'Authorized Users'})
     assets = {key(terms['data']): 'Data', 'data': 'Data',
-              'incident': 'Incident', 'incidents': 'Incident', 'any incident': 'Incident', 'any incidents': 'Incident',
-              'error': 'Error', 'any error': 'Error', 'errors': 'Error'}
+              'incident': 'Incident', 'incidents': 'Incident', 'any incident': 'Incident', 'any incidents': 'Incident'}
+    if terms.get('error_reporting'): assets.update({'error': 'Error', 'any error': 'Error', 'errors': 'Error'})
     for field, flag in (('platform', 'platform_access'), ('records', 'records_access'), ('background', 'background_access'),
                         ('results', 'publication'), ('results', 'attribution'), ('documentation', 'provider_delivery'), ('certificate', 'deletion_certificate')):
         if terms.get(flag): assets.update({field: field.title(), key(terms[field]): field.title()})
