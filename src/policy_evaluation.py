@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import re
 import unicodedata
+from functools import lru_cache
 
 from jsonschema import ValidationError
 
@@ -58,17 +59,85 @@ def normalized(value):
     return value
 
 
-def signatures(policy, core=False):
+def condition_logic(conditions):
+    """Canonical Boolean meaning over literal comparisons; no text similarity.
+
+    Equalities are opaque predicates. Proving equivalence for every Boolean
+    assignment is conservative: it cannot establish that two paraphrases mean
+    the same thing. Bounded reduced decision trees avoid a new solver dependency.
+    """
+    atoms = set()
+    def group(operator, children):
+        children = tuple(children)
+        if all(isinstance(child, bool) for child in children):
+            return (all(children) if operator == 'all' else any(children) if operator == 'any'
+                    else sum(children) == 1)
+        return (operator, children)
+    def convert(entry):
+        for key in ('all', 'any', 'exactly_one'):
+            if key in entry:
+                return group(key, map(convert, entry[key]))
+        comparison = dict(entry)
+        operator = comparison['op']
+        if operator in ('isanyof', 'isnoneof') and isinstance(comparison.get('value'), list):
+            children = [convert(dict(comparison, op='eq', value=value)) for value in comparison['value']]
+            result = group('any', children)
+            return ('not', result) if operator == 'isnoneof' else result
+        if operator == 'neq':
+            return ('not', convert(dict(comparison, op='eq')))
+        atom = json.dumps(comparison, sort_keys=True, ensure_ascii=False)
+        atoms.add(atom)
+        return ('atom', atom)
+    expression = group('all', map(convert, conditions))
+    ordered = sorted(atoms)
+    if len(ordered) > 16:
+        return dict(unproven_bounded_logic=conditions)
+    @lru_cache(maxsize=None)
+    def substitute(node, atom, value):
+        operator, children = node
+        if operator == 'atom':
+            return value if children == atom else node
+        if operator == 'not':
+            result = substitute(children, atom, value)
+            return not result if isinstance(result, bool) else ('not', result)
+        values = [child if isinstance(child, bool) else substitute(child, atom, value) for child in children]
+        remaining = [child for child in values if not isinstance(child, bool)]
+        if operator == 'all':
+            if False in values: return False
+            if not remaining: return True
+        elif operator == 'any':
+            if True in values: return True
+            if not remaining: return False
+        else:
+            count = sum(child is True for child in values)
+            if count > 1: return False
+            if not remaining: return count == 1
+            if count == 1: return ('not', group('any', remaining))
+        return remaining[0] if len(remaining) == 1 else group(operator, remaining)
+    @lru_cache(maxsize=None)
+    def decision(index, node):
+        if isinstance(node, bool): return node
+        if index == len(ordered):
+            # Only an empty logical group can remain without any variables.
+            return node[0] == 'all'
+        atom = ordered[index]
+        low = decision(index + 1, substitute(node, atom, False))
+        high = decision(index + 1, substitute(node, atom, True))
+        return low if low == high else (atom, low, high)
+    return decision(0, expression)
+
+
+def signatures(policy, core=False, logical=False):
     """Ignore identifiers and ordering, never fuzzy-match away a qualification."""
     def encode(value):
         return json.dumps(value, sort_keys=True, ensure_ascii=False)
 
-    def logical(entry):
+    def logical_entry(entry):
         group = next((key for key in ('all', 'any', 'exactly_one') if key in entry), None)
         if group:
             children = []
             for child in entry[group]:
-                result = logical(child)
+                result = logical_entry(child)
                 if group != 'exactly_one' and group in result:
                     children.extend(result[group])
                 else:
@@ -95,12 +164,61 @@ def signatures(policy, core=False):
         if entry.get('actor') in policy.get('parties', {}):
             result['actor'] = dict(unresolved_role=policy['parties'][entry['actor']]['role'])
         if not core:
-            result['conditions'] = logical({'all': entry.get('conditions', [])})
+            conditions = logical_entry({'all': entry.get('conditions', [])})
+            result['conditions'] = condition_logic(conditions['all']) if logical else conditions
         for field in ('requires', 'remedies'):
             if entry.get(field):
                 result[field] = sorted((rule(child) for child in entry[field]), key=encode)
         return result
     return [encode(rule(entry)) for entry in policy['rules']]
+
+
+def component_comparison(expected, actual):
+    """One-to-one diagnostic alignment, never fuzzy-match a rule into correctness."""
+    def parts(policy):
+        return [json.loads(value) for value in signatures(policy, logical=True)]
+    reference, predicted = parts(expected), parts(actual)
+    required = ('kind', 'actor', 'action', 'asset', 'conditions')
+    optional = ('issuer', 'requires', 'remedies')
+    fields = lambda left, right: [*required, *[field for field in optional if field in left or field in right]]
+    def matching(i, j):
+        return {field: reference[i].get(field) == predicted[j].get(field)
+                for field in fields(reference[i], predicted[j])}
+    # The extraction grammar bounds per-clause rules to twelve. Fail explicitly
+    # instead of silently using an order-dependent greedy fallback on huge input.
+    if len(predicted) > 16:
+        raise ValueError('Too many predicted rules for bounded component alignment.')
+    @lru_cache(maxsize=None)
+    def align(index, used):
+        if index == len(reference): return (0, ())
+        best_score, best_pairs = align(index + 1, used)
+        for j in range(len(predicted)):
+            if used & (1 << j): continue
+            agreements = matching(index, j)
+            weight = sum((4 if key in ('kind', 'action') else 2 if key in ('actor', 'asset') else 1)
+                         for key, equal in agreements.items() if equal)
+            if all(agreements.values()): weight += 1000
+            later_score, later_pairs = align(index + 1, used | (1 << j))
+            if weight + later_score > best_score:
+                best_score, best_pairs = weight + later_score, ((index, j), *later_pairs)
+        return best_score, best_pairs
+    pairs = align(0, 0)[1]
+    counts = {field: dict(matched=0, reference=0, predicted=0) for field in (*required, *optional)}
+    for collection, side in ((reference, 'reference'), (predicted, 'predicted')):
+        for entry in collection:
+            for field in (*required, *[key for key in optional if key in entry]):
+                counts[field][side] += 1
+    rows, complete = [], 0
+    for i, j in pairs:
+        agreements = matching(i, j)
+        for field, equal in agreements.items():
+            counts[field]['matched'] += int(equal)
+        complete += int(all(agreements.values()))
+        rows.append(dict(reference_rule_id=expected['rules'][i]['id'], prediction_rule_id=actual['rules'][j]['id'],
+                         components=agreements, complete_agreement=all(agreements.values())))
+    return dict(matched_rules=complete, fields=counts, alignment=rows,
+        missing_reference_rule_ids=[expected['rules'][i]['id'] for i in range(len(reference)) if not any(i == left for left, _ in pairs)],
+        unmatched_prediction_rule_ids=[actual['rules'][j]['id'] for j in range(len(predicted)) if not any(j == right for _, right in pairs)])
 
 
 def score(reference, predictions, root=Path('.')):
@@ -112,6 +230,7 @@ def score(reference, predictions, root=Path('.')):
         raise ValueError('Predictions belong to a different frozen reference.')
     results, totals = [], dict(matched=0, predicted=0, reference=0, core_matched=0, complete_clauses=0,
                               scored_clauses=0, failures=0, expected_no_rule=0, correct_no_rule=0)
+    logical_matches, component_totals = 0, {}
     for case in reference['cases']:
         row = rows.get(case['case_id'])
         if case['status'] != 'provisional':
@@ -148,7 +267,23 @@ def score(reference, predictions, root=Path('.')):
                     raise ValueError('Prediction imported a context-only rule.')
             except (ValueError, KeyError, TypeError, ValidationError) as exc:
                 error = str(exc).splitlines()[0]
-        predicted_count = len((actual or {}).get('rules', []))
+        submitted_rules = actual.get('rules') if isinstance(actual, dict) else None
+        predicted_count = len(submitted_rules) if isinstance(submitted_rules, list) else int(actual is not None)
+        try:
+            comparison = component_comparison(expected, actual if actual and not error else dict(expected, rules=[]))
+        except ValueError as exc:
+            error = str(exc)
+            comparison = component_comparison(expected, dict(expected, rules=[]))
+        if error:
+            for field in ('kind', 'actor', 'action', 'asset', 'conditions'):
+                comparison['fields'][field]['predicted'] = predicted_count
+            for field in ('issuer', 'requires', 'remedies'):
+                comparison['fields'][field]['predicted'] = sum(isinstance(rule, dict) and field in rule
+                                                              for rule in (submitted_rules if isinstance(submitted_rules, list) else []))
+        logical_matches += comparison['matched_rules']
+        for field, counts in comparison['fields'].items():
+            target = component_totals.setdefault(field, dict(matched=0, reference=0, predicted=0))
+            for key, number in counts.items(): target[key] += number
         expected_sig = Counter(signatures(expected))
         actual_sig = Counter(signatures(actual)) if actual and not error else Counter()
         matches = sum((expected_sig & actual_sig).values())
@@ -166,15 +301,26 @@ def score(reference, predictions, root=Path('.')):
         results.append(dict(case_id=case['case_id'], status='failed' if error else 'compared', error=error,
             complete_agreement=complete, matched=matches, core_matched=core_matches,
             predicted=predicted_count, reference=len(expected['rules']),
+            component_comparison=comparison,
             missing_signatures=list((expected_sig - actual_sig).elements()),
             unmatched_signatures=list((actual_sig - expected_sig).elements())))
     precision = totals['matched'] / totals['predicted'] if totals['predicted'] else 0.0
     recall = totals['matched'] / totals['reference'] if totals['reference'] else 0.0
+    def metrics(matched, predicted, expected):
+        precision = matched / predicted if predicted else 0.0
+        recall = matched / expected if expected else 0.0
+        return dict(matched=matched, predicted=predicted, reference=expected, precision=precision, recall=recall,
+                    f1=2 * precision * recall / (precision + recall) if precision + recall else 0.0)
     return dict(protocol='frozen_ai_reference_agreement_v1', reference_sha256=reference['sha256'],
         complete=len(rows) == len(known), completed_cases=len(rows), total_cases=len(known),
         interpretation='Agreement with a provisional AI reference, not legal accuracy. Core matches ignore conditions and are diagnostic only. Equivalent wording may still mismatch.',
         totals=totals, exact_rule_agreement=dict(precision=precision, recall=recall,
-            f1=2 * precision * recall / (precision + recall) if precision + recall else 0.0), cases=results)
+            f1=2 * precision * recall / (precision + recall) if precision + recall else 0.0),
+        logical_rule_agreement=metrics(logical_matches, totals['predicted'], totals['reference']),
+        component_agreement={field: metrics(counts['matched'], counts['predicted'], counts['reference'])
+                             for field, counts in component_totals.items() if counts['reference'] or counts['predicted']},
+        diagnostic_scope='Component and propositional-logic agreement only; free-text meaning, source completeness and legal correctness are not established.',
+        cases=results)
 
 
 def run(reference, client, root, output, include_unreviewed=False):

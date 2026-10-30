@@ -1,0 +1,1606 @@
+{
+  "version": "policy-validation-v1-2026-10-29",
+  "status": "AI-authored provisional reference; not independently or legally validated",
+  "author": {
+    "system": "ChatGPT/Codex assistant in this conversation",
+    "method": "Authored from primary text and supplied context before running these cases against the current extraction revision; no predictions for these selected cases inspected in this work."
+  },
+  "scope": "Additional clauses in existing Contracts 01-03. Not unseen agreements; historical exposure is not ruled out.",
+  "matching": "Exact, component and conservative Boolean agreement are diagnostics. Source assessment remains separate.",
+  "cases": [
+    {
+      "case_id": "contract_01:c001273",
+      "contract_id": "contract_01",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c001273",
+        "text": "1.2.1\nFurther to clause 1.1.1, the Provider must implement appropriate technical and organisational\nmeasures to ensure that a high level of security is maintained during the switching process. This\nrelates, in particular, to the security of Data during their transfer and continued security of the\nData during the period for Data retrieval.",
+        "source": {
+          "pages": [
+            150
+          ],
+          "block_ids": [
+            "b002295"
+          ]
+        },
+        "clause_id": "1.2.1",
+        "parent_clause_id": "1.2",
+        "context": [
+          {
+            "chunk_id": "c001272",
+            "clause_id": "1.2",
+            "heading": "1.2 Security",
+            "text": "1.2 Security",
+            "source": {
+              "pages": [
+                150
+              ],
+              "block_ids": [
+                "b002294"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c001268",
+            "clause_id": "1",
+            "heading": "1. Security and Business Continuity",
+            "text": "1. Security and Business Continuity",
+            "source": {
+              "pages": [
+                150
+              ],
+              "block_ids": [
+                "b002290"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c001270",
+            "clause_id": "1.1.1",
+            "text": "1.1.1\nThe Provider undertakes to apply the most appropriate technical and organisational measures to\nensure that the level of security and resilience is proportionate to the risks presented by the\nServices and their intended and reasonably foreseeable use with respect to the switching process.",
+            "source": {
+              "pages": [
+                150
+              ],
+              "block_ids": [
+                "b002292"
+              ]
+            },
+            "relationship": "reference"
+          },
+          {
+            "chunk_id": "c001209",
+            "text": "Provider: …\n(f) IT Resources which will be ensured by the Provider for effective switching: ...",
+            "source": {
+              "pages": [
+                139
+              ],
+              "block_ids": [
+                "b002124"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "c479b8d57fb90dd77b7ce727f7105bce365e6556753b2d2c38391cc91cb2f1f8",
+      "source_sha256": "b89c28c638c119b517b47257fa20b4c5701c4d61d887745caea39dd513855f0a",
+      "notes": "Source-first AI reference. Source-relative time and unidentified parties are not replaced with invented values.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_01",
+        "id": "urn:xfed:contract_01:reference:c001273",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_01:c001273:reference:1",
+            "kind": "obligation",
+            "actor": "the Provider",
+            "action": "implement",
+            "asset": "appropriate technical and organisational measures",
+            "conditions": [
+              {
+                "field": "purpose",
+                "op": "eq",
+                "value": "ensure that a high level of security is maintained"
+              },
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "during the switching process"
+              },
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "the security of Data during their transfer and continued security of the Data during the period for Data retrieval"
+              }
+            ],
+            "source": "c001273"
+          }
+        ],
+        "sources": {
+          "c001273": {
+            "chunk_id": "c001273",
+            "clause_id": "1.2.1",
+            "text": "1.2.1\nFurther to clause 1.1.1, the Provider must implement appropriate technical and organisational\nmeasures to ensure that a high level of security is maintained during the switching process. This\nrelates, in particular, to the security of Data during their transfer and continued security of the\nData during the period for Data retrieval.",
+            "pages": [
+              150
+            ],
+            "block_ids": [
+              "b002295"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_02:c000360",
+      "contract_id": "contract_02",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000360",
+        "text": "11.1.\nContractor is solely responsible for the work safety and industrial hygiene of the members of\nContractor Group and their respective Personnel and Invitees in relation to the Work.  Contractor\nshall conduct periodic audits to assure itself of satisfactory work safety and industrial hygiene,\nincluding at the request of Company, and shall provide Company with reports from such audits.",
+        "source": {
+          "pages": [
+            27
+          ],
+          "block_ids": [
+            "b000395"
+          ]
+        },
+        "clause_id": "11.1",
+        "parent_clause_id": "11",
+        "context": [
+          {
+            "chunk_id": "c000359",
+            "clause_id": "11",
+            "heading": "11. HEALTH, SAFETY, AND ENVIRONMENT",
+            "text": "11. HEALTH, SAFETY, AND ENVIRONMENT",
+            "source": {
+              "pages": [
+                27
+              ],
+              "block_ids": [
+                "b000394"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000087",
+            "text": "Contractor Group means, with regard to an individual Call-Off Order, any or all of: (i) Contractor\nand its Affiliates; (ii) Subcontractors and their Affiliates; and (iii) the respective agents of any of the\nentities addressed in (i) and (ii) above; all the foregoing being ‘members of Contractor Group’.",
+            "source": {
+              "pages": [
+                6
+              ],
+              "block_ids": [
+                "b000101"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000086",
+            "text": "Contractor has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Contractor’ means the entity identified as Contractor in that Call-Off Order.",
+            "source": {
+              "pages": [
+                6
+              ],
+              "block_ids": [
+                "b000100"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000079",
+            "text": "Company has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Company’ means the entity identified as Company in that Call-Off Order.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000088"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000111",
+            "text": "Work means all elements of the activities to be performed by or on behalf of Contractor under an\nindividual Call-Off Order, whether or not specifically described therein, including everything that\nmay be reasonably inferred from such Call-Off Order as needing to be done by or on behalf of\nContractor in order for Contractor to fulfill all its duties, obligations, and responsibilities under such\nCall-Off Order.  Particular Work includes the provision of equipment, materials, personnel, other\nresources, and Goods, as applicable, to perform technical and other services in relation to\nexploration, development, production, and other drilling- or well-related operations of Company or\nCompany’s Affiliates.",
+            "source": {
+              "pages": [
+                8,
+                9
+              ],
+              "block_ids": [
+                "b000127",
+                "b000130"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000076",
+            "text": "Call-Off Order means a specific contractual agreement established between Company or one of\nits Affiliates and Contractor or one of its Affiliates in accordance with the terms of Article 4 for the\nperformance of particular Work by Contractor or its Affiliate, in the form set out in the Exhibit entitled\n‘Example Call-Off Order’, as identified in Article 1.1, or in such other form as Company and\nContractor may agree.  The generic term ‘Call-Off Order’, as used herein, will include similar\ndocuments entitled ‘Work Order’, ‘Scope of Work (SOW)’, ‘Purchase Order’, ‘Service Order’, and\nthe like that are also used by Company or its Affiliates for the above-described purpose.  Provided\nalways that a purchase order or other document used in accordance with Article 4.2 to address the\nperformance of particular Work under a Call-Off Order forms part of that Call-Off Order and does\nnot constitute a separate contractual agreement.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000085"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000074",
+            "text": "Agreement has the meaning provided in the Preamble, and it comprises the items set out in Article\n1.1.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000083"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000096",
+            "text": "Goods means any materials or other goods to be provided by any of the members of Contractor\nGroup in relation to Work and that will be subject to a transfer of title to Company, together, as\napplicable, with any associated items such as software, firmware, special tools or installation/\nremoval aids, spare parts, and operating and maintenance manuals.  Chemicals and other\nconsumable substances that any member of Contractor Group will itself use in the performance of\nthe Work and which will thereby be dissipated or spent are not considered as Goods.",
+            "source": {
+              "pages": [
+                7
+              ],
+              "block_ids": [
+                "b000111"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000073",
+            "text": "Affiliate means any entity, including any corporation, limited liability company, partnership, or joint\nventure, controlled by, under common control with, or controlling the entity in relation to which the\nterm ‘Affiliate’ is used, with ‘control’ being defined as owning, directly or indirectly, fifty percent\n(50%) or more of the assets or the outstanding shares having voting rights, or otherwise having the\nright, either by contract or otherwise, to control the operation, management, or policy of an entity.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000082"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "7bfd7fcdd36eedd44fc0bd998f49f70508ef8c53d91b148738422675c8b6187d",
+      "source_sha256": "93532b25bbb3ab5484c3f319ecaf839fc7b8e31b339da0d84faa82e0c85c54a1",
+      "notes": "Conduct periodic safety/hygiene audits, including on Company request; provide their reports to Company. The opening operational safety responsibility is not an independent information rule.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_02",
+        "id": "urn:xfed:contract_02:reference:c000360",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_02:c000360:reference:1",
+            "kind": "obligation",
+            "actor": "Contractor",
+            "action": "conduct",
+            "asset": "audits",
+            "conditions": [
+              {
+                "any": [
+                  {
+                    "field": "frequency",
+                    "op": "eq",
+                    "value": "periodic"
+                  },
+                  {
+                    "field": "event",
+                    "op": "eq",
+                    "value": "at the request of Company"
+                  }
+                ]
+              },
+              {
+                "field": "purpose",
+                "op": "eq",
+                "value": "assure itself of satisfactory work safety and industrial hygiene"
+              }
+            ],
+            "source": "c000360"
+          },
+          {
+            "id": "contract_02:c000360:reference:2",
+            "kind": "obligation",
+            "actor": "Contractor",
+            "action": "provide",
+            "asset": "reports",
+            "conditions": [
+              {
+                "field": "recipient",
+                "op": "eq",
+                "value": "Company"
+              },
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "periodic audits to assure itself of satisfactory work safety and industrial hygiene"
+              }
+            ],
+            "source": "c000360"
+          }
+        ],
+        "sources": {
+          "c000360": {
+            "chunk_id": "c000360",
+            "clause_id": "11.1",
+            "text": "11.1.\nContractor is solely responsible for the work safety and industrial hygiene of the members of\nContractor Group and their respective Personnel and Invitees in relation to the Work.  Contractor\nshall conduct periodic audits to assure itself of satisfactory work safety and industrial hygiene,\nincluding at the request of Company, and shall provide Company with reports from such audits.",
+            "pages": [
+              27
+            ],
+            "block_ids": [
+              "b000395"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_02:c000720",
+      "contract_id": "contract_02",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000720",
+        "text": "30.2.\nFrom the Effective Date and at all times thereafter, Contractor shall treat as confidential and shall\nnot, without Company’s prior written consent, divulge to any third party, or, except to the extent\nnecessary for performance under any Call-Off Order, make any use of any (i) Confidential\nInformation; (ii) Proprietary Information; or (iii) Contractor Data that could be re-interpreted to\ndevelop Proprietary Information.",
+        "source": {
+          "pages": [
+            58
+          ],
+          "block_ids": [
+            "b000789"
+          ]
+        },
+        "clause_id": "30.2",
+        "parent_clause_id": "30",
+        "context": [
+          {
+            "chunk_id": "c000714",
+            "clause_id": "30",
+            "heading": "30. CONFIDENTIALITY",
+            "text": "30. CONFIDENTIALITY",
+            "source": {
+              "pages": [
+                58
+              ],
+              "block_ids": [
+                "b000783"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000719",
+            "text": "Proprietary Information means information (including all oral and visual information, all\ninformation recorded in writing or electronically, or in any other medium or by any other method\n(i) relating to Company’s operations, facilities, processes, plans, intentions, product information,\nKnowhow, designs, trade secrets, software, market opportunities or business affairs relating to\nthe Work; (ii) ascertainable by the inspection or analysis of Company’s samples; or (iii) relating\nto wells or reservoirs (including geological data, geophysical data, petrophysics data, logging\ndata, depth, formation penetration, coring, testing and survey results); which is disclosed by\nCompany to Contractor or obtained by Contractor in relation to Work, from Company or a third\nparty or otherwise.  ‘Proprietary Information’ includes information generated or obtained by\nContractor in respect of Company’s wells, reservoirs, facilities, or operations (including geological\ndata, geophysical data, petrophysics data, logging data, depth, formation penetration, coring,\ntesting and survey results and information on wellbore, production, reservoir, geology, and\nformations encountered in a well).",
+            "source": {
+              "pages": [
+                58
+              ],
+              "block_ids": [
+                "b000788"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000717",
+            "text": "Contractor Data means data gathered by Contractor in performance of Work that it is not\nrequired to provide to Company as deliverables from the Work, including equipment performance\nmeasurements, raw sensor measurements, and the like but excluding any Proprietary Data.",
+            "source": {
+              "pages": [
+                58
+              ],
+              "block_ids": [
+                "b000786"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000076",
+            "text": "Call-Off Order means a specific contractual agreement established between Company or one of\nits Affiliates and Contractor or one of its Affiliates in accordance with the terms of Article 4 for the\nperformance of particular Work by Contractor or its Affiliate, in the form set out in the Exhibit entitled\n‘Example Call-Off Order’, as identified in Article 1.1, or in such other form as Company and\nContractor may agree.  The generic term ‘Call-Off Order’, as used herein, will include similar\ndocuments entitled ‘Work Order’, ‘Scope of Work (SOW)’, ‘Purchase Order’, ‘Service Order’, and\nthe like that are also used by Company or its Affiliates for the above-described purpose.  Provided\nalways that a purchase order or other document used in accordance with Article 4.2 to address the\nperformance of particular Work under a Call-Off Order forms part of that Call-Off Order and does\nnot constitute a separate contractual agreement.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000085"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000093",
+            "text": "Effective Date has the meaning provided in the Preamble.",
+            "source": {
+              "pages": [
+                7
+              ],
+              "block_ids": [
+                "b000108"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000086",
+            "text": "Contractor has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Contractor’ means the entity identified as Contractor in that Call-Off Order.",
+            "source": {
+              "pages": [
+                6
+              ],
+              "block_ids": [
+                "b000100"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000079",
+            "text": "Company has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Company’ means the entity identified as Company in that Call-Off Order.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000088"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000073",
+            "text": "Affiliate means any entity, including any corporation, limited liability company, partnership, or joint\nventure, controlled by, under common control with, or controlling the entity in relation to which the\nterm ‘Affiliate’ is used, with ‘control’ being defined as owning, directly or indirectly, fifty percent\n(50%) or more of the assets or the outstanding shares having voting rights, or otherwise having the\nright, either by contract or otherwise, to control the operation, management, or policy of an entity.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000082"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000074",
+            "text": "Agreement has the meaning provided in the Preamble, and it comprises the items set out in Article\n1.1.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000083"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000718",
+            "text": "Knowhow means all patentable inventions, discoveries, designs, improvements, processes,\nindustrial information and techniques (including drawings, formulae, test reports, operating and\ntesting procedures, instruction manuals, tables of operating conditions, administration\nprocedures, marketing methods and procedures, and computer programs).",
+            "source": {
+              "pages": [
+                58
+              ],
+              "block_ids": [
+                "b000787"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000111",
+            "text": "Work means all elements of the activities to be performed by or on behalf of Contractor under an\nindividual Call-Off Order, whether or not specifically described therein, including everything that\nmay be reasonably inferred from such Call-Off Order as needing to be done by or on behalf of\nContractor in order for Contractor to fulfill all its duties, obligations, and responsibilities under such\nCall-Off Order.  Particular Work includes the provision of equipment, materials, personnel, other\nresources, and Goods, as applicable, to perform technical and other services in relation to\nexploration, development, production, and other drilling- or well-related operations of Company or\nCompany’s Affiliates.",
+            "source": {
+              "pages": [
+                8,
+                9
+              ],
+              "block_ids": [
+                "b000127",
+                "b000130"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000096",
+            "text": "Goods means any materials or other goods to be provided by any of the members of Contractor\nGroup in relation to Work and that will be subject to a transfer of title to Company, together, as\napplicable, with any associated items such as software, firmware, special tools or installation/\nremoval aids, spare parts, and operating and maintenance manuals.  Chemicals and other\nconsumable substances that any member of Contractor Group will itself use in the performance of\nthe Work and which will thereby be dissipated or spent are not considered as Goods.",
+            "source": {
+              "pages": [
+                7
+              ],
+              "block_ids": [
+                "b000111"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000087",
+            "text": "Contractor Group means, with regard to an individual Call-Off Order, any or all of: (i) Contractor\nand its Affiliates; (ii) Subcontractors and their Affiliates; and (iii) the respective agents of any of the\nentities addressed in (i) and (ii) above; all the foregoing being ‘members of Contractor Group’.",
+            "source": {
+              "pages": [
+                6
+              ],
+              "block_ids": [
+                "b000101"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": [
+          "date: ambiguous definition"
+        ]
+      },
+      "pdf_sha256": "7bfd7fcdd36eedd44fc0bd998f49f70508ef8c53d91b148738422675c8b6187d",
+      "source_sha256": "c306fd360e221da070ede481eb0606cf5666f6398d3801e42ed288f2a18b131a",
+      "notes": "Nine atomic requirements: confidentiality, disclosure and use for three asset classes. The opening time span applies to the whole sentence. Prior written consent qualifies the coordinated disclosure/use bans; necessary Call-Off performance is an additional use exception. Contractor Data scope is limited to data that could reveal Proprietary Information. No calendar Effective Date is guessed.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_02",
+        "id": "urn:xfed:contract_02:reference:c000720",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_02:c000720:reference:1",
+            "kind": "obligation",
+            "actor": "Contractor",
+            "action": "keepConfidential",
+            "asset": "Confidential Information",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "From the Effective Date and at all times thereafter"
+              }
+            ],
+            "source": "c000720"
+          },
+          {
+            "id": "contract_02:c000720:reference:2",
+            "kind": "prohibition",
+            "actor": "Contractor",
+            "action": "divulge",
+            "asset": "Confidential Information",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "From the Effective Date and at all times thereafter"
+              },
+              {
+                "field": "recipient",
+                "op": "eq",
+                "value": "any third party"
+              },
+              {
+                "field": "approval",
+                "op": "neq",
+                "value": "Company’s prior written consent"
+              }
+            ],
+            "source": "c000720"
+          },
+          {
+            "id": "contract_02:c000720:reference:3",
+            "kind": "prohibition",
+            "actor": "Contractor",
+            "action": "use",
+            "asset": "Confidential Information",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "From the Effective Date and at all times thereafter"
+              },
+              {
+                "field": "approval",
+                "op": "neq",
+                "value": "Company’s prior written consent"
+              },
+              {
+                "field": "purpose",
+                "op": "neq",
+                "value": "necessary for performance under any Call-Off Order"
+              }
+            ],
+            "source": "c000720"
+          },
+          {
+            "id": "contract_02:c000720:reference:4",
+            "kind": "obligation",
+            "actor": "Contractor",
+            "action": "keepConfidential",
+            "asset": "Proprietary Information",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "From the Effective Date and at all times thereafter"
+              }
+            ],
+            "source": "c000720"
+          },
+          {
+            "id": "contract_02:c000720:reference:5",
+            "kind": "prohibition",
+            "actor": "Contractor",
+            "action": "divulge",
+            "asset": "Proprietary Information",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "From the Effective Date and at all times thereafter"
+              },
+              {
+                "field": "recipient",
+                "op": "eq",
+                "value": "any third party"
+              },
+              {
+                "field": "approval",
+                "op": "neq",
+                "value": "Company’s prior written consent"
+              }
+            ],
+            "source": "c000720"
+          },
+          {
+            "id": "contract_02:c000720:reference:6",
+            "kind": "prohibition",
+            "actor": "Contractor",
+            "action": "use",
+            "asset": "Proprietary Information",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "From the Effective Date and at all times thereafter"
+              },
+              {
+                "field": "approval",
+                "op": "neq",
+                "value": "Company’s prior written consent"
+              },
+              {
+                "field": "purpose",
+                "op": "neq",
+                "value": "necessary for performance under any Call-Off Order"
+              }
+            ],
+            "source": "c000720"
+          },
+          {
+            "id": "contract_02:c000720:reference:7",
+            "kind": "obligation",
+            "actor": "Contractor",
+            "action": "keepConfidential",
+            "asset": "Contractor Data",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "From the Effective Date and at all times thereafter"
+              },
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "that could be re-interpreted to develop Proprietary Information"
+              }
+            ],
+            "source": "c000720"
+          },
+          {
+            "id": "contract_02:c000720:reference:8",
+            "kind": "prohibition",
+            "actor": "Contractor",
+            "action": "divulge",
+            "asset": "Contractor Data",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "From the Effective Date and at all times thereafter"
+              },
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "that could be re-interpreted to develop Proprietary Information"
+              },
+              {
+                "field": "recipient",
+                "op": "eq",
+                "value": "any third party"
+              },
+              {
+                "field": "approval",
+                "op": "neq",
+                "value": "Company’s prior written consent"
+              }
+            ],
+            "source": "c000720"
+          },
+          {
+            "id": "contract_02:c000720:reference:9",
+            "kind": "prohibition",
+            "actor": "Contractor",
+            "action": "use",
+            "asset": "Contractor Data",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "From the Effective Date and at all times thereafter"
+              },
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "that could be re-interpreted to develop Proprietary Information"
+              },
+              {
+                "field": "approval",
+                "op": "neq",
+                "value": "Company’s prior written consent"
+              },
+              {
+                "field": "purpose",
+                "op": "neq",
+                "value": "necessary for performance under any Call-Off Order"
+              }
+            ],
+            "source": "c000720"
+          }
+        ],
+        "sources": {
+          "c000720": {
+            "chunk_id": "c000720",
+            "clause_id": "30.2",
+            "text": "30.2.\nFrom the Effective Date and at all times thereafter, Contractor shall treat as confidential and shall\nnot, without Company’s prior written consent, divulge to any third party, or, except to the extent\nnecessary for performance under any Call-Off Order, make any use of any (i) Confidential\nInformation; (ii) Proprietary Information; or (iii) Contractor Data that could be re-interpreted to\ndevelop Proprietary Information.",
+            "pages": [
+              58
+            ],
+            "block_ids": [
+              "b000789"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_02:c000283",
+      "contract_id": "contract_02",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000283",
+        "text": "5.11.2.\nShould Personnel or Invitees of any of the members of Contractor Group become\nincapacitated through injury or illness during attendance at any offshore Site in relation\nto the Work, Company will arrange, at its cost, for their transportation to shore, including\ntransportation to and from the offshore Site of any medical personnel needed to\naccompany such incapacitated individuals.  Contractor is responsible, at its own\nexpense, for arranging the attendance of such medical personnel.  When such\nincapacitated individuals have been brought to shore, Contractor shall assume all further\nresponsibility for them, including arranging and paying for (i) medical treatment and any\nrequired medical services; and (ii) if necessary, their transfer to destinations outside the\ncountry in which Company’s offshore Site is located.",
+        "source": {
+          "pages": [
+            21,
+            22
+          ],
+          "block_ids": [
+            "b000315",
+            "b000318"
+          ]
+        },
+        "clause_id": "5.11.2",
+        "parent_clause_id": "5.11",
+        "context": [
+          {
+            "chunk_id": "c000281",
+            "clause_id": "5.11",
+            "text": "5.11.\nOffshore Work; Emergency Evacuation",
+            "source": {
+              "pages": [
+                21
+              ],
+              "block_ids": [
+                "b000313"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000195",
+            "clause_id": "5",
+            "heading": "5. PERFORMANCE OF WORK",
+            "text": "5. PERFORMANCE OF WORK",
+            "source": {
+              "pages": [
+                14
+              ],
+              "block_ids": [
+                "b000212"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000087",
+            "text": "Contractor Group means, with regard to an individual Call-Off Order, any or all of: (i) Contractor\nand its Affiliates; (ii) Subcontractors and their Affiliates; and (iii) the respective agents of any of the\nentities addressed in (i) and (ii) above; all the foregoing being ‘members of Contractor Group’.",
+            "source": {
+              "pages": [
+                6
+              ],
+              "block_ids": [
+                "b000101"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000086",
+            "text": "Contractor has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Contractor’ means the entity identified as Contractor in that Call-Off Order.",
+            "source": {
+              "pages": [
+                6
+              ],
+              "block_ids": [
+                "b000100"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000079",
+            "text": "Company has the meaning provided in the Preamble when the term is used in relation to this\nAgreement.  When used in relation to a particular Call-Off Order, both before and after its execution,\nthe term ‘Company’ means the entity identified as Company in that Call-Off Order.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000088"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000108",
+            "text": "Site means any location owned, solely or jointly, or controlled by Company where any part of the\nWork is to be performed, including any wellsite location and any drilling rig, drilling vessel, or\noffshore platform from which drilling, workover, or other well-related operations are conducted.",
+            "source": {
+              "pages": [
+                8
+              ],
+              "block_ids": [
+                "b000124"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000111",
+            "text": "Work means all elements of the activities to be performed by or on behalf of Contractor under an\nindividual Call-Off Order, whether or not specifically described therein, including everything that\nmay be reasonably inferred from such Call-Off Order as needing to be done by or on behalf of\nContractor in order for Contractor to fulfill all its duties, obligations, and responsibilities under such\nCall-Off Order.  Particular Work includes the provision of equipment, materials, personnel, other\nresources, and Goods, as applicable, to perform technical and other services in relation to\nexploration, development, production, and other drilling- or well-related operations of Company or\nCompany’s Affiliates.",
+            "source": {
+              "pages": [
+                8,
+                9
+              ],
+              "block_ids": [
+                "b000127",
+                "b000130"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000076",
+            "text": "Call-Off Order means a specific contractual agreement established between Company or one of\nits Affiliates and Contractor or one of its Affiliates in accordance with the terms of Article 4 for the\nperformance of particular Work by Contractor or its Affiliate, in the form set out in the Exhibit entitled\n‘Example Call-Off Order’, as identified in Article 1.1, or in such other form as Company and\nContractor may agree.  The generic term ‘Call-Off Order’, as used herein, will include similar\ndocuments entitled ‘Work Order’, ‘Scope of Work (SOW)’, ‘Purchase Order’, ‘Service Order’, and\nthe like that are also used by Company or its Affiliates for the above-described purpose.  Provided\nalways that a purchase order or other document used in accordance with Article 4.2 to address the\nperformance of particular Work under a Call-Off Order forms part of that Call-Off Order and does\nnot constitute a separate contractual agreement.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000085"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000074",
+            "text": "Agreement has the meaning provided in the Preamble, and it comprises the items set out in Article\n1.1.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000083"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000096",
+            "text": "Goods means any materials or other goods to be provided by any of the members of Contractor\nGroup in relation to Work and that will be subject to a transfer of title to Company, together, as\napplicable, with any associated items such as software, firmware, special tools or installation/\nremoval aids, spare parts, and operating and maintenance manuals.  Chemicals and other\nconsumable substances that any member of Contractor Group will itself use in the performance of\nthe Work and which will thereby be dissipated or spent are not considered as Goods.",
+            "source": {
+              "pages": [
+                7
+              ],
+              "block_ids": [
+                "b000111"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000073",
+            "text": "Affiliate means any entity, including any corporation, limited liability company, partnership, or joint\nventure, controlled by, under common control with, or controlling the entity in relation to which the\nterm ‘Affiliate’ is used, with ‘control’ being defined as owning, directly or indirectly, fifty percent\n(50%) or more of the assets or the outstanding shares having voting rights, or otherwise having the\nright, either by contract or otherwise, to control the operation, management, or policy of an entity.",
+            "source": {
+              "pages": [
+                5
+              ],
+              "block_ids": [
+                "b000082"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "7bfd7fcdd36eedd44fc0bd998f49f70508ef8c53d91b148738422675c8b6187d",
+      "source_sha256": "83dbdca7396bcb309b3e5d218124c4cd7bc16bdf924a704a34c7d5088170853f",
+      "notes": "Operative-text negative: medical transportation/treatment and associated costs create no information-collaboration rule.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_02",
+        "id": "urn:xfed:contract_02:reference:c000283",
+        "type": "Set",
+        "rules": [],
+        "sources": {}
+      }
+    },
+    {
+      "case_id": "contract_03:c000104",
+      "contract_id": "contract_03",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000104",
+        "text": "9.1.3\nIn accordance with its own auditing and management principles, each of the Parties shall be\nsolely responsible for documenting its own Project costs, both towards the Funding\nAuthority and to the other Parties. Documentation shall be provided at the request of\neither the Project Owner or the Funding Authority.",
+        "source": {
+          "pages": [
+            10
+          ],
+          "block_ids": [
+            "b000152"
+          ]
+        },
+        "clause_id": "9.1.3",
+        "parent_clause_id": "9.1",
+        "context": [
+          {
+            "chunk_id": "c000101",
+            "clause_id": "9.1",
+            "text": "9.1\nDistribution of funding",
+            "source": {
+              "pages": [
+                10
+              ],
+              "block_ids": [
+                "b000150"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000100",
+            "clause_id": "9",
+            "text": "9\nPayment",
+            "source": {
+              "pages": [
+                10
+              ],
+              "block_ids": [
+                "b000150"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000017",
+            "text": "Funding Authority: The Research Council of Norway.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000049"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000026",
+            "text": "Project Owner: The Party designated as Project Owner in the R&D Contract and host\ninstitution for the Research Centre.",
+            "source": {
+              "pages": [
+                4
+              ],
+              "block_ids": [
+                "b000058"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000022",
+            "text": "Project: The overall activities covered by the R&D Contract. The terms Project and Research\nCentre are used interchangeably.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000054"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000021",
+            "text": "Research Centre: National Centre for Sustainable Subsurface Utilization of The Norwegian\nContinental Shelf, in short “NCS2030”. The terms Research Centre and Project are used\ninterchangeably.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000053"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000029",
+            "text": "R&D Contract: Agreement relating to a Project between the Project Owner and the Funding\nAuthority that comprises a written agreement, general terms and conditions for R&D\nProjects, as well as the Project Description and any supplementary documents, and is\nincluded as Appendix 1.",
+            "source": {
+              "pages": [
+                4
+              ],
+              "block_ids": [
+                "b000061"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000023",
+            "text": "Project Description: Scientific and administrative description of and plan for the\nimplementation of the Project, included as an attachment to the R&D Contract.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000055"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "6c6747152e55ac4ce2db2b43f1ad49ecea06622c39c714f66a6b3415d2825fb5",
+      "source_sha256": "56b0345e016278efe71a77a66e419f3beb011f71dadbbfddde95338d33d45993",
+      "notes": "Each Party documents its own costs towards Funding Authority and other Parties under its own principles; that cost documentation is provided on either specified requester demand. No numeric deadline or particular file format is inferred.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_03",
+        "id": "urn:xfed:contract_03:reference:c000104",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_03:c000104:reference:1",
+            "kind": "obligation",
+            "actor": "each of the Parties",
+            "action": "document",
+            "asset": "its own Project costs",
+            "conditions": [
+              {
+                "field": "compliance",
+                "op": "eq",
+                "value": "its own auditing and management principles"
+              },
+              {
+                "field": "recipient",
+                "op": "isAllOf",
+                "value": [
+                  "Funding Authority",
+                  "other Parties"
+                ]
+              }
+            ],
+            "source": "c000104"
+          },
+          {
+            "id": "contract_03:c000104:reference:2",
+            "kind": "obligation",
+            "actor": "each of the Parties",
+            "action": "provide",
+            "asset": "Documentation",
+            "conditions": [
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "its own Project costs"
+              },
+              {
+                "field": "event",
+                "op": "eq",
+                "value": "at the request of either the Project Owner or the Funding Authority"
+              }
+            ],
+            "source": "c000104"
+          }
+        ],
+        "sources": {
+          "c000104": {
+            "chunk_id": "c000104",
+            "clause_id": "9.1.3",
+            "text": "9.1.3\nIn accordance with its own auditing and management principles, each of the Parties shall be\nsolely responsible for documenting its own Project costs, both towards the Funding\nAuthority and to the other Parties. Documentation shall be provided at the request of\neither the Project Owner or the Funding Authority.",
+            "pages": [
+              10
+            ],
+            "block_ids": [
+              "b000152"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_03:c000204",
+      "contract_id": "contract_03",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000204",
+        "text": "21.4\nAny documented deviations presented during an audit and justified by reference to the\nCollaboration Agreement shall be corrected by the Party within a reasonable time.",
+        "source": {
+          "pages": [
+            17
+          ],
+          "block_ids": [
+            "b000202"
+          ]
+        },
+        "clause_id": "21.4",
+        "parent_clause_id": "21",
+        "context": [
+          {
+            "chunk_id": "c000200",
+            "clause_id": "21",
+            "text": "21\nAudit",
+            "source": {
+              "pages": [
+                17
+              ],
+              "block_ids": [
+                "b000202"
+              ]
+            },
+            "relationship": "parent"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "6c6747152e55ac4ce2db2b43f1ad49ecea06622c39c714f66a6b3415d2825fb5",
+      "source_sha256": "f64ce36b3ae4dd95a4c443cf289abf463e2095dbe9f1180b668844b0fb88398e",
+      "notes": "Both audit presentation and contractual justification qualify the deviations to correct. Time remains qualitative; no named responsible Party is invented.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_03",
+        "id": "urn:xfed:contract_03:reference:c000204",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_03:c000204:reference:1",
+            "kind": "obligation",
+            "actor": "the Party",
+            "action": "correct",
+            "asset": "documented deviations",
+            "conditions": [
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "presented during an audit and justified by reference to the Collaboration Agreement"
+              },
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "within a reasonable time"
+              }
+            ],
+            "source": "c000204"
+          }
+        ],
+        "sources": {
+          "c000204": {
+            "chunk_id": "c000204",
+            "clause_id": "21.4",
+            "text": "21.4\nAny documented deviations presented during an audit and justified by reference to the\nCollaboration Agreement shall be corrected by the Party within a reasonable time.",
+            "pages": [
+              17
+            ],
+            "block_ids": [
+              "b000202"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_03:c000514",
+      "contract_id": "contract_03",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000514",
+        "text": "16 Verification, auditing and disclosure requirement\nThe Research Council, the Office of the Auditor General or a third party appointed by the Research\nCouncil are entitled at any time to verify that the funds are being applied in accordance with the\ncontract.\nUpon a request from the Research Council or Office of the Auditor General, the Project Owner shall\nproduce receipts, time sheets, calculations and any other relevant documentary evidence and\ninformation requested by the Research Council and/or the Office of the Auditor General in order to\ncarry out such verification.\nThe Research Council and the Office of the Auditor General may require the Project Owner to\ndisclose all information that is necessary to verify compliance with the rules pertaining to public\nsupport.",
+        "source": {
+          "pages": [
+            63
+          ],
+          "block_ids": [
+            "b000757",
+            "b000758",
+            "b000759",
+            "b000760"
+          ]
+        },
+        "clause_id": "16",
+        "context": [
+          {
+            "chunk_id": "c000454",
+            "text": "Project Owner: The entity that is responsible vis-à-vis the Research Council for ensuring that the\nproject is carried out in accordance with the contract, receives the Research Council’s allocation on\nbehalf of itself or any partners, and that is otherwise obligated under the contract.",
+            "source": {
+              "pages": [
+                54
+              ],
+              "block_ids": [
+                "b000608"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000448",
+            "text": "Contract: The R&D Project Agreement Document, the project description and the General Terms\nand Conditions for R&D Projects, as well as any specified supplementary documents.",
+            "source": {
+              "pages": [
+                53
+              ],
+              "block_ids": [
+                "b000602"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000453",
+            "text": "Project: The overall activities covered by the contract.",
+            "source": {
+              "pages": [
+                54
+              ],
+              "block_ids": [
+                "b000607"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000456",
+            "text": "Project description: Scientific and administrative description of and plan for the implementation of\nthe project.",
+            "source": {
+              "pages": [
+                54
+              ],
+              "block_ids": [
+                "b000610"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000434",
+            "text": "Agreement document: The document that is signed by the parties and that contains the agreed-upon\nspecifications and stipulations for the project.",
+            "source": {
+              "pages": [
+                52
+              ],
+              "block_ids": [
+                "b000583"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000435",
+            "text": "Allocation: The Research Council’s approved funding of a project, which is binding for one budget\nyear at a time.",
+            "source": {
+              "pages": [
+                52
+              ],
+              "block_ids": [
+                "b000584"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000466",
+            "text": "Partners: The entities that, in accordance with the agreement document, are to perform the project in\neffective collaboration with the Project Owner and, if relevant, other partners.",
+            "source": {
+              "pages": [
+                54
+              ],
+              "block_ids": [
+                "b000620"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000442",
+            "text": "R&D: Research and development",
+            "source": {
+              "pages": [
+                53
+              ],
+              "block_ids": [
+                "b000596"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000437",
+            "text": "Effective collaboration: Collaboration between at least two independent parties to exchange\nknowledge or technology, or to achieve a common objective based on the division of labour, where\nthe parties jointly define the scope of the collaborative project, contribute to its implementation and\nshare its risks, as well as its results. One or several parties may bear the full costs relating to the\nproject and thus relieve other parties of its financial risks. Contract research and provision of research\nservices are not considered forms of collaboration.",
+            "source": {
+              "pages": [
+                52
+              ],
+              "block_ids": [
+                "b000586"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "6c6747152e55ac4ce2db2b43f1ad49ecea06622c39c714f66a6b3415d2825fb5",
+      "source_sha256": "74b8da420e64790b9056c90d213e20a2c580cb45c61f44634b0237ad69501ab6",
+      "notes": "Verification right, evidence-production duty on request, and authorities right to require necessary public-support compliance disclosure. The last right is not an unconditional Owner duty.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_03",
+        "id": "urn:xfed:contract_03:reference:c000514",
+        "type": "Set",
+        "rules": [
+          {
+            "id": "contract_03:c000514:reference:1",
+            "kind": "permission",
+            "actor": "The Research Council, the Office of the Auditor General or a third party appointed by the Research Council",
+            "action": "verify",
+            "asset": "funds",
+            "conditions": [
+              {
+                "field": "timing",
+                "op": "eq",
+                "value": "at any time"
+              },
+              {
+                "field": "compliance",
+                "op": "eq",
+                "value": "being applied in accordance with the contract"
+              }
+            ],
+            "source": "c000514"
+          },
+          {
+            "id": "contract_03:c000514:reference:2",
+            "kind": "obligation",
+            "actor": "the Project Owner",
+            "action": "produce",
+            "asset": "receipts, time sheets, calculations and any other relevant documentary evidence and information",
+            "conditions": [
+              {
+                "field": "event",
+                "op": "eq",
+                "value": "Upon a request from the Research Council or Office of the Auditor General"
+              },
+              {
+                "field": "recipient",
+                "op": "isAnyOf",
+                "value": [
+                  "the Research Council",
+                  "the Office of the Auditor General"
+                ]
+              },
+              {
+                "field": "purpose",
+                "op": "eq",
+                "value": "carry out such verification"
+              }
+            ],
+            "source": "c000514"
+          },
+          {
+            "id": "contract_03:c000514:reference:3",
+            "kind": "permission",
+            "actor": "The Research Council and the Office of the Auditor General",
+            "action": "requireDisclosure",
+            "asset": "all information",
+            "conditions": [
+              {
+                "field": "recipient",
+                "op": "eq",
+                "value": "the Project Owner"
+              },
+              {
+                "field": "scope",
+                "op": "eq",
+                "value": "necessary to verify compliance with the rules pertaining to public support"
+              }
+            ],
+            "source": "c000514"
+          }
+        ],
+        "sources": {
+          "c000514": {
+            "chunk_id": "c000514",
+            "clause_id": "16",
+            "text": "16 Verification, auditing and disclosure requirement\nThe Research Council, the Office of the Auditor General or a third party appointed by the Research\nCouncil are entitled at any time to verify that the funds are being applied in accordance with the\ncontract.\nUpon a request from the Research Council or Office of the Auditor General, the Project Owner shall\nproduce receipts, time sheets, calculations and any other relevant documentary evidence and\ninformation requested by the Research Council and/or the Office of the Auditor General in order to\ncarry out such verification.\nThe Research Council and the Office of the Auditor General may require the Project Owner to\ndisclose all information that is necessary to verify compliance with the rules pertaining to public\nsupport.",
+            "pages": [
+              63
+            ],
+            "block_ids": [
+              "b000757",
+              "b000758",
+              "b000759",
+              "b000760"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contract_03:c000028",
+      "contract_id": "contract_03",
+      "status": "provisional",
+      "input": {
+        "chunk_id": "c000028",
+        "text": "Project Results: All results produced or achieved through the work carried out under the\nProject, including Intellectual Property Rights, regardless of whether or not the results are\nprotected by law.",
+        "source": {
+          "pages": [
+            4
+          ],
+          "block_ids": [
+            "b000060"
+          ]
+        },
+        "parent_clause_id": "1",
+        "context": [
+          {
+            "chunk_id": "c000005",
+            "clause_id": "1",
+            "heading": "1",
+            "text": "1\nDefinitions",
+            "source": {
+              "pages": [
+                2
+              ],
+              "block_ids": [
+                "b000037"
+              ]
+            },
+            "relationship": "parent"
+          },
+          {
+            "chunk_id": "c000020",
+            "text": "Intellectual Property Rights: All rights to technical solutions, methods, processes and\nprocedures, regardless of whether or not these are or may be patented. This also includes\nall copyrights and other rights to trademarks, design, plant species, databases, integrated\ncircuit layout designs, drawings, specifications, prototypes, company confidential\ninformation and the like.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000052"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000022",
+            "text": "Project: The overall activities covered by the R&D Contract. The terms Project and Research\nCentre are used interchangeably.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000054"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000029",
+            "text": "R&D Contract: Agreement relating to a Project between the Project Owner and the Funding\nAuthority that comprises a written agreement, general terms and conditions for R&D\nProjects, as well as the Project Description and any supplementary documents, and is\nincluded as Appendix 1.",
+            "source": {
+              "pages": [
+                4
+              ],
+              "block_ids": [
+                "b000061"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000023",
+            "text": "Project Description: Scientific and administrative description of and plan for the\nimplementation of the Project, included as an attachment to the R&D Contract.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000055"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000026",
+            "text": "Project Owner: The Party designated as Project Owner in the R&D Contract and host\ninstitution for the Research Centre.",
+            "source": {
+              "pages": [
+                4
+              ],
+              "block_ids": [
+                "b000058"
+              ]
+            },
+            "relationship": "definition"
+          },
+          {
+            "chunk_id": "c000021",
+            "text": "Research Centre: National Centre for Sustainable Subsurface Utilization of The Norwegian\nContinental Shelf, in short “NCS2030”. The terms Research Centre and Project are used\ninterchangeably.",
+            "source": {
+              "pages": [
+                3
+              ],
+              "block_ids": [
+                "b000053"
+              ]
+            },
+            "relationship": "definition"
+          }
+        ],
+        "unresolved_references": []
+      },
+      "pdf_sha256": "6c6747152e55ac4ce2db2b43f1ad49ecea06622c39c714f66a6b3415d2825fb5",
+      "source_sha256": "1fd6900302a0e0eef9e03500177432f953bf81414a065b8b32e81d6b799b4312",
+      "notes": "Definition of Project Results only; no independent rule.",
+      "expected": {
+        "version": "2.0",
+        "contract_id": "contract_03",
+        "id": "urn:xfed:contract_03:reference:c000028",
+        "type": "Set",
+        "rules": [],
+        "sources": {}
+      }
+    }
+  ]
+}

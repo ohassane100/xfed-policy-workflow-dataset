@@ -11,6 +11,8 @@ For each operative statement identify:
   provideAccess for granting/making access available, delete for erase, and
   keepConfidential for keeping information confidential. A right to request a
   delay is requestDelay, not approval or a guaranteed delay.
+  Retain share for an explicit sharing rule; provideAccess describes making
+  access available and must not substitute for share merely to use a standard verb.
 - asset: a short, explicit information/resource name copied from PRIMARY or a
   cited definition. Resolve this information, such records and similar pronouns
   to the actual noun phrase. Keep descriptive adjectives that identify or limit
@@ -63,9 +65,12 @@ Asset labels stay short. 'Members have access to Material necessary for their
 own work under Schedule' uses asset Material plus scope 'necessary for their own
 work' and compliance 'under Schedule'. Maintaining repair records and making
 those records available are separate duties on the SAME explicit records asset.
-The reused records target includes its original Goods/Work scope and completeness
-qualification on BOTH duties. Resolving 'such records' means retaining that whole
+The reused records target includes its original Goods/Work scope on BOTH duties.
+Resolving 'such records' means retaining that whole
 qualified target, not just replacing the pronoun with a generic records label.
+Copy the source Goods/Work scope into a scope condition on the access rule.
+Completeness imposed on maintenance is not a prerequisite that exempts incomplete
+records from disclosure; do not invent that access exception.
 A secure-storage duty likewise uses the explicit information name, not 'this
 information'. Retain repaired/serviced Goods or other target qualifications in
 scope. A notification retains the information/error/incident subject and trigger.

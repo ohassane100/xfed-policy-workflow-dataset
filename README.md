@@ -60,6 +60,13 @@ The **Evaluation** tab measures task 1.3 classification only. **Policy review**
 is a static visual demo with labelled sample content and inert buttons. It has
 no node connections, review actions, downloads or amendment logic.
 
+**Guided authoring** creates a contract PDF from selected data-sharing terms.
+The PDF passes through the same stages 1.1–2. Terms and the frozen reference stay
+outside the extraction input and are used only for post-run comparison. Results
+appear in Guided authoring after selecting the saved contract. They measure
+agreement with the supported template, not arbitrary-contract accuracy. Changes
+create a new contract revision; editing its PDF/reference invalidates the score.
+
 To use the university model through the existing tunnel while keeping scripts and
 reports local, run locally (no server changes or remote commands):
 

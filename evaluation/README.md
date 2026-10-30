@@ -57,11 +57,33 @@ is diagnostic only. Review mismatches as possible representation differences or
 real errors before drawing conclusions about fidelity. Do not call these scores
 legal accuracy. A missing/failed no-rule case never earns a correct-negative pass.
 
+The report also separates actor, modality, action, asset and condition agreement,
+using bounded one-to-one rule alignment. A separate logical-rule score recognizes
+Boolean equivalence over identical literal predicates, including membership lists
+and their complements. It does not infer paraphrase equivalence. Missing material
+conditions still fail the complete-rule measure even when other components match.
+Mutation regressions check swapped parties, removed exceptions, changed operators,
+AND/OR changes and duplicate rules; these are evaluator checks, not model accuracy.
+
+`policy_validation.json` freezes eight additional source-first clause cases from
+the same agreements, with eighteen expected atomic rules. It includes a compound
+confidentiality clause and two no-rule cases. It is AI-authored and provisional;
+it is not an unseen-agreement benchmark. Run with
+`--reference evaluation/policy_validation.json`. Keep results separate from the
+original development pilot; do not revise these answers to fit model predictions.
+
 Freeze reference revisions before new comparisons; never rewrite expected answers
 to match predictions. Keep uncertain cases excluded until reviewed. For this small
 project, combine this comparison with source inspection of important mismatches
 and focused regression tests for polarity, exceptions, clocks and binding scope.
 Do not build another model-jury system merely to obtain a higher score.
+
+Guided authoring keeps selected terms and a hashed reference outside the input
+PDF. After the normal stages 1.1 through 2, `guided_evaluation.json` compares
+complete rules, operative-clause routing and consent/deadline scenarios. Explicit
+template role/name aliases and Boolean equivalence are allowed; missing conditions
+and extra rules still fail. This measures the supported generated contracts,
+not arbitrary-contract accuracy. Changing terms creates a new contract revision.
 
 Generation also gives its same-model reviewer small computed examples of purpose
 restrictions. Missing state, unresolved values and unsupported comparisons stay

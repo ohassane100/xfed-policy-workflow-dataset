@@ -9,6 +9,7 @@ dist/
 tmp/
 config/models.yaml
 contracts/*/output/*
+contracts/guided_*/
 !contracts/*/output/.gitkeep
 
 evaluation/runs/

@@ -349,6 +349,18 @@ def clause_decoder_schema(output_schema, item):
     # model to remember which combinations are legal. Empty legacy arrays are
     # accepted, but do not need to be emitted.
     base = decoder_schema['properties']['rules']['items']
+    # A single explicit active operation should not become its subordinate
+    # objective (implement measures -> maintain Data). Mixed operations retain
+    # the general grammar, including coordinated actions without repeated modals.
+    verbs = {'implement', 'maintain', 'notify', 'inform', 'conduct', 'produce', 'correct',
+             'document', 'submit', 'store', 'retain', 'return', 'establish', 'use', 'share', 'divulge', 'disclose', 'transfer'}
+    modal_actions = re.findall(r'\b(?:shall|must|may|can|will)\s+(?:(?:unilaterally|promptly)\s+)?([a-z]+)\b', item['text'], re.I)
+    conjoined = re.findall(r'\b(?:and|or)\s+(?:to\s+)?([a-z]+)\b', item['text'], re.I)
+    if (modal_actions and all(action.casefold() in verbs for action in modal_actions)
+            and len({action.casefold() for action in modal_actions}) == 1
+            and not any(action.casefold() in verbs and action.casefold() != modal_actions[0].casefold() for action in conjoined)
+            and not re.search(r'\b(?:entitled|right|obligation|required|responsible)\b', item['text'], re.I)):
+        base['properties']['action'] = dict(type='string', const=modal_actions[0].casefold())
     kinds = ([base['properties']['kind']['const']] if 'const' in base['properties']['kind']
              else base['properties']['kind']['enum'])
     variants = []
@@ -542,6 +554,8 @@ def response_schema(root=Path('.')):
             kind=dict(type='string', enum=['permission', 'prohibition', 'obligation', 'restriction']), **properties,
             allowed_when=dict(constraint, minItems=1),
             duties=dict(type='array', items=duty), remedies=dict(type='array', items=duty)))
+    rule['properties']['asset'] = dict(anyOf=[text, dict(type='array', minItems=1, maxItems=12,
+                                                       uniqueItems=True, items=text)])
     return dict(type='object', additionalProperties=False, required=['rules', 'unrepresented', 'reason'],
         **{'$defs': definitions},
         properties=dict(rules=dict(type='array', items=rule), reason=dict(text, maxLength=600), osdu=metadata,
@@ -555,6 +569,12 @@ def response_schema(root=Path('.')):
 def compile_plan(answer, contract, item, rejected=None):
     """Resolve source IDs, check legacy quotes and deterministically build ODRL."""
     answer = deepcopy(answer)
+    expanded = []
+    for value in answer['rules']:
+        assets = value['asset'] if isinstance(value['asset'], list) else [value['asset']]
+        for asset in assets:
+            expanded.append(dict(deepcopy(value), asset=asset))
+    answer['rules'] = expanded
     for value in answer['rules']:
         value.setdefault('duties', [])
         value.setdefault('remedies', [])
@@ -624,19 +644,62 @@ def compile_plan(answer, contract, item, rejected=None):
         if re.match(r'^(?:(?:all|any|the)\s+)?(?:such|this|these|that|those)\b', normalized(value['asset'])):
             raise ValueError('Resolve the asset antecedent to its explicit source name; '
                              'such records and this information are not standalone targets.')
-        if re.search(r'\b(?:necessary for|in accordance with|subject to|upon request|unless|provided that|'
-                     r'in connection with|in relation to|that might|discovered in|for all|for any)\b',
-                     normalized(value['asset'])):
-            raise ValueError('Keep the asset as its explicit noun label. Move necessity, compliance, '
-                             'triggers and exceptions into this rule\'s conditions, not its asset name.')
         for field in ('actor', 'asset', 'issuer'):
             if field == 'actor' and value.get('actor_role', 'literal') != 'literal':
                 continue
             if field in value and not any(re.search(r'(?<!\w)' + re.escape(normalized(value[field])) + r'(?!\w)', span)
                                           for span in cited):
+                if field == 'asset':
+                    tokens = re.findall(r"\w+(?:[-']\w+)*", normalized(value[field]))
+                    primary_tokens = set(re.findall(r"\w+(?:[-']\w+)*", normalized(item['text'])))
+                    if re.search(r'\([ivx]+\)', item['text'], re.I) and re.search(r'[,;]', value[field]):
+                        raise ValueError('Do not concatenate enumerated asset classes into a paraphrased label. '
+                                         'Use an asset array of source labels; preserve each item\'s own qualifier on that item.')
+                    if tokens and all(token in primary_tokens or token + 's' in primary_tokens for token in tokens):
+                        # Lexical support is only a necessary check. The fresh
+                        # semantic review must establish this composed label's
+                        # relationship to the clause; word overlap is not proof.
+                        continue
                 raise ValueError('Rule ' + field + ' must use a literal label from its cited evidence; '
-                                 'cite the supplied definition instead of inventing a label.')
+                                 'put a reordered description in scope and copy the source noun phrase. '
+                                 'Unsupported label: ' + repr(value[field]))
+        # A literal target with a simple trailing qualifier is supported evidence,
+        # not a reason to discard an otherwise correct rule. Separate its exact
+        # words locally instead of spending another model request on formatting.
+        qualifier = re.search(r'\b(?:necessary for|in accordance with|in connection with|in relation to|'
+                              r'that might|that could|discovered in|for all|for any)\b', value['asset'], re.I)
+        if qualifier:
+            label, qualification = value['asset'][:qualifier.start()].rstrip(' ,'), value['asset'][qualifier.start():]
+            if not label or re.search(r'\b(?:not|no|unless|except|provided that|shall|must|may|will)\b', value['asset'], re.I):
+                raise ValueError('Target qualifier has ambiguous or negative scope; encode it explicitly in conditions.')
+            field = 'compliance' if qualification.casefold().startswith('in accordance with') else 'scope'
+            condition = dict(leftOperand=field, operator='eq', rightOperand=qualification)
+            value['asset'] = label
+            if condition not in value['conditions']: value['conditions'].append(condition)
+        for condition in list(constraint_leaves(value['conditions'])):
+            # A verbatim numeric deadline is not qualitative timing. Preserve
+            # its local Boolean position while compiling the explicit clock.
+            wording = condition.get('rightOperand')
+            relative = (re.fullmatch(r'within\s+(\d+)\s+(hours?|days?)\s+(?:after|of|from)\s+(.+?)[.]?', wording.strip(), re.I)
+                        if isinstance(wording, str) else None)
+            if (condition['leftOperand'].casefold() == 'timing' and condition['operator'] == 'eq'
+                    and relative and any(normalized(wording) in span for span in cited)
+                    and not (relative[2].lower().startswith('day') and any('business day' in span for span in cited))):
+                duration = ('PT' + relative[1] + 'H' if relative[2].lower().startswith('hour') else 'P' + relative[1] + 'D')
+                condition.clear()
+                condition['and'] = [dict(leftOperand='elapsedTime', operator='lteq', rightOperand=duration),
+                                    dict(leftOperand='event', operator='eq', rightOperand=relative[3])]
+                continue
+            recipient = condition.get('rightOperand')
+            if (condition['leftOperand'].casefold() == 'recipient' and condition['operator'] == 'eq'
+                    and isinstance(recipient, str) and any(normalized(recipient) in span for span in cited)
+                    and re.search(r'\bor\s+(?:its|their)\s+authori[sz]ed\s+representatives?\b', recipient, re.I)):
+                condition.update(operator='isAnyOf', rightOperand=re.split(r'\s+or\s+', recipient, maxsplit=1, flags=re.I))
         primary = normalized(item['text'])
+        if (value['action'].casefold() == 'provideaccess' and re.search(r'\b(?:shar(?:e|es|ing|ed)|produce|submit|supply|deliver)\b', primary)
+                and not re.search(r'\b(?:access|available|grant(?:ed|ing|s)?)\b', primary)):
+            raise ValueError('PRIMARY states a sharing or delivery operation, not an access grant. '
+                             'Retain action share, produce, submit, supply or deliver as stated; provideAccess is a different operation.')
         # Custom actions retain their source verb rather than selecting a
         # plausible but different operation (e.g. establish vs implement).
         canonical = {'read', 'delete', 'notify', 'inform', 'report', 'provideaccess',
@@ -659,6 +722,28 @@ def compile_plan(answer, contract, item, rejected=None):
         leaves = list(constraint_leaves(value['conditions']))
         branches = constraint_branches(value['conditions'])
         missing = []
+        shared_exception = re.search(r'\bshall not,\s*without (.{1,120}?(?:consent|approval)),\s*'
+            r'(?:divulge|disclose|share)\b[^.]+?\bor,?\s*except to the extent (.{1,160}?),\s*make any use\b', primary)
+        if shared_exception and kind == 'prohibition' and value['action'].casefold() == 'use':
+            for field, phrase in (('approval', shared_exception[1]), ('scope', shared_exception[2])):
+                def excludes(condition):
+                    expected_fields = ('scope', 'purpose') if field == 'scope' else ('approval',)
+                    operand = condition.get('rightOperand')
+                    return (condition['leftOperand'].casefold() in expected_fields
+                        and ((condition['operator'] == 'neq' and isinstance(operand, str) and normalized(operand) == phrase)
+                             or (condition['operator'] == 'isNoneOf' and isinstance(operand, list) and len(operand) == 1
+                                 and isinstance(operand[0], str) and normalized(operand[0]) == phrase)))
+                if not all(any(excludes(condition) for condition in branch) for branch in branches):
+                    missing.append('The coordinated use ban retains the source exception: ' + field + ' neq ' + repr(phrase) + '.')
+        record_scope = re.search(r'\brecords\s+(for\s+.{1,200}?)\s+and\s+(?:will|shall|must)\s+'
+                                 r'make\s+(?:all\s+)?such\s+records\s+available\b', primary)
+        if (record_scope and value['action'].casefold() == 'provideaccess'
+                and not all(any(condition['leftOperand'].casefold() == 'scope'
+                    and normalized(str(condition.get('rightOperand', ''))).removeprefix('for all ').removeprefix('for ')
+                        == record_scope[1].removeprefix('for all ').removeprefix('for ')
+                    for condition in branch) for branch in branches)):
+            missing.append('The reused records target retains its original scope on this access rule: scope eq '
+                           + repr(record_scope[1]) + '. Do not copy a maintenance duty\'s quality requirement as an access prerequisite.')
         # Preserve explicit source time spans without making the LLM invent
         # calendar boundaries or reason about a multi-period Boolean expression.
         period = re.search(r'\b(for the duration of [^,.;]{1,90}),', primary)
@@ -738,13 +823,13 @@ def compile_plan(answer, contract, item, rejected=None):
                     and parameters[condition['rightOperandReference']]['dataType'] != 'duration'):
                 raise ValueError('An elapsedTime reference must bind a duration, not a boolean or generic string.')
             values = condition.get('rightOperand')
-            if (condition['leftOperand'].casefold() in ('format', 'quality') and condition['operator'] == 'isAnyOf'
+            if (condition['leftOperand'].casefold() in ('format', 'quality', 'recipient') and condition['operator'] == 'isAnyOf'
                     and isinstance(values, list) and len(values) > 1 and all(isinstance(part, str) for part in values)):
                 positions = [(primary.find(normalized(part)), len(normalized(part))) for part in values]
                 if all(position >= 0 for position, _ in positions):
                     source_list = primary[min(position for position, _ in positions):max(position + length for position, length in positions)]
                     if re.search(r'\band\b', source_list) and not re.search(r'\bor\b', source_list):
-                        raise ValueError('Source format/quality requirements are cumulative, not alternatives. '
+                        raise ValueError('Source listed requirements/recipients are cumulative, not alternatives. '
                                          'Use isAllOf or separate conjunctive constraints.')
         if kind == 'permission':
             primary = normalized(item['text'])
@@ -784,7 +869,9 @@ def compile_plan(answer, contract, item, rejected=None):
         if value['action'].casefold() in ('notify', 'inform', 'report'):
             senders = re.findall(r'\b(?:The\s+)?([A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,3})\s+'
                                  r'(?:must|shall)\s+(?:notify|inform)\b', item['text'])
-            if len(set(senders)) == 1 and normalized(value['actor']).removeprefix('the ') != normalized(senders[0]):
+            literal_sender = re.search(r'(?<!\w)' + re.escape(normalized(value['actor']))
+                                       + r'\s+(?:must|shall)\s+(?:notify|inform)\b', primary)
+            if len(set(senders)) == 1 and normalized(value['actor']).removeprefix('the ') != normalized(senders[0]) and not literal_sender:
                 raise ValueError('Notification responsible actor differs from the explicit source sender: ' + senders[0])
             named_recipient = re.search(r'\b(?:notify|inform)\s+(?:(?:the|all|each)\s+)?'
                 r'([A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,3})\s+(?:of|about|without|within|regarding|that)\b', item['text'])
@@ -1085,12 +1172,12 @@ def generate_item(item, client, prompt, contract, request_schema, root):
             # First request a full repair. If a later plan still mixes invalid
             # groups into sound rules, withhold them and review the remainder.
             rejected = []
-            fragment = compile_plan(dict(answer, unrepresented=[]), contract, supplied,
-                                    rejected=rejected if attempt else None)
+            fragment = compile_plan(dict(answer, unrepresented=[]), contract, supplied, rejected=rejected)
             if rejected:
                 diagnostics['withheld_plan_groups'] = rejected
                 if fragment is None:
-                    raise ValueError('No valid source-grounded rule groups remain after withholding invalid groups.')
+                    raise ValueError('No valid source-grounded rule groups remain. Compiler corrections: '
+                                     + json.dumps(rejected, ensure_ascii=False))
             if fragment is not None:
                 validate_fragment(fragment, contract, supplied, root)
             candidates = []
@@ -1129,9 +1216,9 @@ def generate_item(item, client, prompt, contract, request_schema, root):
                               outcome='abstained_needs_review')
             if hasattr(client, 'discard_response'):
                 client.discard_response(draft_cache_key)
-            issues = dict(coverage=checked['coverage'], reason=checked['reason'],
+            issues = dict(relevance=checked['relevance'], coverage=checked['coverage'], reason=checked['reason'],
                           missing_rules=checked['missing_rules'], rule_reviews=checked['rule_reviews'],
-                          unrepresented=answer['unrepresented'])
+                          unrepresented=answer['unrepresented'], compiler_errors=rejected)
             raise ValueError('Evidence check requires correction: ' + json.dumps(issues, ensure_ascii=False))
         except (ValueError, ValidationError) as error:
             if hasattr(client, 'discard_last_response'):

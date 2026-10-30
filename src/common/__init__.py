@@ -3,6 +3,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from time import sleep
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 
 
@@ -158,7 +159,9 @@ def standalone_heading(chunk):
 def definition_only(chunk):
     """A named definition without an operative statement creates no policy rule."""
     text = chunk['text'].strip()
-    text = re.sub(r'^\s*\d+(?:\.\d+)*[.):]?\s*\n', '', text)
+    number = CLAUSE.match(text)
+    if number:
+        text = text[number.end():].lstrip()
     match = DEFINITION.match(text)
     if not match:
         return False
@@ -221,7 +224,16 @@ def write_json(path, value):
             temporary = Path(stream.name)
             json.dump(value, stream, ensure_ascii=False, indent=2)
             stream.write('\n')
-        temporary.replace(path)
+        for attempt in range(5):
+            try:
+                temporary.replace(path)
+                break
+            except PermissionError as error:
+                # Windows readers/antivirus can briefly lock the destination.
+                # Keep the old JSON intact and still fail on a persistent lock.
+                if getattr(error, 'winerror', None) not in (5, 32, 33) or attempt == 4:
+                    raise
+                sleep(.025 * 2 ** attempt)
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
