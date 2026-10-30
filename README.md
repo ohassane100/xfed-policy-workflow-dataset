@@ -56,7 +56,8 @@ recorded. Rules with missing issuers use an ODRL Set. Context overflow fails
 explicitly. Rerun through policy creation after updating to rebuild extraction
 metadata and context.
 
-The **Evaluation** tab measures task 1.3 classification only. **Policy review**
+The **Evaluation** tab offers the Contract 05 classification benchmark and DCT
+agreement evaluation for tasks 1.3 and 2. **Policy review**
 is a static visual demo with labelled sample content and inert buttons. It has
 no node connections, review actions, downloads or amendment logic.
 
@@ -72,6 +73,9 @@ and exact clause/PDF-page links shown beside it.
 The **Research collaboration preset** adds controlled platform access, processing
 records with cross-clause scope, dated Background access and publication notice,
 objection and delay windows. Supporting clauses appear beside the extracted rule.
+It also covers authorised users, re-identification, attribution, error reporting,
+data/documentation delivery and deletion certificates. New agreements freeze
+classification labels for every PDF chunk alongside their expected policy rules.
 
 To use the university model through the existing tunnel while keeping scripts and
 reports local, run locally (no server changes or remote commands):

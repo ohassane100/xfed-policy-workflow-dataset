@@ -1,6 +1,7 @@
 # Classification evaluation (task 1.3)
 
-The Evaluation tab measures RELEVANT, NOT_RELEVANT and NEEDS_CONTEXT classification.
+The Evaluation tab retains this real-contract classification benchmark and adds
+DCT evaluation for classification (1.3) and policy extraction (2).
 The frozen reference contains 300 development cases from Contracts 01–03 and all
 76 chunks from Contract 05. Classification labels are unchanged. The reference
 labels are provisional; Contract 05 has already been inspected during development.
@@ -90,6 +91,14 @@ enabled only when those DCT terms are selected.
 The research preset also checks access roles, inherited record scope, inclusive
 calendar boundaries, Work Plan compliance and separate publication clocks.
 Its clauses adapt patterns from Contracts 01–03; these remain development inputs.
+New DCT revisions freeze authored classification labels for every PDF chunk,
+including headings, definitions and general administrative clauses. Classification
+is scored before enrichment updates its outputs. The Evaluation tab runs the full
+PDF pipeline and reports classification metrics separately from complete-rule
+precision/recall/F1, routing and behavior checks. Missing predictions remain in the
+denominators; source/reference hashes guard saved results. The research preset has
+27 expected rules and 70 behavior checks with all terms selected. These references
+are authored specifications, not independently reviewed legal ground truth.
 
 Generation also gives its same-model reviewer small computed examples of purpose
 restrictions. Missing state, unresolved values and unsupported comparisons stay

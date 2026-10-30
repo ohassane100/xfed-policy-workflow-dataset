@@ -17,8 +17,8 @@ from xfed.policy import validate_policy, verify_sources
 from xfed.policy_evaluation import component_comparison, normalized
 
 
-VERSION = 'dct-2'
-SUPPORTED_VERSIONS = ('guided-1', 'guided-2', 'guided-3', 'dct-1', VERSION)
+VERSION = 'dct-3'
+SUPPORTED_VERSIONS = ('guided-1', 'guided-2', 'guided-3', 'dct-1', 'dct-2', VERSION)
 STORAGE_COUNTRIES = ('Norway', 'Sweden', 'Denmark', 'Finland', 'Iceland', 'Germany', 'France', 'Netherlands')
 DEFAULTS = dict(title='Data Collaboration Agreement', provider='North Research Institute',
     recipient='Harbour Analytics', data='Research Dataset', purpose='joint research',
@@ -32,9 +32,23 @@ PROJECT_DEFAULTS = dict(competition_limit=False, platform_access=False, records_
     background='Background Research Materials', results='Aggregate Research Results', work_plan='Agreed Research Work Plan',
     project_start='2026-11-01', project_end='2027-10-31', publication_notice_days=30, publication_delay_days=90)
 DEFAULTS.update(PROJECT_DEFAULTS)
+STEWARDSHIP_DEFAULTS = dict(authorized_access=False, no_reidentification=False, attribution=False,
+    error_reporting=False, deletion_certificate=False, provider_delivery=False,
+    authorized_users='Approved Project Researchers', documentation='Dataset Documentation', certificate='Data Deletion Certificate',
+    delivery_days=5, certificate_days=7, error_hours=24, data_description='')
+DEFAULTS.update(STEWARDSHIP_DEFAULTS)
 FLAGS = ('read', 'purpose_limit', 'sharing_limit', 'consent_exception', 'confidentiality',
          'secure_storage', 'deletion', 'notification', 'encryption', 'storage_limit',
-         'legal_disclosure', 'legal_retention', 'competition_limit', 'platform_access', 'records_access', 'background_access', 'publication')
+         'legal_disclosure', 'legal_retention', 'competition_limit', 'platform_access', 'records_access', 'background_access', 'publication',
+         'authorized_access', 'no_reidentification', 'attribution', 'error_reporting', 'deletion_certificate', 'provider_delivery')
+RESEARCH_PRESET = dict(DEFAULTS, **{key: True for key in FLAGS},
+    title='North Sea Energy Research Data Sharing Agreement', provider='Fjord Energy Research Institute', recipient='Bergen Applied Analytics',
+    data='Offshore Energy Research Dataset', purpose='offshore energy efficiency and safety research',
+    platform='North Sea Research Portal', records='Research Processing Audit Records', background='Legacy Turbine Research Materials',
+    results='Aggregate Energy Research Results', work_plan='Offshore Research Work Plan',
+    authorized_users='Approved Energy Project Researchers', documentation='Energy Dataset Documentation',
+    data_description='Pseudonymised turbine-performance, maintenance and personnel-occupancy observations from the North Sea research programme, together with the associated measurement metadata.',
+    delete_days=14, notify_hours=48)
 
 
 def digest(value):
@@ -42,13 +56,15 @@ def digest(value):
 
 
 def validate_terms(value):
-    legacy_fields = set(DEFAULTS) - set(PROJECT_DEFAULTS)
-    if isinstance(value, dict) and set(value) in (legacy_fields, legacy_fields - set(ADVANCED)):
+    previous_fields = set(DEFAULTS) - set(STEWARDSHIP_DEFAULTS)
+    legacy_fields = previous_fields - set(PROJECT_DEFAULTS)
+    if isinstance(value, dict) and set(value) in (previous_fields, legacy_fields, legacy_fields - set(ADVANCED)):
         value = dict(DEFAULTS, **value)  # Saved v1/v2 forms remain usable.
     if not isinstance(value, dict) or set(value) != set(DEFAULTS):
         raise ValueError('Provide all DCT fields and no additional fields.')
     value = deepcopy(value)
-    for key in ('title', 'provider', 'recipient', 'data', 'purpose', 'platform', 'records', 'background', 'results', 'work_plan'):
+    for key in ('title', 'provider', 'recipient', 'data', 'purpose', 'platform', 'records', 'background', 'results', 'work_plan',
+                'authorized_users', 'documentation', 'certificate'):
         text = value[key]
         if not isinstance(text, str) or not 1 <= len(text.strip()) <= 120 or any(ord(c) < 32 for c in text):
             raise ValueError(key + ' must be one line containing 1 to 120 printable characters.')
@@ -56,8 +72,14 @@ def validate_terms(value):
             raise ValueError(key + ' must be a label, not an additional contract clause.')
         value[key] = ' '.join(text.split())
         if key != 'title' and normalized(value[key]) in ('provider', 'recipient', 'data', 'incident', 'parties', 'permitted purpose',
-                'platform', 'records', 'background', 'results', 'work plan', 'security requirements', 'confidential information'):
+                'platform', 'records', 'background', 'results', 'work plan', 'security requirements', 'confidential information',
+                'authorized users', 'documentation', 'certificate', 'error'):
             raise ValueError(key + ' must name an entity or purpose rather than repeat a defined role.')
+    description = value['data_description']
+    if (not isinstance(description, str) or len(description) > 600 or any(ord(c) < 32 for c in description)
+            or re.search(r'\b(?:shall|must|may|will)\b', description, re.I)):
+        raise ValueError('Dataset description must be one descriptive line of at most 600 characters, without additional rules.')
+    value['data_description'] = ' '.join(description.split())
     for key in FLAGS:
         if type(value[key]) is not bool: raise ValueError(key + ' must be true or false.')
     countries = value['storage_countries']
@@ -65,7 +87,8 @@ def validate_terms(value):
             or any(not isinstance(c, str) or c not in STORAGE_COUNTRIES for c in countries)
             or len(set(countries)) != len(countries)):
         raise ValueError('Choose 1 to 4 distinct storage countries from: ' + ', '.join(STORAGE_COUNTRIES) + '.')
-    for key, maximum in (('delete_days', 3650), ('notify_hours', 168), ('publication_notice_days', 365), ('publication_delay_days', 3650)):
+    for key, maximum in (('delete_days', 3650), ('notify_hours', 168), ('publication_notice_days', 365), ('publication_delay_days', 3650),
+                         ('delivery_days', 365), ('certificate_days', 365), ('error_hours', 168)):
         if type(value[key]) is not int or not 1 <= value[key] <= maximum:
             raise ValueError(key + ' must be a whole number from 1 to ' + str(maximum) + '.')
     for key in ('project_start', 'project_end'):
@@ -76,11 +99,14 @@ def validate_terms(value):
             raise ValueError(key + ' must be a valid YYYY-MM-DD date.') from None
     if value['project_end'] < value['project_start']: raise ValueError('Project end must be on or after project start.')
     active_assets = ['data', *[field for field, enabled in (('platform', 'platform_access'), ('records', 'records_access'),
-                                                          ('background', 'background_access'), ('results', 'publication')) if value[enabled]]]
+                                                          ('background', 'background_access'), ('results', 'publication'),
+                                                          ('documentation', 'provider_delivery'), ('certificate', 'deletion_certificate')) if value[enabled]]]
     if len({normalized(value[k]) for k in active_assets}) != len(active_assets):
         raise ValueError('Selected resources must have distinct names.')
     if normalized(value['provider']) == normalized(value['recipient']):
         raise ValueError('Provider and Recipient must be distinct parties.')
+    if value['authorized_access'] and normalized(value['authorized_users']) in {normalized(value[k]) for k in ('provider', 'recipient')}:
+        raise ValueError('The authorised researcher group must have a distinct name from Provider and Recipient.')
     if not any(value[key] for key in FLAGS if key not in ('consent_exception', 'legal_disclosure', 'legal_retention')):
         raise ValueError('Select at least one policy term.')
     return value
@@ -89,15 +115,20 @@ def validate_terms(value):
 def draft(terms):
     """Each supported policy term has its own clause and explicit applicability."""
     t = validate_terms(terms)
-    clauses, rules = [], []
-    def clause(number, text, rule=None):
+    clauses, rules, classifications = [], [], {}
+    def clause(number, text, rule=None, relevant=None):
         if rule:
             labels = {'Provider': t['provider'], 'Recipient': t['recipient'], 'Data': t['data'], 'Permitted Purpose': t['purpose'],
-                      'Platform': t['platform'], 'Records': t['records'], 'Background': t['background'], 'Results': t['results'], 'Work Plan': t['work_plan']}
+                      'Platform': t['platform'], 'Records': t['records'], 'Background': t['background'], 'Results': t['results'], 'Work Plan': t['work_plan'],
+                      'Authorized Users': t['authorized_users'], 'Documentation': t['documentation'], 'Certificate': t['certificate']}
             # Operative clauses contain explicit names; the extraction model
             # need not recover identities from the authoring record.
             text = re.sub(r'\b(?:' + '|'.join(sorted(map(re.escape, labels), key=len, reverse=True)) + r')\b', lambda m: labels[m[0]], text)
         clauses.append(dict(clause_id=number, text=text))
+        if relevant is None: relevant = bool(rule) or number.startswith('1.') and number != '1.5'
+        classifications[number] = dict(label='RELEVANT' if relevant else 'NOT_RELEVANT',
+            rationale=('Creates an information-handling rule.' if rule else 'Defines the scope or meaning of information-handling terms.' if relevant
+                       else 'Heading or general administration without a material information-handling term.'))
         if rule: rules.append(dict(id='reference:' + number, source=number, **rule))
     def condition(field, value, op='eq'): return dict(field=field, op=op, value=value)
     def rule(kind, action, asset='Data', conditions=(), actor='Recipient'):
@@ -106,7 +137,7 @@ def draft(terms):
     clause('1', 'Parties and definitions')
     clause('1.1', 'Provider means ' + t['provider'] + '.')
     clause('1.2', 'Recipient means ' + t['recipient'] + '.')
-    clause('1.3', 'Data means ' + t['data'] + '.')
+    clause('1.3', 'Data means ' + t['data'] + '.' + (' The dataset comprises ' + t['data_description'].rstrip('.') + '.' if t['data_description'] else ''))
     clause('1.4', 'Permitted Purpose means ' + t['purpose'] + '.')
     clause('1.5', 'Parties means Provider and Recipient.')
     if t['notification']:
@@ -119,11 +150,16 @@ def draft(terms):
         clause('1.10', 'Security Requirements means multi-factor authentication and an approved project account, assessed together as a continuing access requirement.')
     if t['records_access']: clause('1.11', 'Records means ' + t['records'] + '.')
     if t['background_access']: clause('1.12', 'Background means ' + t['background'] + '.')
-    if t['publication']:
+    if t['publication'] or t['attribution']:
         clause('1.13', 'Results means ' + t['results'] + '.')
+    if t['publication']:
         clause('1.14', 'Confidential Information means Data and project information marked confidential by Provider.')
+    if t['authorized_access']: clause('1.15', 'Authorized Users means ' + t['authorized_users'] + ', limited to Recipient personnel registered for this Project and bound by its confidentiality requirements.')
+    if t['provider_delivery'] or t['error_reporting']: clause('1.16', 'Documentation means ' + t['documentation'] + ', comprising the data dictionary and processing notes accompanying Data.')
+    if t['deletion_certificate']: clause('1.17', 'Certificate means ' + t['certificate'] + ', a signed record of the copies deleted and any copies retained under a legal retention requirement.')
+    if t['error_reporting']: clause('1.18', 'Error means a material inaccuracy discovered in Data or Documentation.')
     clause('2', 'Collaboration and administration')
-    clause('2.1', 'The Parties intend to collaborate on the Permitted Purpose.')
+    clause('2.1', 'The Parties intend to collaborate on the Permitted Purpose.', relevant=True)
     clause('2.2', 'Each Party bears its own administrative expenses.')
     if any(t[k] for k in ('read', 'purpose_limit', 'sharing_limit', 'competition_limit')): clause('3', 'Access, use and sharing')
     if t['read']:
@@ -209,10 +245,35 @@ def draft(terms):
                rule('permission', 'publish', 'Results', conditions=[condition('elapsedTime', 'P'+str(t['publication_delay_days'])+'D', 'gteq'),
                     condition('event', "Provider's objection"), condition('approval', "Provider's objections addressed"),
                     condition('compliance', 'no Confidential Information disclosed')]))
-    clause('10', 'General arrangements')
-    clause('10.1', 'The Parties will arrange project meetings separately.')
-    clause('10.2', 'This Agreement may be executed in counterparts.')
-    return dict(template_version=VERSION, title=t['title'], clauses=clauses, rules=rules)
+    if any(t[k] for k in ('authorized_access', 'no_reidentification', 'attribution', 'error_reporting', 'deletion_certificate', 'provider_delivery')):
+        clause('10', 'Delivery, responsible use and project close-out')
+    if t['authorized_access']:
+        clause('10.1', 'Recipient must not provide access to Data to anyone other than Authorized Users.',
+               rule('prohibition', 'provideAccess', conditions=[condition('recipient', 'Authorized Users', 'neq')]))
+    if t['no_reidentification']:
+        clause('10.2', 'Recipient must not reidentify individuals from Data.', rule('prohibition', 'reidentify'))
+    if t['attribution']:
+        clause('10.3', 'Recipient must attribute Provider when publishing Results.',
+               rule('obligation', 'attribute', 'Results', conditions=[condition('recipient', 'Provider'), condition('timing', 'when publishing')]))
+    if t['error_reporting']:
+        clause('10.4', f"Recipient must notify Provider of any Error within {t['error_hours']} hours after discovering the Error.",
+               rule('obligation', 'notify', 'Error', conditions=[condition('recipient', 'Provider'), condition('elapsedTime', 'PT'+str(t['error_hours'])+'H', 'lteq'), condition('event', 'error discovery')]))
+    if t['deletion_certificate']:
+        clause('10.5', f"Recipient must submit Certificate to Provider within {t['certificate_days']} days after deletion of Data.",
+               rule('obligation', 'submit', 'Certificate', conditions=[condition('recipient', 'Provider'), condition('elapsedTime', 'P'+str(t['certificate_days'])+'D', 'lteq'), condition('event', 'data deletion')]))
+    if t['provider_delivery']:
+        for number, asset in (('10.6', 'Data'), ('10.7', 'Documentation')):
+            clause(number, f"Provider must share {asset} with Recipient within {t['delivery_days']} days after this Agreement is signed.",
+                   rule('obligation', 'share', asset, actor='Provider', conditions=[condition('recipient', 'Recipient'),
+                       condition('elapsedTime', 'P'+str(t['delivery_days'])+'D', 'lteq'), condition('event', 'agreement signature')]))
+    clause('11', 'Ownership and general arrangements')
+    clause('11.1', 'Each Party retains ownership of the materials it contributes. This Agreement transfers no ownership of Data'
+           + (' or Background.' if t['background_access'] else '.'), relevant=True)
+    clause('11.2', 'The Parties will arrange project meetings separately.')
+    clause('11.3', 'This Agreement is governed by Norwegian law. Disputes are submitted to the courts of Oslo.')
+    clause('11.4', 'Neither Party warrants the commercial viability of the research project.')
+    clause('11.5', 'This Agreement may be executed in counterparts.')
+    return dict(template_version=VERSION, title=t['title'], clauses=clauses, rules=rules, classification_terms=classifications)
 
 
 def render_pdf(terms):
@@ -272,10 +333,30 @@ def create(root, terms):
     base = Path(root) / 'contracts' / identifier
     reference = draft(terms)
     reference.update(contract_id=identifier, pdf_sha256=hashlib.sha256(pdf).hexdigest())
-    manifest = dict(template_version=VERSION, terms=terms, terms_sha256=digest(terms),
-                    pdf_sha256=reference['pdf_sha256'], reference_sha256=digest(reference))
     (base / 'input').mkdir(parents=True, exist_ok=False)
     (base / 'input/contract.pdf').write_bytes(pdf)
+    from xfed.extraction import extract_document
+    from xfed.segmentation import segment
+    chunks = segment(extract_document(base / 'input/contract.pdf', identifier, root), root)['chunks']
+    authored = {c['clause_id']: c for c in reference['clauses']}
+    classification = []
+    for chunk in chunks:
+        cid, text = chunk.get('clause_id'), normalized(chunk['text'])
+        if cid in authored:
+            if text != normalized(cid + ' ' + authored[cid]['text']):
+                raise ValueError('DCT segmentation changed the authored clause: ' + cid)
+            gold = reference['classification_terms'][cid]
+        elif text in (normalized(terms['title']), 'data collaboration') or re.fullmatch(r'page \d+ of \d+', text):
+            gold = dict(label='NOT_RELEVANT', rationale='Document title, running header or page number.')
+        else:
+            raise ValueError('DCT classification reference has an unmapped PDF chunk: ' + chunk['chunk_id'])
+        classification.append(dict(chunk=deepcopy(chunk), **gold))
+    if {c.get('clause_id') for c in chunks} - {None} != set(authored):
+        raise ValueError('DCT segmentation must retain every authored clause exactly once.')
+    reference['classification'] = classification
+    reference.pop('classification_terms')
+    manifest = dict(template_version=VERSION, terms=terms, terms_sha256=digest(terms),
+                    pdf_sha256=reference['pdf_sha256'], reference_sha256=digest(reference))
     write_json(base / 'authoring.json', manifest)
     write_json(base / 'reference.json', reference)
     return dict(contract=identifier, title=terms['title'], expected_rules=len(reference['rules']))
@@ -304,9 +385,13 @@ def canonical(policy, terms):
     def key(text): return re.sub(r'^the\s+', '', normalized(text)).strip(' .')
     parties = {key(terms['provider']): 'Provider', 'provider': 'Provider',
                key(terms['recipient']): 'Recipient', 'recipient': 'Recipient'}
+    if terms.get('authorized_access'):
+        parties.update({key(terms['authorized_users']): 'Authorized Users', 'authorized users': 'Authorized Users'})
     assets = {key(terms['data']): 'Data', 'data': 'Data',
-              'incident': 'Incident', 'incidents': 'Incident', 'any incident': 'Incident', 'any incidents': 'Incident'}
-    for field, flag in (('platform', 'platform_access'), ('records', 'records_access'), ('background', 'background_access'), ('results', 'publication')):
+              'incident': 'Incident', 'incidents': 'Incident', 'any incident': 'Incident', 'any incidents': 'Incident',
+              'error': 'Error', 'any error': 'Error', 'errors': 'Error'}
+    for field, flag in (('platform', 'platform_access'), ('records', 'records_access'), ('background', 'background_access'),
+                        ('results', 'publication'), ('results', 'attribution'), ('documentation', 'provider_delivery'), ('certificate', 'deletion_certificate')):
         if terms.get(flag): assets.update({field: field.title(), key(terms[field]): field.title()})
     purposes = {key(terms['purpose']), 'for ' + key(terms['purpose']), 'permitted purpose', 'for the permitted purpose', 'for permitted purpose'}
     consents = {"provider's prior written consent", "the provider's prior written consent", 'prior written consent of provider',
@@ -320,6 +405,9 @@ def canonical(policy, terms):
     events.update({phrase: 'publication notice' for phrase in ('publication notice', 'the publication notice is issued',
         'publication notice is issued', 'publication notice was issued', 'the publication notice was issued', 'publication notice issued')})
     events.update({phrase: "Provider's objection" for phrase in ("provider's objection", key(terms['provider']+"'s objection"))})
+    events.update({phrase: 'error discovery' for phrase in ('error discovery', 'discovering the error', 'after discovering the error')})
+    events.update({phrase: 'data deletion' for phrase in ('data deletion', 'deletion of data', key('deletion of '+terms['data']))})
+    events.update({phrase: 'agreement signature' for phrase in ('agreement signature', 'this agreement is signed', 'the agreement is signed', 'signature of this agreement')})
     def condition(entry):
         for group in ('all', 'any', 'exactly_one'):
             if group in entry: return {group: [condition(c) for c in entry[group]]}
@@ -398,6 +486,35 @@ def canonical(policy, terms):
             for child in entry.get(field, []): rule(child)
     for entry in policy['rules']: rule(entry)
     return policy
+
+
+def evaluate_classification(base, chunks, root):
+    """Score every frozen PDF chunk, including no-rule definitions and negatives."""
+    from xfed.evaluation import classification_metrics
+    manifest, reference = load(base)
+    cases = reference.get('classification')
+    if not cases:
+        raise ValueError('This older DCT revision has no frozen classification labels. Create a new revision.')
+    expected = {case['chunk']['chunk_id']: case for case in cases}
+    actual = {chunk['chunk_id']: chunk for chunk in chunks}
+    if len(actual) != len(chunks) or set(actual) - set(expected):
+        raise ValueError('Classification output has duplicate or unknown source chunks.')
+    rows = []
+    for identifier, case in expected.items():
+        chunk = actual.get(identifier)
+        if chunk and {k: v for k, v in chunk.items() if k != 'classification'} != case['chunk']:
+            raise ValueError('Classification evidence changed: ' + identifier)
+        prediction = (chunk or {}).get('classification', {})
+        rows.append(dict(chunk_id=identifier, clause_id=case['chunk'].get('clause_id'), pages=case['chunk']['source']['pages'],
+            text=case['chunk']['text'], gold=case['label'], gold_reason=case['rationale'], label=prediction.get('label'),
+            reason=prediction.get('reason'), error='Missing prediction' if not prediction else None))
+    metrics = classification_metrics(rows)
+    return dict(task='classification', protocol='dct_classification_v1', contract_id=reference['contract_id'],
+        reference_status='Authored DCT labels; not independently reviewed.', reference_sha256=manifest['reference_sha256'],
+        pdf_sha256=manifest['pdf_sha256'], predictions_sha256=digest(rows), predictions=rows, metrics=metrics,
+        mismatches=[row for row in rows if row['error'] or row['gold'] != row['label']],
+        scorer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        scope='Task 1.3 on every chunk of this generated DCT PDF; no claim of general contract accuracy.')
 
 
 def evaluate(base, policy, chunks, root):
@@ -558,6 +675,25 @@ def evaluate(base, policy, chunks, root):
                     ('Missing publication clearance', dict(state, approval=approval), False),
                     ('Confidential publication', dict(state, compliance='Confidential Information disclosed'), False)):
                 check(clause, label, 'permission', 'Recipient', 'publish', 'Results', inputs, expected_result, 'time window' if 'window' in label else 'condition match')
+    if terms['authorized_access']:
+        for recipient, expected_result in (('Authorized Users', False), ('unregistered researcher', True)):
+            check('10.1', 'Research access / '+recipient, 'prohibition', 'Recipient', 'provideAccess', 'Data', dict(recipient=recipient), expected_result)
+    if terms['no_reidentification']:
+        check('10.2', 'Reidentification is prohibited', 'prohibition', 'Recipient', 'reidentify', 'Data', {}, True)
+    if terms['attribution']:
+        attribution = dict(recipient='Provider', timing='when publishing')
+        check('10.3', 'Provider attribution on publication', 'obligation', 'Recipient', 'attribute', 'Results', attribution, True, 'requirement satisfaction')
+        check('10.3', 'Attribution to wrong party', 'obligation', 'Recipient', 'attribute', 'Results', dict(attribution, recipient='other party'), False, 'requirement satisfaction')
+    for enabled, clause, actor, action, asset, amount, prefix, suffix, event, recipient in (
+            (terms['error_reporting'], '10.4', 'Recipient', 'notify', 'Error', terms['error_hours'], 'PT', 'H', 'error discovery', 'Provider'),
+            (terms['deletion_certificate'], '10.5', 'Recipient', 'submit', 'Certificate', terms['certificate_days'], 'P', 'D', 'data deletion', 'Provider'),
+            (terms['provider_delivery'], '10.6', 'Provider', 'share', 'Data', terms['delivery_days'], 'P', 'D', 'agreement signature', 'Recipient'),
+            (terms['provider_delivery'], '10.7', 'Provider', 'share', 'Documentation', terms['delivery_days'], 'P', 'D', 'agreement signature', 'Recipient')):
+        if not enabled: continue
+        state = dict(event=event, recipient=recipient, elapsedTime=prefix+str(amount)+suffix)
+        check(clause, 'At deadline / '+asset, 'obligation', actor, action, asset, state, True, 'deadline satisfaction')
+        check(clause, 'Beyond deadline / '+asset, 'obligation', actor, action, asset, dict(state, elapsedTime=prefix+str(amount+1)+suffix), False, 'deadline satisfaction')
+        check(clause, 'Wrong clock / '+asset, 'obligation', actor, action, asset, dict(state, event='unrelated event'), False, 'deadline satisfaction')
     alignments = [row for clause in comparisons for row in clause['alignment']]
     diagnostics = dict(missing_rules=sum(len(c['missing_reference_rule_ids']) for c in comparisons),
         extra_rules=sum(len(c['unmatched_prediction_rule_ids']) for c in comparisons),

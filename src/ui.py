@@ -396,6 +396,11 @@ class Pipeline:
             return deepcopy(self.benchmark_report)
 
     def start_evaluation(self, request):
+        if request.get('contract'):
+            _, reference = authoring.load(self.base(request['contract']))
+            if not reference.get('classification') or request.get('task') != 'dct':
+                raise ValueError('Choose a DCT revision with frozen classification and policy references.')
+            return self.start(dict(request, stage='2', mode='through', reuse=False))
         if request.get('split', 'test') != 'test':
             raise ValueError('The UI evaluates the test set only. Use the local CLI for development.')
         if request.get('task', 'classification') != 'classification' or 'policy_mode' in request:
@@ -450,13 +455,28 @@ class Pipeline:
                 self.evaluation_report = report
         self.finish(status, message)
 
-    def evaluation_result(self):
+    def evaluation_result(self, contract=None):
+        dcts = {cid: reference['title'] for cid in sorted(self.contracts(), key=lambda cid: (self.base(cid) / 'input/contract.pdf').stat().st_mtime, reverse=True)
+                if (reference := read_json(self.base(cid) / 'reference.json', {})).get('classification')}
+        if contract:
+            value = self.guided_result(contract)
+            manifest, reference = authoring.load(self.base(contract))
+            classification = read_json(self.output(contract) / 'dct_classification_evaluation.json')
+            if classification and (classification['reference_sha256'] != manifest['reference_sha256']
+                    or classification['pdf_sha256'] != manifest['pdf_sha256']
+                    or classification['predictions_sha256'] != authoring.digest(classification['predictions'])):
+                raise ValueError('Saved classification evaluation changed or belongs to another contract revision.')
+            return dict(contract=contract, title=value['title'], dct_contracts=dcts, reference=reference,
+                classification=classification, policy=value['evaluation'], policy_preview=value['policy_preview'],
+                stages=self.state(contract)['stages'], job=self.snapshot())
         with self.lock:
             report = deepcopy(self.evaluation_report)
-        return dict(reference=reference_summary(load_reference(self.root), split='test'), report=report)
+        return dict(reference=reference_summary(load_reference(self.root), split='test'), report=report, dct_contracts=dcts)
 
     def invalidate(self, contract, stage):
         (self.output(contract) / 'guided_evaluation.json').unlink(missing_ok=True)
+        if stage in ('1.1', '1.2', '1.3'):
+            (self.output(contract) / 'dct_classification_evaluation.json').unlink(missing_ok=True)
         stages = list(STAGES)
         for downstream in stages[stages.index(stage):]:
             self.path(contract, downstream).unlink(missing_ok=True)
@@ -543,6 +563,9 @@ class Pipeline:
                 self.progress(self.snapshot()['completed'], self.snapshot()['total'], 'Saving stage ' + stage)
                 if result is not None:
                     write_output(self.path(contract, stage), result, STAGES[stage][1], self.root)
+                if stage == '1.3' and (base / 'reference.json').is_file() and read_json(base / 'reference.json').get('classification'):
+                    write_json(self.output(contract) / 'dct_classification_evaluation.json',
+                               authoring.evaluate_classification(base, result['chunks'], self.root))
                 if stage == '2' and (base / 'authoring.json').is_file():
                     chunks = read_json(self.path(contract, '1.3'))['chunks']
                     evaluation = authoring.evaluate(base, result, chunks, self.root)
@@ -699,10 +722,10 @@ def handler(pipeline):
                 elif route.path == '/api/benchmark':
                     self.send(dict(report=pipeline.benchmark_result()))
                 elif route.path == '/api/evaluation':
-                    self.send(pipeline.evaluation_result())
+                    self.send(pipeline.evaluation_result(query.get('contract', [None])[0]))
                 elif route.path == '/api/authoring':
                     self.send(pipeline.guided_result(query['contract'][0]) if 'contract' in query
-                              else dict(defaults=authoring.DEFAULTS, template_version=authoring.VERSION))
+                              else dict(defaults=authoring.DEFAULTS, research_preset=authoring.RESEARCH_PRESET, template_version=authoring.VERSION))
                 elif route.path in ('/api/output', '/api/pdf'):
                     contract = query['contract'][0]
                     if route.path == '/api/pdf':

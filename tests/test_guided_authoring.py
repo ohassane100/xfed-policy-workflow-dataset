@@ -204,7 +204,7 @@ class GuidedTests(unittest.TestCase):
         self.assertIn('30 days', deletion['conditions'][0])
 
     def test_research_template_covers_multiple_resources_roles_scopes_and_publication_clocks(self):
-        terms = dict(authoring.DEFAULTS, **{k: True for k in authoring.FLAGS})
+        terms = dict(authoring.DEFAULTS, **{k: True for k in authoring.FLAGS if k not in authoring.STEWARDSHIP_DEFAULTS})
         self.created = authoring.create(self.root, terms)
         self.base = self.root / 'contracts' / self.created['contract']
         self.document = extract_document(self.base / 'input/contract.pdf', self.created['contract'], self.root)
@@ -245,7 +245,7 @@ class GuidedTests(unittest.TestCase):
         self.assertEqual(row['supporting_sources'][0]['text'], by_clause['7.1']['text'])
 
     def test_project_date_inputs_and_older_dct_forms(self):
-        old = {k: v for k, v in authoring.DEFAULTS.items() if k not in authoring.PROJECT_DEFAULTS}
+        old = {k: v for k, v in authoring.DEFAULTS.items() if k not in (*authoring.PROJECT_DEFAULTS, *authoring.STEWARDSHIP_DEFAULTS)}
         self.assertEqual(authoring.validate_terms(old), authoring.DEFAULTS)
         for change in (dict(project_start='2026-02-30'), dict(project_end='2020-01-01'),
                        dict(publication_notice_days=0), dict(publication_delay_days=True),
@@ -259,7 +259,7 @@ class GuidedTests(unittest.TestCase):
         self.assertIsNone(constraint_truth(comparisons, dict(dateTime='not a date')))
 
     def test_legacy_forms_and_frozen_references_keep_their_meaning(self):
-        legacy = {k: v for k, v in authoring.DEFAULTS.items() if k not in (*authoring.ADVANCED, *authoring.PROJECT_DEFAULTS)}
+        legacy = {k: v for k, v in authoring.DEFAULTS.items() if k not in (*authoring.ADVANCED, *authoring.PROJECT_DEFAULTS, *authoring.STEWARDSHIP_DEFAULTS)}
         self.assertEqual(authoring.validate_terms(legacy), authoring.DEFAULTS)
         manifest = json.loads((self.base / 'authoring.json').read_text())
         reference = deepcopy(self.reference)
@@ -271,6 +271,72 @@ class GuidedTests(unittest.TestCase):
         self.assertTrue(authoring.evaluate(self.base, self.reference_policy(), self.chunks, self.root)['complete_policy'])
         self.assertEqual(authoring.load(self.base)[0]['terms'], legacy)
         self.assertEqual(Pipeline(self.root, 'http://127.0.0.1:11435').guided_result(self.created['contract'])['clauses'], reference['clauses'])
+
+    def test_complete_research_reference_and_stewardship_mutations(self):
+        self.created = authoring.create(self.root, authoring.RESEARCH_PRESET)
+        self.base = self.root / 'contracts' / self.created['contract']
+        self.reference = authoring.load(self.base)[1]
+        self.chunks = [deepcopy(c['chunk']) for c in self.reference['classification']]
+        policy = self.reference_policy()
+        score = authoring.evaluate(self.base, policy, self.chunks, self.root)
+        self.assertEqual(score['expected_rules'], 27)
+        self.assertEqual(len(score['behavior_checks']), 70)
+        self.assertTrue(score['complete_policy'])
+        self.assertTrue(all(c['passed'] for c in score['behavior_checks']))
+        by_clause = {c.get('clause_id'): c for c in self.chunks}
+        for clause, mutation in (('10.1', 'recipient'), ('10.2', 'remove'), ('10.3', 'recipient'),
+                                 ('10.4', 'event'), ('10.5', 'event'), ('10.6', 'actor'), ('10.7', 'actor')):
+            changed = deepcopy(policy)
+            rule = next(r for r in changed['rules'] if r['source'] == by_clause[clause]['chunk_id'])
+            if mutation == 'remove':
+                changed['rules'].remove(rule)
+                changed['sources'].pop(rule['source'])
+            elif mutation == 'actor': rule['actor'] = 'Recipient'
+            else: rule['conditions'] = [c for c in rule['conditions'] if c['field'] != mutation]
+            if rule.get('conditions') == []: rule.pop('conditions')
+            result = authoring.evaluate(self.base, changed, self.chunks, self.root)
+            self.assertFalse(result['complete_policy'], clause)
+            self.assertTrue(any(not c['passed'] for c in result['behavior_checks'] if c['clause_id'] == clause), clause)
+        legacy_v2 = {k: v for k, v in authoring.DEFAULTS.items() if k not in authoring.STEWARDSHIP_DEFAULTS}
+        self.assertEqual(authoring.validate_terms(legacy_v2), authoring.DEFAULTS)
+        for change in (dict(delivery_days=0), dict(certificate_days=True), dict(error_hours=169),
+                       dict(data_description='Recipient must share all data.'),
+                       dict(authorized_access=True, authorized_users=authoring.DEFAULTS['recipient'])):
+            with self.assertRaises(ValueError): authoring.validate_terms(dict(authoring.DEFAULTS, **change))
+
+    def test_classification_scores_all_frozen_chunks_and_guards_evidence(self):
+        chunks = [dict(deepcopy(c['chunk']), classification=dict(label=c['label'])) for c in self.reference['classification']]
+        result = authoring.evaluate_classification(self.base, chunks, self.root)
+        self.assertEqual(result['metrics']['accuracy'], 1)
+        self.assertEqual(result['metrics']['per_class']['NEEDS_CONTEXT']['support'], 0)
+        self.assertIsNone(result['metrics']['per_class']['NEEDS_CONTEXT']['recall'])
+        missing = authoring.evaluate_classification(self.base, chunks[:-1], self.root)
+        self.assertEqual(missing['metrics']['n'], len(chunks))
+        self.assertEqual(missing['metrics']['errors'], 1)
+        changed = deepcopy(chunks)
+        changed[0]['text'] += ' altered'
+        with self.assertRaisesRegex(ValueError, 'evidence changed'): authoring.evaluate_classification(self.base, changed, self.root)
+        with self.assertRaisesRegex(ValueError, 'unknown source chunks'):
+            authoring.evaluate_classification(self.base, [*chunks, dict(chunks[0], chunk_id='unknown')], self.root)
+
+    def test_dct_evaluation_dispatch_and_saved_classification_integrity(self):
+        pipeline = Pipeline(self.root, 'http://127.0.0.1:11435')
+        with patch.object(pipeline, 'start', return_value=dict(status='running')) as start:
+            pipeline.start_evaluation(dict(contract=self.created['contract'], task='dct', model='simulated'))
+            request = start.call_args.args[0]
+            self.assertEqual((request['stage'], request['mode'], request['reuse']), ('2', 'through', False))
+        chunks = [dict(deepcopy(c['chunk']), classification=dict(label=c['label'])) for c in self.reference['classification']]
+        result = authoring.evaluate_classification(self.base, chunks, self.root)
+        path = self.base / 'output/dct_classification_evaluation.json'
+        write_json(path, result)
+        saved = pipeline.evaluation_result(self.created['contract'])
+        self.assertEqual(saved['classification']['metrics']['accuracy'], 1)
+        self.assertEqual(len(saved['reference']['rules']), 7)
+        result['predictions'][0]['label'] = 'changed'
+        write_json(path, result)
+        with self.assertRaisesRegex(ValueError, 'evaluation changed'): pipeline.evaluation_result(self.created['contract'])
+        pipeline.invalidate(self.created['contract'], '1.3')
+        self.assertFalse(path.exists())
 
     def test_advanced_country_values_are_bounded_and_inactive_exceptions_add_no_rules(self):
         for invalid in ([], ['Norway', 'Norway'], ['Unknown'], 'Norway', [True], list(authoring.STORAGE_COUNTRIES)):
