@@ -470,6 +470,39 @@ class QualityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Separate the numeric deadline'):
             compile_plan(answer, 'contract', item)
 
+    def test_research_condition_normalization_preserves_branch_scope_and_separate_clocks(self):
+        item = dict(self.item, text="Recipient may read Materials for internal analysis in accordance with the Work Plan or with Owner's prior written consent.")
+        answer = plan(item, 'permission', actor='Recipient', action='read', asset='Materials', conditions=[{'or': [
+            dict(leftOperand='scope', operator='eq', rightOperand='for internal analysis in accordance with the Work Plan'),
+            dict(leftOperand='approval', operator='eq', rightOperand='prior written consent from Owner')]}])
+        encoded = compile_plan(answer, 'contract', item)['odrlPolicy']['permission'][0]['constraint']
+        from xfed.common import constraint_truth
+        self.assertTrue(constraint_truth(encoded, dict(scope='unrelated', compliance='other plan', approval="Owner's prior written consent")))
+        self.assertFalse(constraint_truth(encoded, dict(scope='for internal analysis', compliance='other plan', approval='absent')))
+        self.assertTrue(constraint_truth(encoded, dict(scope='for internal analysis', compliance='in accordance with the Work Plan', approval='absent')))
+        item = dict(self.item, text='Owner may request a delay of publication of Results of no more than 90 days, within 30 days after the publication notice is issued.')
+        answer = plan(item, 'permission', actor='Owner', action='requestDelay', asset='Results', conditions=[
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='P30D'),
+            dict(leftOperand='postponementDuration', operator='lteq', rightOperand='P90D')])
+        encoded = compile_plan(answer, 'contract', item)['odrlPolicy']['permission'][0]['constraint']
+        state = dict(elapsedTime='P30D', postponementDuration='P90D', event='publication notice')
+        self.assertTrue(constraint_truth(encoded, state))
+        self.assertFalse(constraint_truth(encoded, dict(state, event='other event')))
+        self.assertFalse(constraint_truth(encoded, dict(state, postponementDuration='P91D')))
+        item = dict(self.item, text='Once 30 days have elapsed since the publication notice was issued, Recipient may publish Results if Owner has confirmed no objection and no Confidential Information is disclosed.')
+        answer = plan(item, 'permission', actor='Recipient', action='publish', asset='Results', conditions=[
+            dict(leftOperand='timing', operator='eq', rightOperand='Once 30 days have elapsed since the publication notice was issued'),
+            dict(leftOperand='approval', operator='eq', rightOperand='Owner confirmed no objection'),
+            dict(leftOperand='security', operator='eq', rightOperand='no Confidential Information is disclosed')])
+        encoded = compile_plan(answer, 'contract', item)['odrlPolicy']['permission'][0]['constraint']
+        state = dict(elapsedTime='P30D', event='publication notice', approval='Owner confirmation of no objection', compliance='no Confidential Information disclosed')
+        self.assertTrue(constraint_truth(encoded, state))
+        self.assertFalse(constraint_truth(encoded, dict(state, elapsedTime='P29D')))
+        self.assertFalse(constraint_truth(encoded, dict(state, compliance='Confidential Information disclosed')))
+        answer['rules'][0]['conditions'][1]['rightOperand'] = 'confirmed no objection'
+        encoded = compile_plan(answer, 'contract', item)['odrlPolicy']['permission'][0]['constraint']
+        self.assertTrue(constraint_truth(encoded, state))
+
     def test_source_deadline_and_qualitative_timing_are_required_not_just_checked_when_present(self):
         item = dict(self.item, text='Provider must notify Customer of Incidents without undue delay within 36 hours of awareness.')
         answer = plan(item, action='notify', asset='Incidents', conditions=[
@@ -499,6 +532,39 @@ class QualityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'complete-records'):
             compile_plan(answer, 'contract', item)
         answer['rules'][0]['conditions'] = [dict(leftOperand='completeness', operator='eq', rightOperand='complete')]
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+
+    def test_source_bound_restriction_completeness_units_and_inherited_record_scope(self):
+        item = dict(self.item, text='Recipient must not use Dataset for any purpose other than analysis.')
+        answer = plan(item, 'restriction', actor='Recipient', action='use', asset='Dataset', conditions=[],
+                      allowed_when=[dict(leftOperand='purpose', operator='eq', rightOperand='analysis')])
+        rule = compile_plan(answer, 'contract', item)['odrlPolicy']['prohibition'][0]
+        self.assertEqual(rule['constraint'], [dict(leftOperand='purpose', operator='neq', rightOperand='analysis')])
+        item = dict(self.item, text='Recipient must maintain complete Audit Records.')
+        answer = plan(item, actor='Recipient', action='maintain', asset='Audit Records', conditions=[
+            dict(leftOperand='completeness', operator='eq', rightOperand=True, dataType='boolean')])
+        rule = compile_plan(answer, 'contract', item)['odrlPolicy']['obligation'][0]
+        self.assertEqual(rule['constraint'][0]['rightOperand'], 'complete')
+        answer['rules'][0]['conditions'][0]['rightOperand'] = False
+        with self.assertRaisesRegex(ValueError, 'complete-records'): compile_plan(answer, 'contract', item)
+        item = dict(self.item, text='Provider must notify Customer of Incident within 48 hours after awareness.')
+        answer = plan(item, actor='Provider', action='notify', asset='Incident', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Customer'),
+            dict(leftOperand='event', operator='eq', rightOperand='awareness'),
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT48H', unit='hours')])
+        rule = compile_plan(answer, 'contract', item)['odrlPolicy']['obligation'][0]
+        self.assertNotIn('unit', rule['constraint'][-1])
+        context = chunk('c0', '7.1 Recipient must maintain complete Audit Records for all processing of Dataset performed under this Agreement.', clause_id='7.1')
+        item = dict(self.item, text='Recipient must make the Audit Records described in clause 7.1 available to Provider upon request.', context=[context])
+        answer = plan(item, actor='Recipient', action='provideAccess', asset='Audit Records', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Provider'),
+            dict(leftOperand='event', operator='eq', rightOperand='request'),
+            dict(leftOperand='scope', operator='eq', rightOperand='processing of Dataset'),
+            dict(leftOperand='compliance', operator='eq', rightOperand='performed under this Agreement')])
+        answer['rules'][0]['evidence']['supporting'] = ['c0']
+        with self.assertRaisesRegex(ValueError, 'entire referenced records scope'): compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'][2:] = [dict(leftOperand='scope', operator='eq',
+            rightOperand='for all processing of Dataset performed under this Agreement')]
         self.assertIsNotNone(compile_plan(answer, 'contract', item))
 
     def test_condition_truth_and_review_examples_preserve_negation_and_unknowns(self):

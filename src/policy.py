@@ -102,6 +102,8 @@ def to_compact(value, chunks=(), root=Path('.')):
                 {'ids': 'https://w3id.org/idsa/core/', 'idsc': 'https://w3id.org/idsa/code/'}]
     if old['@context'] != defaults or old['profile'] != 'http://www.w3.org/ns/odrl/2/core':
         result['export_context'] = dict(context=deepcopy(old['@context']), profile=old['profile'])
+    order = {chunk['chunk_id']: index for index, chunk in enumerate(chunks)}
+    result['rules'].sort(key=lambda row: order.get(result['sources'][row['source']]['chunk_id'], len(order)))
     return validate_policy(result, root)
 
 
@@ -238,7 +240,9 @@ def readable_rules(value):
     import re
     labels = dict(recipient='Recipient', purpose='Purpose', spatial='Storage country',
                   elapsedTime='Elapsed time from the stated trigger', event='Trigger',
-                  approval='Approval', compliance='Legal condition', security='Security', encryption='Encryption')
+                  approval='Approval', compliance='Required condition', security='Security', encryption='Encryption',
+                  dateTime='Date', payAmount='Charge', scope='Scope', discretion='Discretion',
+                  completeness='Record completeness', postponementDuration='Requested publication delay')
     operators = dict(eq='is', neq='is not', lt='is less than', lteq='is at most', gt='is more than',
                      gteq='is at least', isAnyOf='is one of', isNoneOf='is none of', isAllOf='includes all of')
     def literal(item):
@@ -259,10 +263,17 @@ def readable_rules(value):
         modality = dict(permission='may', prohibition='must not', obligation='must').get(rule.get('kind'), 'must')
         operation = ('keep ' + rule['asset'] + ' confidential' if rule['action'] == 'keepConfidential'
                      else 'provide access to ' + rule['asset'] if rule['action'] == 'provideAccess'
+                     else 'request a publication delay for ' + rule['asset'] if rule['action'] == 'requestDelay'
                      else re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', rule['action']).lower() + ' ' + rule['asset'])
         return dict(id=rule['id'], summary=rule['actor'] + ' ' + modality + ' ' + operation + '.',
                     conditions=[condition(item) for item in rule.get('conditions', [])],
                     source=deepcopy(value['sources'][rule['source']]), rule=deepcopy(rule),
+                    supporting_sources=[deepcopy(value['sources'][key]) for key in rule.get('context', [])],
                     requires=[explain(child) for child in rule.get('requires', [])],
                     remedies=[explain(child) for child in rule.get('remedies', [])])
-    return [explain(rule) for rule in value['rules']]
+    rows = [explain(rule) for rule in value['rules']]
+    def source_order(row):
+        source = row['source']
+        number = source.get('clause_id') or source['chunk_id']
+        return (source.get('pages', [0])[0], tuple(part.zfill(12) if part.isdigit() else part for part in re.split(r'(\d+)', number)))
+    return sorted(rows, key=source_order)

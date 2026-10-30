@@ -13,10 +13,11 @@ from threading import Thread
 from urllib.request import Request, urlopen
 
 from xfed import authoring
-from xfed.policy import readable_rules
+from xfed.policy import readable_rules, to_odrl, to_compact
 from xfed.common import write_json
 from xfed.extraction import extract_document
 from xfed.segmentation import segment
+from xfed.enrichment import ContextIndex
 from xfed.ui import Pipeline, STAGES
 
 
@@ -202,8 +203,63 @@ class GuidedTests(unittest.TestCase):
         deletion = next(r for r in readable_rules(policy) if r['rule']['action'] == 'delete')
         self.assertIn('30 days', deletion['conditions'][0])
 
+    def test_research_template_covers_multiple_resources_roles_scopes_and_publication_clocks(self):
+        terms = dict(authoring.DEFAULTS, **{k: True for k in authoring.FLAGS})
+        self.created = authoring.create(self.root, terms)
+        self.base = self.root / 'contracts' / self.created['contract']
+        self.document = extract_document(self.base / 'input/contract.pdf', self.created['contract'], self.root)
+        self.chunks = segment(self.document, self.root)['chunks']
+        self.reference = authoring.load(self.base)[1]
+        policy = self.reference_policy()
+        result = authoring.evaluate(self.base, policy, self.chunks, self.root)
+        self.assertEqual(result['expected_rules'], 20)
+        self.assertTrue(result['complete_policy'])
+        self.assertGreaterEqual(len(result['behavior_checks']), 45)
+        self.assertTrue(all(c['passed'] for c in result['behavior_checks']), [c for c in result['behavior_checks'] if not c['passed']])
+        reversed_policy = dict(policy, rules=list(reversed(policy['rules'])))
+        ordered = to_compact(to_odrl(reversed_policy, self.root), self.chunks, self.root)
+        self.assertEqual([r['source'] for r in ordered['rules']], [r['source'] for r in policy['rules']])
+        self.assertEqual({r['id']:r for r in ordered['rules']}, {r['id']:r for r in policy['rules']})
+        self.assertEqual([r['id'] for r in readable_rules(reversed_policy)], [r['id'] for r in policy['rules']])
+        by_clause = {c.get('clause_id'): c for c in self.chunks}
+        self.assertIn('clause 7.1', by_clause['7.2']['text'])
+        index = ContextIndex(self.chunks)
+        for primary, required in (('6.1', '1.10'), ('9.3', '1.14')):
+            context, _ = index.context_for(by_clause[primary])
+            definition = next(c for c in context if c.get('clause_id') == required)
+            self.assertEqual(definition['relationship'], 'definition')
+            self.assertIn(definition['text'], by_clause[required]['text'])
+        for clause, field, mutation in (('6.1', 'actor', 'Recipient'), ('6.1', 'scope', 'drop'), ('7.2', 'scope', 'drop'),
+                                       ('8.1', 'dateTime', 'drop'), ('8.2', 'approval', 'drop'),
+                                       ('9.2', 'postponementDuration', 'drop'), ('9.4', 'approval', 'drop')):
+            changed = deepcopy(policy)
+            rule = next(r for r in changed['rules'] if r['source'] == by_clause[clause]['chunk_id'])
+            if field == 'actor': rule['actor'] = mutation
+            else: rule['conditions'] = [c for c in rule['conditions'] if c['field'] != field]
+            compared = authoring.evaluate(self.base, changed, self.chunks, self.root)
+            self.assertFalse(compared['complete_policy'], clause)
+            self.assertTrue(any(not p['passed'] for p in compared['behavior_checks'] if p['clause_id'] == clause), clause)
+        rule = next(r for r in policy['rules'] if r['source'] == by_clause['7.2']['chunk_id'])
+        rule['context'] = [by_clause['7.1']['chunk_id']]
+        row = next(r for r in readable_rules(policy) if r['id'] == rule['id'])
+        self.assertEqual(row['supporting_sources'][0]['text'], by_clause['7.1']['text'])
+
+    def test_project_date_inputs_and_older_dct_forms(self):
+        old = {k: v for k, v in authoring.DEFAULTS.items() if k not in authoring.PROJECT_DEFAULTS}
+        self.assertEqual(authoring.validate_terms(old), authoring.DEFAULTS)
+        for change in (dict(project_start='2026-02-30'), dict(project_end='2020-01-01'),
+                       dict(publication_notice_days=0), dict(publication_delay_days=True),
+                       dict(records_access=True, records=authoring.DEFAULTS['data'])):
+            with self.assertRaises(ValueError): authoring.validate_terms(dict(authoring.DEFAULTS, **change))
+        from xfed.common import constraint_truth
+        comparisons = [dict(leftOperand='dateTime', operator='gteq', rightOperand='2026-11-01'),
+                       dict(leftOperand='dateTime', operator='lteq', rightOperand='2027-10-31')]
+        self.assertTrue(constraint_truth(comparisons, dict(dateTime='2026-11-01')))
+        self.assertFalse(constraint_truth(comparisons, dict(dateTime='2027-11-01')))
+        self.assertIsNone(constraint_truth(comparisons, dict(dateTime='not a date')))
+
     def test_legacy_forms_and_frozen_references_keep_their_meaning(self):
-        legacy = {k: v for k, v in authoring.DEFAULTS.items() if k not in authoring.ADVANCED}
+        legacy = {k: v for k, v in authoring.DEFAULTS.items() if k not in (*authoring.ADVANCED, *authoring.PROJECT_DEFAULTS)}
         self.assertEqual(authoring.validate_terms(legacy), authoring.DEFAULTS)
         manifest = json.loads((self.base / 'authoring.json').read_text())
         reference = deepcopy(self.reference)

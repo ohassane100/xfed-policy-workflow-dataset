@@ -94,6 +94,11 @@ def constraint_truth(constraints, state, parameters=None):
             def number(value):
                 if type(value) in (int, float):
                     return Decimal(str(value))
+                if (entry['leftOperand'] == 'dateTime' and isinstance(value, str)
+                        and re.fullmatch(r'\d{4}-\d{2}-\d{2}', value)):
+                    from datetime import date
+                    try: return Decimal(date.fromisoformat(value).toordinal())
+                    except ValueError: return None
                 duration = DURATION.fullmatch(value) if isinstance(value, str) else None
                 if duration and not (duration['years'] or duration['months']):
                     return sum(Decimal(duration[key] or '0') * multiplier for key, multiplier in

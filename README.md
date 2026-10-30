@@ -69,6 +69,9 @@ create a new contract revision; editing its PDF/reference invalidates the score.
 Optional DCT terms cover AES-256 encryption, storage countries, legally required
 disclosure and retention exceptions. The saved JSON supplies the readable policy
 and exact clause/PDF-page links shown beside it.
+The **Research collaboration preset** adds controlled platform access, processing
+records with cross-clause scope, dated Background access and publication notice,
+objection and delay windows. Supporting clauses appear beside the extracted rule.
 
 To use the university model through the existing tunnel while keeping scripts and
 reports local, run locally (no server changes or remote commands):

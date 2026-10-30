@@ -29,6 +29,13 @@ For each operative statement identify:
   Choose the supplied operand vocabulary; use unrepresented rather than inventing
   a new field. Each comparison needs a meaningful type: timing is eq with source
   words, elapsedTime compares ISO durations, and payAmount compares an amount.
+  Explicit calendar start/end dates use dateTime gteq/lteq with ISO dates.
+  A publication-objection window uses elapsedTime since the notice; the maximum
+  requested postponement uses postponementDuration. Keep these clocks separate.
+  Every relative time bound retains its source event. 'Once N days have elapsed'
+  is an elapsedTime lower bound, not an opaque timing label. Keep work necessity
+  in scope and work-plan compliance separately in compliance. Publication clearance
+  belongs in approval; exclusion of Confidential Information belongs in compliance.
 - evidence: {"primary":"PRIMARY chunk_id","supporting":["needed context IDs"]}.
   Cite only supplied evidence. PRIMARY must directly create the rule.
 

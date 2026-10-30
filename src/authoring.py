@@ -9,6 +9,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+from datetime import date, timedelta
 from uuid import uuid4
 
 from xfed.common import constraint_truth, write_json
@@ -16,8 +17,8 @@ from xfed.policy import validate_policy, verify_sources
 from xfed.policy_evaluation import component_comparison, normalized
 
 
-VERSION = 'dct-1'
-SUPPORTED_VERSIONS = ('guided-1', 'guided-2', 'guided-3', VERSION)
+VERSION = 'dct-2'
+SUPPORTED_VERSIONS = ('guided-1', 'guided-2', 'guided-3', 'dct-1', VERSION)
 STORAGE_COUNTRIES = ('Norway', 'Sweden', 'Denmark', 'Finland', 'Iceland', 'Germany', 'France', 'Netherlands')
 DEFAULTS = dict(title='Data Collaboration Agreement', provider='North Research Institute',
     recipient='Harbour Analytics', data='Research Dataset', purpose='joint research',
@@ -26,9 +27,14 @@ DEFAULTS = dict(title='Data Collaboration Agreement', provider='North Research I
     notification=True, notify_hours=72, encryption=False, storage_limit=False,
     storage_countries=['Norway', 'Sweden'], legal_disclosure=False, legal_retention=False)
 ADVANCED = ('encryption', 'storage_limit', 'storage_countries', 'legal_disclosure', 'legal_retention')
+PROJECT_DEFAULTS = dict(competition_limit=False, platform_access=False, records_access=False,
+    background_access=False, publication=False, platform='Project Data Portal', records='Project Processing Records',
+    background='Background Research Materials', results='Aggregate Research Results', work_plan='Agreed Research Work Plan',
+    project_start='2026-11-01', project_end='2027-10-31', publication_notice_days=30, publication_delay_days=90)
+DEFAULTS.update(PROJECT_DEFAULTS)
 FLAGS = ('read', 'purpose_limit', 'sharing_limit', 'consent_exception', 'confidentiality',
          'secure_storage', 'deletion', 'notification', 'encryption', 'storage_limit',
-         'legal_disclosure', 'legal_retention')
+         'legal_disclosure', 'legal_retention', 'competition_limit', 'platform_access', 'records_access', 'background_access', 'publication')
 
 
 def digest(value):
@@ -36,19 +42,21 @@ def digest(value):
 
 
 def validate_terms(value):
-    if isinstance(value, dict) and set(value) == set(DEFAULTS) - set(ADVANCED):
+    legacy_fields = set(DEFAULTS) - set(PROJECT_DEFAULTS)
+    if isinstance(value, dict) and set(value) in (legacy_fields, legacy_fields - set(ADVANCED)):
         value = dict(DEFAULTS, **value)  # Saved v1/v2 forms remain usable.
     if not isinstance(value, dict) or set(value) != set(DEFAULTS):
         raise ValueError('Provide all DCT fields and no additional fields.')
     value = deepcopy(value)
-    for key in ('title', 'provider', 'recipient', 'data', 'purpose'):
+    for key in ('title', 'provider', 'recipient', 'data', 'purpose', 'platform', 'records', 'background', 'results', 'work_plan'):
         text = value[key]
         if not isinstance(text, str) or not 1 <= len(text.strip()) <= 120 or any(ord(c) < 32 for c in text):
             raise ValueError(key + ' must be one line containing 1 to 120 printable characters.')
         if re.search(r'\b(?:Provider|Recipient|Parties)\s+(?:shall|must|may|will|can)\b', text, re.I):
             raise ValueError(key + ' must be a label, not an additional contract clause.')
         value[key] = ' '.join(text.split())
-        if key != 'title' and normalized(value[key]) in ('provider', 'recipient', 'data', 'incident', 'parties', 'permitted purpose'):
+        if key != 'title' and normalized(value[key]) in ('provider', 'recipient', 'data', 'incident', 'parties', 'permitted purpose',
+                'platform', 'records', 'background', 'results', 'work plan', 'security requirements', 'confidential information'):
             raise ValueError(key + ' must name an entity or purpose rather than repeat a defined role.')
     for key in FLAGS:
         if type(value[key]) is not bool: raise ValueError(key + ' must be true or false.')
@@ -57,9 +65,20 @@ def validate_terms(value):
             or any(not isinstance(c, str) or c not in STORAGE_COUNTRIES for c in countries)
             or len(set(countries)) != len(countries)):
         raise ValueError('Choose 1 to 4 distinct storage countries from: ' + ', '.join(STORAGE_COUNTRIES) + '.')
-    for key, maximum in (('delete_days', 3650), ('notify_hours', 168)):
+    for key, maximum in (('delete_days', 3650), ('notify_hours', 168), ('publication_notice_days', 365), ('publication_delay_days', 3650)):
         if type(value[key]) is not int or not 1 <= value[key] <= maximum:
             raise ValueError(key + ' must be a whole number from 1 to ' + str(maximum) + '.')
+    for key in ('project_start', 'project_end'):
+        try:
+            if not isinstance(value[key], str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', value[key]): raise ValueError()
+            date.fromisoformat(value[key])
+        except ValueError:
+            raise ValueError(key + ' must be a valid YYYY-MM-DD date.') from None
+    if value['project_end'] < value['project_start']: raise ValueError('Project end must be on or after project start.')
+    active_assets = ['data', *[field for field, enabled in (('platform', 'platform_access'), ('records', 'records_access'),
+                                                          ('background', 'background_access'), ('results', 'publication')) if value[enabled]]]
+    if len({normalized(value[k]) for k in active_assets}) != len(active_assets):
+        raise ValueError('Selected resources must have distinct names.')
     if normalized(value['provider']) == normalized(value['recipient']):
         raise ValueError('Provider and Recipient must be distinct parties.')
     if not any(value[key] for key in FLAGS if key not in ('consent_exception', 'legal_disclosure', 'legal_retention')):
@@ -73,15 +92,16 @@ def draft(terms):
     clauses, rules = [], []
     def clause(number, text, rule=None):
         if rule:
-            labels = {'Provider': t['provider'], 'Recipient': t['recipient'], 'Data': t['data'], 'Permitted Purpose': t['purpose']}
+            labels = {'Provider': t['provider'], 'Recipient': t['recipient'], 'Data': t['data'], 'Permitted Purpose': t['purpose'],
+                      'Platform': t['platform'], 'Records': t['records'], 'Background': t['background'], 'Results': t['results'], 'Work Plan': t['work_plan']}
             # Operative clauses contain explicit names; the extraction model
             # need not recover identities from the authoring record.
-            text = re.sub(r'\b(?:Permitted Purpose|Provider|Recipient|Data)\b', lambda m: labels[m[0]], text)
+            text = re.sub(r'\b(?:' + '|'.join(sorted(map(re.escape, labels), key=len, reverse=True)) + r')\b', lambda m: labels[m[0]], text)
         clauses.append(dict(clause_id=number, text=text))
         if rule: rules.append(dict(id='reference:' + number, source=number, **rule))
     def condition(field, value, op='eq'): return dict(field=field, op=op, value=value)
-    def rule(kind, action, asset='Data', conditions=()):
-        return dict(kind=kind, actor='Recipient', action=action, asset=asset,
+    def rule(kind, action, asset='Data', conditions=(), actor='Recipient'):
+        return dict(kind=kind, actor=actor, action=action, asset=asset,
                     **({'conditions': list(conditions)} if conditions else {}))
     clause('1', 'Parties and definitions')
     clause('1.1', 'Provider means ' + t['provider'] + '.')
@@ -91,10 +111,21 @@ def draft(terms):
     clause('1.5', 'Parties means Provider and Recipient.')
     if t['notification']:
         clause('1.6', 'Incident means unauthorized access to Data or accidental loss of Data.')
+    if t['background_access'] or t['publication']:
+        clause('1.7', 'Project Period means the inclusive period from ' + t['project_start'] + ' to ' + t['project_end'] + '.')
+    if t['background_access']: clause('1.8', 'Work Plan means ' + t['work_plan'] + '.')
+    if t['platform_access']:
+        clause('1.9', 'Platform means ' + t['platform'] + '.')
+        clause('1.10', 'Security Requirements means multi-factor authentication and an approved project account, assessed together as a continuing access requirement.')
+    if t['records_access']: clause('1.11', 'Records means ' + t['records'] + '.')
+    if t['background_access']: clause('1.12', 'Background means ' + t['background'] + '.')
+    if t['publication']:
+        clause('1.13', 'Results means ' + t['results'] + '.')
+        clause('1.14', 'Confidential Information means Data and project information marked confidential by Provider.')
     clause('2', 'Collaboration and administration')
     clause('2.1', 'The Parties intend to collaborate on the Permitted Purpose.')
     clause('2.2', 'Each Party bears its own administrative expenses.')
-    if any(t[k] for k in ('read', 'purpose_limit', 'sharing_limit')): clause('3', 'Access, use and sharing')
+    if any(t[k] for k in ('read', 'purpose_limit', 'sharing_limit', 'competition_limit')): clause('3', 'Access, use and sharing')
     if t['read']:
         clause('3.1', 'Recipient may read Data for Permitted Purpose.',
                rule('permission', 'read', conditions=[condition('purpose', 'Permitted Purpose')]))
@@ -109,6 +140,9 @@ def draft(terms):
         if t['legal_disclosure']: conditions.append(condition('compliance', 'disclosure required by law', 'neq'))
         clause('3.3', 'Recipient must not share Data with any third party' + exception + '.',
                rule('prohibition', 'share', conditions=conditions))
+    if t['competition_limit']:
+        clause('3.4', 'Recipient must not use Data for developing competing products.',
+               rule('prohibition', 'use', conditions=[condition('purpose', 'developing competing products')]))
     if any(t[k] for k in ('confidentiality', 'secure_storage', 'encryption', 'storage_limit')):
         clause('4', 'Information protection')
     if t['confidentiality']:
@@ -136,9 +170,48 @@ def draft(terms):
         clause('5.2', f"Recipient must notify Provider of any Incident within {t['notify_hours']} hours after becoming aware of the Incident.",
                rule('obligation', 'notify', asset='Incident', conditions=[condition('recipient', 'Provider'),
                    condition('elapsedTime', 'PT' + str(t['notify_hours']) + 'H', 'lteq'), condition('event', 'incident awareness')]))
-    clause('6', 'General arrangements')
-    clause('6.1', 'The Parties will arrange project meetings separately.')
-    clause('6.2', 'This Agreement may be executed in counterparts.')
+    if t['platform_access']:
+        clause('6', 'Controlled platform access')
+        clause('6.1', "Provider may grant Recipient direct electronic access to Platform at Provider's sole discretion, provided Recipient meets and continues to meet the Security Requirements.",
+               rule('permission', 'provideAccess', 'Platform', actor='Provider', conditions=[condition('recipient', 'Recipient'),
+                    condition('discretion', "Provider's sole discretion"), condition('security', 'Security Requirements'),
+                    condition('scope', 'direct electronic access')]))
+        clause('6.2', 'Recipient must not read Platform if Recipient does not meet the Security Requirements.',
+               rule('prohibition', 'read', 'Platform', conditions=[condition('security', 'Security Requirements', 'neq')]))
+    if t['records_access']:
+        clause('7', 'Processing records and audit access')
+        scope = 'for all processing of ' + t['data'] + ' performed under this Agreement'
+        clause('7.1', 'Recipient must maintain complete Records for all processing of Data performed under this Agreement.',
+               rule('obligation', 'maintain', 'Records', conditions=[condition('completeness', 'complete'), condition('scope', scope)]))
+        clause('7.2', 'Recipient must make the Records described in clause 7.1 available to Provider upon request.',
+               rule('obligation', 'provideAccess', 'Records', conditions=[condition('recipient', 'Provider'), condition('event', 'request'), condition('scope', scope)]))
+    if t['background_access']:
+        clause('8', 'Background materials and work scope')
+        clause('8.1', f"From {t['project_start']} through {t['project_end']}, Recipient may read Background at no charge, to the extent necessary for its own work in accordance with the Work Plan.",
+               rule('permission', 'read', 'Background', conditions=[condition('dateTime', t['project_start'], 'gteq'),
+                    condition('dateTime', t['project_end'], 'lteq'), condition('payAmount', 0),
+                    condition('scope', 'necessary for its own work'), condition('compliance', 'Work Plan')]))
+        clause('8.2', "Recipient must only use Background for Permitted Purpose or with Provider's prior written consent.",
+               rule('prohibition', 'use', 'Background', conditions=[condition('purpose', 'Permitted Purpose', 'neq'),
+                    condition('approval', "Provider's prior written consent", 'neq')]))
+    if t['publication']:
+        clause('9', 'Publication notice, objections and delay')
+        clause('9.1', 'Recipient must notify Provider of Results before publication.',
+               rule('obligation', 'notify', 'Results', conditions=[condition('recipient', 'Provider'), condition('timing', 'before publication')]))
+        clause('9.2', f"Provider may request a delay of publication of Results of no more than {t['publication_delay_days']} days, within {t['publication_notice_days']} days after the publication notice is issued.",
+               rule('permission', 'requestDelay', 'Results', actor='Provider', conditions=[condition('postponementDuration', 'P'+str(t['publication_delay_days'])+'D', 'lteq'),
+                    condition('elapsedTime', 'P'+str(t['publication_notice_days'])+'D', 'lteq'), condition('event', 'publication notice')]))
+        clause('9.3', f"Once {t['publication_notice_days']} days have elapsed since the publication notice was issued, Recipient may publish Results if Provider has confirmed no objection and no Confidential Information is disclosed.",
+               rule('permission', 'publish', 'Results', conditions=[condition('elapsedTime', 'P'+str(t['publication_notice_days'])+'D', 'gteq'),
+                    condition('event', 'publication notice'), condition('approval', 'Provider confirmation of no objection'),
+                    condition('compliance', 'no Confidential Information disclosed')]))
+        clause('9.4', f"Once {t['publication_delay_days']} days have elapsed since Provider's objection, Recipient may publish Results if Provider's objections have been addressed and no Confidential Information is disclosed.",
+               rule('permission', 'publish', 'Results', conditions=[condition('elapsedTime', 'P'+str(t['publication_delay_days'])+'D', 'gteq'),
+                    condition('event', "Provider's objection"), condition('approval', "Provider's objections addressed"),
+                    condition('compliance', 'no Confidential Information disclosed')]))
+    clause('10', 'General arrangements')
+    clause('10.1', 'The Parties will arrange project meetings separately.')
+    clause('10.2', 'This Agreement may be executed in counterparts.')
     return dict(template_version=VERSION, title=t['title'], clauses=clauses, rules=rules)
 
 
@@ -233,6 +306,8 @@ def canonical(policy, terms):
                key(terms['recipient']): 'Recipient', 'recipient': 'Recipient'}
     assets = {key(terms['data']): 'Data', 'data': 'Data',
               'incident': 'Incident', 'incidents': 'Incident', 'any incident': 'Incident', 'any incidents': 'Incident'}
+    for field, flag in (('platform', 'platform_access'), ('records', 'records_access'), ('background', 'background_access'), ('results', 'publication')):
+        if terms.get(flag): assets.update({field: field.title(), key(terms[field]): field.title()})
     purposes = {key(terms['purpose']), 'for ' + key(terms['purpose']), 'permitted purpose', 'for the permitted purpose', 'for permitted purpose'}
     consents = {"provider's prior written consent", "the provider's prior written consent", 'prior written consent of provider',
                 key(terms['provider'] + "'s prior written consent"), 'prior written consent of ' + key(terms['provider'])}
@@ -241,6 +316,10 @@ def canonical(policy, terms):
               'termination': 'termination', 'becoming aware of the incident': 'incident awareness',
               'after becoming aware of the incident': 'incident awareness', 'awareness of the incident': 'incident awareness',
               'incident awareness': 'incident awareness', 'becoming aware of an incident': 'incident awareness'}
+    events.update({phrase: 'request' for phrase in ('request', 'upon request', "provider's request", key(terms['provider']+"'s request"))})
+    events.update({phrase: 'publication notice' for phrase in ('publication notice', 'the publication notice is issued',
+        'publication notice is issued', 'publication notice was issued', 'the publication notice was issued', 'publication notice issued')})
+    events.update({phrase: "Provider's objection" for phrase in ("provider's objection", key(terms['provider']+"'s objection"))})
     def condition(entry):
         for group in ('all', 'any', 'exactly_one'):
             if group in entry: return {group: [condition(c) for c in entry[group]]}
@@ -251,10 +330,33 @@ def canonical(policy, terms):
             if not isinstance(v, str): return v
             label = key(v)
             if field in ('purpose', 'scope') and label in purposes: return 'Permitted Purpose'
+            if field == 'purpose' and label in ('developing competing products', 'for developing competing products'):
+                return 'developing competing products'
             if field == 'recipient' and label in ('third party', 'a third party', 'any third party', 'third parties', 'any third parties'):
                 return 'third party'
             if field == 'recipient': return parties.get(label, v)
             if field == 'approval' and label in consents: return "Provider's prior written consent"
+            if field == 'approval' and label in ('provider confirmation of no objection', 'provider has confirmed no objection',
+                    key(terms['provider']+' confirmation of no objection'), key(terms['provider']+' has confirmed no objection')):
+                return 'Provider confirmation of no objection'
+            if field == 'approval' and label in ("provider's objections addressed", "provider's objections have been addressed",
+                    key(terms['provider']+"'s objections addressed"), key(terms['provider']+"'s objections have been addressed")):
+                return "Provider's objections addressed"
+            if field == 'discretion' and label in ("provider's sole discretion", key(terms['provider']+"'s sole discretion"),
+                    'sole discretion of '+key(terms['provider'])): return "Provider's sole discretion"
+            if field in ('security', 'compliance') and label in ('security requirements', 'the security requirements',
+                    'meets and continues to meet the security requirements', 'meeting and continuing to meet the security requirements'):
+                return 'Security Requirements'
+            if field == 'compliance' and label in ('work plan', 'in accordance with the work plan', key(terms['work_plan']),
+                    'in accordance with '+key(terms['work_plan']), 'in accordance with the '+key(terms['work_plan'])):
+                return 'Work Plan'
+            if field == 'compliance' and label in ('no confidential information disclosed', 'no confidential information is disclosed'):
+                return 'no Confidential Information disclosed'
+            if field == 'scope' and label in ('necessary for its own work', 'to the extent necessary for its own work'):
+                return 'necessary for its own work'
+            record_scope = 'for all processing of ' + terms['data'] + ' performed under this Agreement'
+            if field == 'scope' and label in (key(record_scope), key(record_scope.removeprefix('for '))):
+                return record_scope
             if field == 'security' and label in ('secure', 'securely', 'in a secure manner', 'secure manner', 'secure storage'):
                 return 'secure'
             if field in ('security', 'encryption') and label in ('aes-256', 'aes 256', 'using aes-256'):
@@ -264,17 +366,22 @@ def canonical(policy, terms):
             if field == 'compliance' and label in ('retention required by law', 'retention is required by law'):
                 return 'retention required by law'
             if field in ('event', 'timing') and label in events: return events[label]
+            if field == 'timing' and label in ('before publication', 'prior to publication'): return 'before publication'
             return v
         if isinstance(value, list): result['value'] = [mapped(v) for v in value]
         elif 'value' in result: result['value'] = mapped(value)
         if field == 'scope' and result.get('value') == 'Permitted Purpose': result['field'] = 'purpose'
-        if field == 'timing' and result.get('value') in ('termination', 'incident awareness'): result['field'] = 'event'
+        if field == 'timing' and result.get('value') in ('termination', 'incident awareness', 'request', 'publication notice', "Provider's objection"):
+            result['field'] = 'event'
+        if field == 'compliance' and result.get('value') == 'Security Requirements': result['field'] = 'security'
         if field == 'encryption' and result.get('value') == 'AES-256': result['field'] = 'security'
         scalar = result.get('value')
         inferred = ('duration' if field == 'elapsedtime' and isinstance(scalar, str) and re.fullmatch(r'P[\dYMDTHS.]+', scalar, re.I)
                     else 'boolean' if type(scalar) is bool else 'number' if type(scalar) in (int, float)
                     else 'string' if isinstance(scalar, str) else None)
         if inferred and result.get('type') == inferred: result.pop('type')
+        if field == 'datetime' and isinstance(scalar, str) and re.fullmatch(r'\d{4}-\d{2}-\d{2}', scalar) and result.get('type') == 'dateTime':
+            result.pop('type')
         return result
     def rule(entry):
         for field in ('actor', 'asset', 'issuer'):
@@ -285,7 +392,8 @@ def canonical(policy, terms):
         entry['conditions'] = [condition(c) for c in entry.get('conditions', [])]
         # An explicitly identified Provider issuer is compatible with this
         # template's access right; an incorrect issuer remains a mismatch.
-        if entry.get('kind') == 'permission' and entry.get('issuer') == 'Provider': entry.pop('issuer')
+        if (entry.get('kind') == 'permission' and entry.get('actor') == 'Recipient'
+                and entry['action'] == 'read' and entry.get('issuer') == 'Provider'): entry.pop('issuer')
         for field in ('requires', 'remedies'):
             for child in entry.get(field, []): rule(child)
     for entry in policy['rules']: rule(entry)
@@ -385,6 +493,71 @@ def evaluate(base, policy, chunks, root):
             result = False if any(v is False for v in values) else None if not values or any(v is None for v in values) else True
             probes.append(dict(clause_id='4.3', scenario='Encryption / ' + algorithm, criterion='algorithm satisfaction',
                                expected_satisfied=expected_result, actual_satisfied=result, passed=result is expected_result))
+    def check(clause, label, kind, actor, action, asset, state, expected_result, criterion='condition match'):
+        candidates = [r for r in actual['rules'] if actual_clauses[r['id']] == clause and r['kind'] == kind
+                      and r['actor'] == actor and r['action'] == action and r['asset'] == asset]
+        values = [constraint_truth([odrl_condition(c) for c in r.get('conditions', [])], state) for r in candidates]
+        result = True if any(v is True for v in values) else None if not values or any(v is None for v in values) else False
+        probes.append(dict(clause_id=clause, scenario=label, criterion=criterion,
+                           expected_condition_match=expected_result, actual_condition_match=result, passed=result is expected_result))
+    if terms['competition_limit']:
+        for purpose, expected_result in (('developing competing products', True), ('Permitted Purpose', False)):
+            check('3.4', 'Competing-product use / '+purpose, 'prohibition', 'Recipient', 'use', 'Data', dict(purpose=purpose), expected_result)
+    if terms['platform_access']:
+        grant = dict(recipient='Recipient', discretion="Provider's sole discretion", security='Security Requirements')
+        # New references retain the access mode; older frozen references and
+        # their probes remain unchanged for historical comparisons.
+        if any(r['source'] == '6.1' and any(c.get('field') == 'scope' and c.get('value') == 'direct electronic access'
+                for c in r.get('conditions', [])) for r in expected_rules):
+            grant['scope'] = 'direct electronic access'
+        check('6.1', 'Provider-controlled secure grant', 'permission', 'Provider', 'provideAccess', 'Platform', grant, True)
+        check('6.1', 'Grant with failed security', 'permission', 'Provider', 'provideAccess', 'Platform', dict(grant, security='not met'), False)
+        check('6.1', 'Grant to wrong recipient', 'permission', 'Provider', 'provideAccess', 'Platform', dict(grant, recipient='other party'), False)
+        if 'scope' in grant:
+            check('6.1', 'Grant outside the stated access mode', 'permission', 'Provider', 'provideAccess', 'Platform', dict(grant, scope='other access mode'), False)
+        for security, expected_result in (('Security Requirements', False), ('not met', True)):
+            check('6.2', 'Platform denial / '+security, 'prohibition', 'Recipient', 'read', 'Platform', dict(security=security), expected_result)
+    if terms['records_access']:
+        scope = 'for all processing of '+terms['data']+' performed under this Agreement'
+        check('7.1', 'Complete records in agreed scope', 'obligation', 'Recipient', 'maintain', 'Records', dict(completeness='complete', scope=scope), True, 'requirement satisfaction')
+        check('7.1', 'Incomplete records', 'obligation', 'Recipient', 'maintain', 'Records', dict(completeness='incomplete', scope=scope), False, 'requirement satisfaction')
+        access = dict(recipient='Provider', event='request', scope=scope)
+        for label, state, expected_result in (('Requested records', access, True),
+                ('No records request', dict(access, event='no request'), False),
+                ('Records outside processing scope', dict(access, scope='unrelated records'), False)):
+            check('7.2', label, 'obligation', 'Recipient', 'provideAccess', 'Records', state, expected_result, 'requirement satisfaction')
+    if terms['background_access']:
+        access = dict(dateTime=terms['project_start'], payAmount=0, scope='necessary for its own work', compliance='Work Plan')
+        for label, state, expected_result in (('Project start boundary', access, True),
+                ('Project end boundary', dict(access, dateTime=terms['project_end']), True),
+                ('Before project start', dict(access, dateTime=(date.fromisoformat(terms['project_start'])-timedelta(days=1)).isoformat()), False),
+                ('After project end', dict(access, dateTime=(date.fromisoformat(terms['project_end'])+timedelta(days=1)).isoformat()), False),
+                ('Background access with a charge', dict(access, payAmount=1), False),
+                ('Background unrelated to own work', dict(access, scope='unrelated work'), False),
+                ('Background outside work plan', dict(access, compliance='other plan'), False)):
+            check('8.1', label, 'permission', 'Recipient', 'read', 'Background', state, expected_result, 'time window' if 'project' in label.lower() else 'condition match')
+        for label, purpose, approval, expected_result in (
+                ('Allowed project purpose', 'Permitted Purpose', 'absent', False),
+                ('Other purpose without consent', 'other purpose', 'absent', True),
+                ('Other purpose with consent', 'other purpose', "Provider's prior written consent", False)):
+            check('8.2', label, 'prohibition', 'Recipient', 'use', 'Background', dict(purpose=purpose, approval=approval), expected_result)
+    if terms['publication']:
+        for timing, expected_result in (('before publication', True), ('after publication', False)):
+            check('9.1', 'Publication notice / '+timing, 'obligation', 'Recipient', 'notify', 'Results', dict(recipient='Provider', timing=timing), expected_result, 'deadline satisfaction')
+        window, delay = terms['publication_notice_days'], terms['publication_delay_days']
+        request = dict(elapsedTime='P'+str(window)+'D', event='publication notice', postponementDuration='P'+str(delay)+'D')
+        for label, state, expected_result in (('Delay request at both bounds', request, True),
+                ('Late delay request', dict(request, elapsedTime='P'+str(window+1)+'D'), False),
+                ('Excessive requested delay', dict(request, postponementDuration='P'+str(delay+1)+'D'), False)):
+            check('9.2', label, 'permission', 'Provider', 'requestDelay', 'Results', state, expected_result, 'time window')
+        ordinary = dict(elapsedTime='P'+str(window)+'D', event='publication notice', approval='Provider confirmation of no objection', compliance='no Confidential Information disclosed')
+        delayed = dict(elapsedTime='P'+str(delay)+'D', event="Provider's objection", approval="Provider's objections addressed", compliance='no Confidential Information disclosed')
+        for clause, state, bound, approval in (('9.3', ordinary, window, 'unconfirmed'), ('9.4', delayed, delay, 'unresolved')):
+            for label, inputs, expected_result in (('Publication at window boundary', state, True),
+                    ('Publication before window opens', dict(state, elapsedTime='P'+str(bound-1)+'D'), False),
+                    ('Missing publication clearance', dict(state, approval=approval), False),
+                    ('Confidential publication', dict(state, compliance='Confidential Information disclosed'), False)):
+                check(clause, label, 'permission', 'Recipient', 'publish', 'Results', inputs, expected_result, 'time window' if 'window' in label else 'condition match')
     alignments = [row for clause in comparisons for row in clause['alignment']]
     diagnostics = dict(missing_rules=sum(len(c['missing_reference_rule_ids']) for c in comparisons),
         extra_rules=sum(len(c['unmatched_prediction_rule_ids']) for c in comparisons),
@@ -392,7 +565,7 @@ def evaluate(base, policy, chunks, root):
         wrong_parties=sum(not row['components']['actor'] or row['components'].get('issuer') is False for row in alignments),
         wrong_actions=sum(not row['components']['action'] for row in alignments),
         condition_mismatches=sum(not row['components']['conditions'] for row in alignments),
-        failed_deadline_checks=sum(not c['passed'] for c in probes if c.get('criterion') == 'deadline satisfaction'),
+        failed_deadline_checks=sum(not c['passed'] for c in probes if c.get('criterion') in ('deadline satisfaction', 'time window')),
         failed_exception_checks=sum(not c['passed'] for c in probes if c.get('criterion') == 'exception applicability'
                                    or 'consent' in c['scenario'].lower() or 'legally required disclosure' in c['scenario'].lower()))
     return dict(protocol='dct_source_reference_v1', scope='DCT contracts only; template meanings and aliases, not arbitrary-contract legal accuracy.',

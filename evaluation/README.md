@@ -87,6 +87,9 @@ not arbitrary-contract accuracy. Changing terms creates a new contract revision.
 Diagnostics separate missing/extra rules from aligned rule mismatches and failed
 exception/deadline checks. Encryption, country and legal-exception probes are
 enabled only when those DCT terms are selected.
+The research preset also checks access roles, inherited record scope, inclusive
+calendar boundaries, Work Plan compliance and separate publication clocks.
+Its clauses adapt patterns from Contracts 01–03; these remain development inputs.
 
 Generation also gives its same-model reviewer small computed examples of purpose
 restrictions. Missing state, unresolved values and unsupported comparisons stay
