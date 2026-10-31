@@ -21,9 +21,11 @@ from xfed.enrichment import enrich
 from xfed.llm import OllamaPool, load_client
 from xfed.llm.service import OllamaServicePool, nvidia_gpus
 from xfed.policy_generation import generate
+from xfed.policy import to_odrl, readable_rules, validate_policy, verify_sources
 # The separate review stage is disabled; generation uses its clause evidence check.
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
 from xfed.evaluation import load_reference, reference_summary, run_evaluation
+from xfed import authoring
 
 
 STAGES = {
@@ -31,10 +33,10 @@ STAGES = {
     '1.2': ('1 preprocessing/1.2 segmentation/contract_chunks.json', 2, 'chunks'),
     '1.3': ('1 preprocessing/1.3 relevance/classified_chunks.json', 3, 'chunks'),
     '1.4': ('1 preprocessing/1.4 enrichment/enriched_relevance.json', 4, 'items'),
-    '2': ('2 policy_generation/policy.json', 5, 'traceability'),
+    '2': ('2 policy_generation/policy.json', 5, 'rules'),
     # '3': ('3 policy_review/policy_review.json', 6, 'clause_reviews'),
 }
-PREFERRED_MODELS = ['qwen3.5:27b', 'qwen3.5:35b', 'qwen3.5:9b', 'gemma3:27b', 'llama3.1:70b']
+PREFERRED_MODELS = ['qwen3.5:122b-a10b', 'qwen3.5:27b', 'qwen3.5:35b', 'qwen3.5:9b', 'gemma3:27b', 'llama3.1:70b']
 
 
 def read_json(path, default=None):
@@ -129,7 +131,7 @@ class Pipeline:
         self.ollama_url = ollama_url.rstrip('/')
         self.worker_config = load_client(config) if config else None
         self.service_settings = getattr(self.worker_config, 'service', None)
-        self.defaults = dict(model=None, timeout=600, num_ctx=16384, num_predict=4096, think='auto',
+        self.defaults = dict(model=None, timeout=900, num_ctx=32768, num_predict=12288, think='auto',
                              relevance_num_predict=4096, relevance_think='auto', relevance_batch_size=1,
                              relevance_compact=False, relevance_num_ctx=0, relevance_num_batch=None, keep_alive='30m')
         if self.worker_config:
@@ -210,7 +212,7 @@ class Pipeline:
                 except Exception as exc:
                     error = str(exc).splitlines()[0]
             stages[stage] = dict(ready=value is not None and error is None,
-                                 count=len(value.get(records, [])) if isinstance(value, dict) else 0,
+                                 count=len(value.get(records, value.get('traceability', []))) if isinstance(value, dict) else 0,
                                  error=error, run=meta.get(stage))
         classified = read_json(self.path(contract, '1.3'), {})
         labels = dict.fromkeys(['RELEVANT', 'NOT_RELEVANT', 'NEEDS_CONTEXT'], 0)
@@ -220,7 +222,33 @@ class Pipeline:
                 labels[label] += 1
         report = self.output(contract) / '2 policy_generation/generation_report.json'
         return dict(contract=contract, stages=stages, labels=labels, source_locations=locations,
-                    report=read_json(report), review=None, job=self.snapshot())
+                    report=read_json(report), review=None, job=self.snapshot(),
+                    guided_evaluation=read_json(self.output(contract) / 'guided_evaluation.json'))
+
+    def create_guided(self, terms):
+        with self.lock:
+            if self.job['status'] in ('running', 'cancelling'):
+                raise ValueError('Wait for the current job before creating a contract.')
+            return authoring.create(self.root, terms)
+
+    def guided_result(self, contract):
+        base = self.base(contract)
+        manifest, reference = authoring.load(base)
+        evaluation = read_json(self.output(contract) / 'guided_evaluation.json')
+        if evaluation and (evaluation.get('pdf_sha256') != manifest['pdf_sha256']
+                           or evaluation.get('reference_sha256') != manifest['reference_sha256']):
+            raise ValueError('Saved evaluation belongs to another contract revision. Run the pipeline again.')
+        policy = read_json(self.path(contract, '2'))
+        if evaluation and evaluation.get('policy_sha256') and evaluation['policy_sha256'] != authoring.digest(policy):
+            raise ValueError('Saved policy changed after evaluation. Run the pipeline again.')
+        if policy:
+            validate_policy(policy, self.root)
+            if policy.get('document', {}).get('sha256') != manifest['pdf_sha256']:
+                raise ValueError('Saved policy belongs to another source PDF. Run the pipeline again.')
+            verify_sources(policy, read_json(self.path(contract, '1.3'))['chunks'])
+        return dict(contract=contract, terms=manifest['terms'], title=reference['title'],
+                    expected_rules=len(reference['rules']), clauses=reference['clauses'],
+                    evaluation=evaluation, policy_preview=readable_rules(policy) if policy else [])
 
     def make_client(self, request):
         available = {m['name']: m for m in self.models()}
@@ -240,9 +268,12 @@ class Pipeline:
         else:
             if type(worker_count) is not int or worker_count != 1 or worker_gpus is not None:
                 raise ValueError('Enable parallelization to configure workers and GPUs.')
-        pool_type = OllamaServicePool if parallel else OllamaPool
+        private_workers = parallel and (self.service_settings is not None or worker_gpus is not None)
+        if not private_workers and worker_count > 3:
+            raise ValueError('Choose at most 3 concurrent requests for the shared model endpoint.')
+        pool_type = OllamaServicePool if private_workers else OllamaPool
         execution = dict(worker_count=worker_count, worker_gpus=worker_gpus,
-                         service=self.service_settings) if parallel else {}
+                         service=self.service_settings) if private_workers else dict(workers_per_endpoint=worker_count)
         client = pool_type([self.ollama_url], model, **execution,
                             cancel=self.cancel,
                             timeout=request.get('timeout', self.defaults['timeout']),
@@ -365,6 +396,11 @@ class Pipeline:
             return deepcopy(self.benchmark_report)
 
     def start_evaluation(self, request):
+        if request.get('contract'):
+            _, reference = authoring.load(self.base(request['contract']))
+            if not reference.get('classification') or request.get('task') != 'dct':
+                raise ValueError('Choose a DCT revision with frozen classification and policy references.')
+            return self.start(dict(request, stage='2', mode='through', reuse=False))
         if request.get('split', 'test') != 'test':
             raise ValueError('The UI evaluates the test set only. Use the local CLI for development.')
         if request.get('task', 'classification') != 'classification' or 'policy_mode' in request:
@@ -419,12 +455,28 @@ class Pipeline:
                 self.evaluation_report = report
         self.finish(status, message)
 
-    def evaluation_result(self):
+    def evaluation_result(self, contract=None):
+        dcts = {cid: reference['title'] for cid in sorted(self.contracts(), key=lambda cid: (self.base(cid) / 'input/contract.pdf').stat().st_mtime, reverse=True)
+                if (reference := read_json(self.base(cid) / 'reference.json', {})).get('classification')}
+        if contract:
+            value = self.guided_result(contract)
+            manifest, reference = authoring.load(self.base(contract))
+            classification = read_json(self.output(contract) / 'dct_classification_evaluation.json')
+            if classification and (classification['reference_sha256'] != manifest['reference_sha256']
+                    or classification['pdf_sha256'] != manifest['pdf_sha256']
+                    or classification['predictions_sha256'] != authoring.digest(classification['predictions'])):
+                raise ValueError('Saved classification evaluation changed or belongs to another contract revision.')
+            return dict(contract=contract, title=value['title'], dct_contracts=dcts, reference=reference,
+                classification=classification, policy=value['evaluation'], policy_preview=value['policy_preview'],
+                stages=self.state(contract)['stages'], job=self.snapshot())
         with self.lock:
             report = deepcopy(self.evaluation_report)
-        return dict(reference=reference_summary(load_reference(self.root), split='test'), report=report)
+        return dict(reference=reference_summary(load_reference(self.root), split='test'), report=report, dct_contracts=dcts)
 
     def invalidate(self, contract, stage):
+        (self.output(contract) / 'guided_evaluation.json').unlink(missing_ok=True)
+        if stage in ('1.1', '1.2', '1.3'):
+            (self.output(contract) / 'dct_classification_evaluation.json').unlink(missing_ok=True)
         stages = list(STAGES)
         for downstream in stages[stages.index(stage):]:
             self.path(contract, downstream).unlink(missing_ok=True)
@@ -511,6 +563,13 @@ class Pipeline:
                 self.progress(self.snapshot()['completed'], self.snapshot()['total'], 'Saving stage ' + stage)
                 if result is not None:
                     write_output(self.path(contract, stage), result, STAGES[stage][1], self.root)
+                if stage == '1.3' and (base / 'reference.json').is_file() and read_json(base / 'reference.json').get('classification'):
+                    write_json(self.output(contract) / 'dct_classification_evaluation.json',
+                               authoring.evaluate_classification(base, result['chunks'], self.root))
+                if stage == '2' and (base / 'authoring.json').is_file():
+                    chunks = read_json(self.path(contract, '1.3'))['chunks']
+                    evaluation = authoring.evaluate(base, result, chunks, self.root)
+                    write_json(self.output(contract) / 'guided_evaluation.json', evaluation)
                 meta_path = self.output(contract) / '.runs.json'
                 meta = read_json(meta_path, {})
                 meta[stage] = dict(time=datetime.now(timezone.utc).isoformat(),
@@ -644,8 +703,12 @@ def handler(pipeline):
                     except RuntimeError as error:
                         devices, gpu_error = [], str(error)
                     self.send(dict(contracts=pipeline.contracts(), ollama_url=pipeline.ollama_url,
+                                   contract_titles={c: read_json(pipeline.base(c) / 'authoring.json', {}).get('terms', {}).get('title', c)
+                                                    for c in pipeline.contracts() if (pipeline.base(c) / 'authoring.json').is_file()},
                                    model_defaults=pipeline.defaults,
-                                   gpu_devices=devices, gpu_detection_error=gpu_error, max_workers=32,
+                                   gpu_devices=devices if pipeline.service_settings is not None else [],
+                                   gpu_detection_error=gpu_error, max_workers=32 if pipeline.service_settings is not None else 3,
+                                   shared_endpoint_workers=pipeline.service_settings is None,
                                    worker_gpu_selection=True,
                                    same_model_workers=True,
                                    model_unloading=True,
@@ -659,7 +722,10 @@ def handler(pipeline):
                 elif route.path == '/api/benchmark':
                     self.send(dict(report=pipeline.benchmark_result()))
                 elif route.path == '/api/evaluation':
-                    self.send(pipeline.evaluation_result())
+                    self.send(pipeline.evaluation_result(query.get('contract', [None])[0]))
+                elif route.path == '/api/authoring':
+                    self.send(pipeline.guided_result(query['contract'][0]) if 'contract' in query
+                              else dict(defaults=authoring.DEFAULTS, research_preset=authoring.RESEARCH_PRESET, template_version=authoring.VERSION))
                 elif route.path in ('/api/output', '/api/pdf'):
                     contract = query['contract'][0]
                     if route.path == '/api/pdf':
@@ -670,6 +736,11 @@ def handler(pipeline):
                         if value is None:
                             self.send(dict(error='No completed output for this stage.'), 404)
                         else:
+                            if query.get('format') == ['odrl']:
+                                if query['stage'][0] != '2':
+                                    raise ValueError('ODRL export is available for policy creation only.')
+                                validate(value, 5, pipeline.root)
+                                value = to_odrl(value, pipeline.root)
                             self.send(value)
                 else:
                     self.send(dict(error='Not found'), 404)
@@ -697,6 +768,11 @@ def handler(pipeline):
                     self.send(pipeline.start_benchmark(request), 202)
                 elif self.path == '/api/evaluation':
                     self.send(pipeline.start_evaluation(request), 202)
+                elif self.path == '/api/authoring/preview':
+                    content = authoring.draft(request)
+                    self.send(dict(title=content['title'], clauses=content['clauses'], expected_rules=len(content['rules'])))
+                elif self.path == '/api/authoring/create':
+                    self.send(pipeline.create_guided(request), 201)
                 elif self.path == '/api/cancel':
                     self.send(pipeline.stop())
                 elif self.path == '/api/unload':

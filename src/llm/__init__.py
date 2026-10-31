@@ -158,10 +158,10 @@ class OllamaClient:
             # Older Ollama versions lack thinking.values. Qwen3.5 documents its on/off switch;
             # retain the model default for other families without explicit capability metadata.
             if isinstance(values, list):
-                self.auto_think = False if any(value is False for value in values) else None
+                self.auto_think = True if any(value is True for value in values) else None
+                self.auto_relevance_think = False if any(value is False for value in values) else None
             elif family in ('qwen35', 'qwen35moe'):
-                self.auto_think = False
-            self.auto_relevance_think = self.auto_think
+                self.auto_think, self.auto_relevance_think = True, False
         return self.metadata()
 
     def generate(self, system, value, schema, num_predict=None, think=None, num_ctx=None, num_batch=None,

@@ -21,12 +21,15 @@ from xfed.common import map_chunks, write_json
 from xfed.enrichment import ContextIndex, enrich
 from xfed.llm import OllamaClient, OllamaConnectionError, OllamaPool
 from xfed.llm.service import OllamaServicePool, nvidia_gpus
-from xfed.policy_generation import (clause_decoder_schema, compile_plan, complete_fragment, generate, generate_answer, generate_item,
+from xfed.policy_generation import (clause_decoder_schema, compile_plan, complete_fragment, generate_odrl as generate, generate_answer, generate_item,
                                     response_schema, summarize_error, validate_fragment)
 from jsonschema import Draft202012Validator, ValidationError
 from xfed.policy_review import conflicts, review
 from xfed.relevance import classify, classify_batch
 from xfed.ui import CachedClient, Pipeline
+from xfed.policy import to_compact, to_odrl, validate_policy, verify_sources
+from xfed.policy_evaluation import (load_reference as load_policy_reference, run as run_policy_pilot,
+                                    score as score_policies, signatures, condition_logic, component_comparison)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -96,6 +99,166 @@ class QualityTests(unittest.TestCase):
         self.classified = dict(contract_id='contract', chunks=[dict(chunk(), classification=dict(label='RELEVANT'))])
         self.enriched = dict(contract_id='contract', items=[self.item])
 
+    def test_public_generation_returns_readable_policy_with_exact_pdf_locations(self):
+        from xfed.policy_generation import generate as generate_readable
+        output, report = generate_readable(self.enriched, PlanClient(plan(self.item)), ROOT, classified=self.classified)
+        self.assertEqual(output['version'], '2.0')
+        self.assertNotIn('odrlPolicy', output)
+        self.assertEqual(output['rules'][0]['actor'], 'Provider')
+        self.assertEqual(output['sources']['c1']['pages'], [1])
+        self.assertEqual(output['sources']['c1']['text'], self.item['text'])
+        self.assertEqual(report['policy_format'], '2.0')
+        self.assertEqual(verify_sources(output, self.classified['chunks']), 1)
+
+    def test_readable_export_preserves_nested_rules_logic_bindings_and_metadata(self):
+        old = fragment(self.item, 'permission')
+        old['odrlPolicy']['@type'] = 'Set'
+        parent = old['odrlPolicy']['permission'][0]
+        parent['assignee'] = 'party-unknown'
+        parent['constraint'] = [{'or': [
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperandReference='period'),
+            dict(leftOperand='payAmount', operator='eq', rightOperand=0, dataType='number', unit='EUR', uid='condition')]}]
+        duty = dict(uid='d1', action='notify', assignee='Provider', target='supplied data')
+        parent['duty'] = [duty]
+        ban = dict(uid='r2', action='share', target='supplied data', assignee='Provider', remedy=[dict(duty, uid='d2')])
+        old['odrlPolicy']['prohibition'] = [ban]
+        source = deepcopy(old['traceability'][0]['sourceClauses'])
+        old['traceability'].extend(dict(ruleUid=uid, ruleType=kind, sourceClauses=deepcopy(source))
+                                  for uid, kind in [('d1', 'duty'), ('r2', 'prohibition'), ('d2', 'duty')])
+        old['parameterBindings'] = [dict(uid='period', label='required period', dataType='duration', status='unresolved', sourceClauses=deepcopy(source))]
+        old['partyBindings'] = [dict(uid='party-unknown', role='requester', status='unresolved', sourceClauses=deepcopy(source))]
+        old['osdu'] = dict(legal=dict(legaltags=['source-tag'], otherRelevantDataCountries=['NO']))
+        compact = to_compact(old, [self.item], ROOT)
+        self.assertEqual(len(compact['sources']), 1)
+        self.assertEqual(compact['rules'][0]['requires'][0]['id'], 'd1')
+        exported = to_odrl(compact, ROOT)
+        for value in (old, exported):
+            value['traceability'].sort(key=lambda row: row['ruleUid'])
+        self.assertEqual(old, exported)
+
+    def test_readable_policy_rejects_broken_links_duplicate_rules_and_unbound_values(self):
+        compact = to_compact(fragment(self.item), [self.item], ROOT)
+        for mutation in ('source', 'duplicate', 'parameter', 'page', 'quote'):
+            value = deepcopy(compact)
+            if mutation == 'source':
+                value['rules'][0]['source'] = 'missing'
+            elif mutation == 'duplicate':
+                value['rules'].append(deepcopy(value['rules'][0]))
+            elif mutation == 'parameter':
+                value['rules'][0]['conditions'] = [dict(field='elapsedTime', op='lteq', parameter='missing')]
+            elif mutation == 'page':
+                value['sources']['c1']['pages'] = [2]
+            else:
+                value['sources']['c1']['text'] = 'Invented contract quotation'
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                validate_policy(value, ROOT)
+                verify_sources(value, self.classified['chunks'])
+
+    def test_policy_comparison_counts_omissions_failures_and_reversed_conditions(self):
+        reference = load_policy_reference(ROOT)
+        predictions = dict(reference_sha256=reference['sha256'], cases=[
+            dict(case_id=case['case_id'], source_sha256=case['source_sha256'], policy=deepcopy(case['expected']))
+            for case in reference['cases']])
+        exact = score_policies(reference, predictions, ROOT)
+        self.assertEqual(exact['exact_rule_agreement']['f1'], 1)
+        self.assertEqual(exact['logical_rule_agreement']['f1'], 1)
+        self.assertEqual(exact['totals']['complete_clauses'], 10)
+        changed = deepcopy(predictions)
+        incident = next(row for row in changed['cases'] if row['case_id'] == 'contract_01:c001287')
+        incident['policy']['rules'][0]['conditions'][3]['op'] = 'gteq'
+        result = score_policies(reference, changed, ROOT)
+        self.assertEqual(result['totals']['matched'], exact['totals']['matched'] - 1)
+        self.assertEqual(result['totals']['core_matched'], exact['totals']['core_matched'])
+        self.assertEqual(result['logical_rule_agreement']['matched'], 12)
+        self.assertEqual(result['component_agreement']['conditions']['matched'], 12)
+        self.assertEqual(result['component_agreement']['actor']['matched'], 13)
+        changed['cases'] = [row for row in changed['cases'] if row['case_id'] != 'contract_03:c000119']
+        self.assertEqual(score_policies(reference, changed, ROOT)['totals']['failures'], 1)
+        empty = dict(reference_sha256=reference['sha256'], cases=[])
+        result = score_policies(reference, empty, ROOT)
+        self.assertEqual(result['exact_rule_agreement']['recall'], 0)
+        self.assertEqual(result['totals']['failures'], 10)
+        self.assertEqual(result['totals']['correct_no_rule'], 0)
+
+    def test_policy_comparison_ignores_order_and_equivalent_fixed_durations(self):
+        reference = load_policy_reference(ROOT)
+        policy = deepcopy(next(case['expected'] for case in reference['cases'] if case['case_id'] == 'contract_01:c001287'))
+        changed = deepcopy(policy)
+        changed['rules'][0]['conditions'][3]['value'] = 'P3D'
+        changed['rules'][0]['conditions'].reverse()
+        self.assertEqual(signatures(policy), signatures(changed))
+        changed['rules'][0]['conditions'] = [dict(all=changed['rules'][0]['conditions'])]
+        self.assertEqual(signatures(policy), signatures(changed))
+
+    def test_policy_logic_accepts_equivalence_but_detects_critical_mutations(self):
+        purpose = dict(field='purpose', op='isnoneof', value=['analysis', 'research'])
+        approval = dict(field='approval', op='neq', value='approved')
+        original = condition_logic([purpose, approval])
+        expanded = [dict(field='purpose', op='neq', value='analysis'),
+                    dict(field='purpose', op='neq', value='research'), approval]
+        self.assertEqual(original, condition_logic(expanded))
+        self.assertEqual(original, condition_logic([{'all': list(reversed(expanded))}, approval]))
+        self.assertNotEqual(original, condition_logic([purpose]))  # Missing exception.
+        self.assertNotEqual(original, condition_logic([dict(purpose, op='isanyof'), approval]))
+        self.assertNotEqual(original, condition_logic([{'any': expanded}]))
+        a = dict(field='a', op='eq', value=True)
+        b = dict(field='b', op='eq', value=True)
+        self.assertNotEqual(condition_logic([{'exactly_one':[a,b]}]), condition_logic([{'any':[a,b]}]))
+        self.assertNotEqual(condition_logic([dict(a, value=True)]), condition_logic([dict(a, value=1)]))
+        self.assertFalse(condition_logic([dict(field='purpose',op='isanyof',value=[])]))
+        self.assertTrue(condition_logic([dict(field='purpose',op='isnoneof',value=[])]))
+
+    def test_policy_components_do_not_hide_missing_exceptions_actors_or_duplicate_rules(self):
+        reference = load_policy_reference(ROOT)
+        policy = deepcopy(next(c['expected'] for c in reference['cases'] if c['case_id']=='contract_03:c000154'))
+        for field in ('actor', 'kind', 'action', 'asset', 'conditions'):
+            changed = deepcopy(policy)
+            if field == 'conditions': changed['rules'][2][field].pop()  # Remove approval exception.
+            else: changed['rules'][2][field] = 'different'
+            compared = component_comparison(policy, changed)
+            self.assertEqual(compared['matched_rules'], 2)
+            self.assertEqual(compared['fields'][field]['matched'], 2)
+        changed = deepcopy(policy)
+        changed['rules'].reverse()
+        changed['rules'].append(dict(changed['rules'][0], id='duplicate'))
+        compared = component_comparison(policy, changed)
+        self.assertEqual(compared['matched_rules'], 3)
+        self.assertEqual(len(compared['unmatched_prediction_rule_ids']), 1)
+        self.assertEqual(compared['fields']['action']['predicted'], 4)
+        self.assertEqual(compared['fields']['action']['matched'], 3)
+
+    def test_policy_evaluator_counts_invalid_and_wrong_source_outputs_as_failures(self):
+        reference = load_policy_reference(ROOT)
+        case = next(c for c in reference['cases'] if c['case_id']=='contract_03:c000119')
+        for value in (True, dict(case['expected'], contract_id='another_contract')):
+            predictions=dict(reference_sha256=reference['sha256'],cases=[
+                dict(case_id=case['case_id'],source_sha256=case['source_sha256'],policy=value)])
+            result=score_policies(reference,predictions,ROOT)
+            self.assertEqual(result['logical_rule_agreement']['matched'],0)
+            self.assertEqual(result['component_agreement']['action']['predicted'],1)
+            self.assertEqual(result['component_agreement']['action']['matched'],0)
+            self.assertEqual(result['totals']['failures'],10)
+
+    def test_policy_pilot_skips_excluded_cases_without_changing_scored_denominators(self):
+        reference = load_policy_reference(ROOT)
+        pool = SimpleNamespace(model='simulated', clients=[], workers=3)
+        @contextmanager
+        def for_chunk(identifier):
+            yield pool
+        pool.for_chunk = for_chunk
+        def generated(document, client, root):
+            case = next(case for case in reference['cases'] if case['input']['chunk_id'] == document['items'][0]['chunk_id']
+                        and case['contract_id'] == document['contract_id'])
+            return deepcopy(case['expected']), dict(status='draft')
+        with TemporaryDirectory() as directory, patch('xfed.policy_generation.generate', side_effect=generated) as mocked:
+            result = run_policy_pilot(reference, pool, ROOT, Path(directory) / 'pilot.json')
+            self.assertEqual(mocked.call_count, 10)
+            self.assertEqual(sum('skipped' in row for row in result['cases']), 2)
+            scores = score_policies(reference, result, ROOT)
+            self.assertTrue(scores['complete'])
+            self.assertEqual(scores['totals']['reference'], 13)
+            self.assertEqual(scores['totals']['complete_clauses'], 10)
+
     def test_parent_restrictions_include_referenced_provision(self):
         parent = chunk('c1', '1. Research use is subject to clause 8.', clause_id='1')
         child = chunk('c2', '(a) test reproducibility;', clause_id='1(a)', parent_clause_id='1')
@@ -103,6 +266,436 @@ class QualityTests(unittest.TestCase):
         context, missing = ContextIndex([parent, child, restriction]).context_for(child)
         self.assertIn('c3', [row['chunk_id'] for row in context])
         self.assertFalse(missing)
+
+    def test_decoder_prevents_invalid_modality_nesting_and_omits_empty_arrays(self):
+        item = dict(self.item, text='Provider may grant access to supplied data if Customer meets security requirements.')
+        shape = clause_decoder_schema(response_schema(ROOT), item)
+        value = plan(item, 'permission', action='provideAccess', conditions=[])
+        value['rules'][0].pop('duties')
+        value['rules'][0].pop('remedies')
+        Draft202012Validator(shape).validate(value)
+        nested = dict(actor='Customer', action='meet', asset='security requirements', conditions=[],
+                      evidence=dict(primary='c1', supporting=[]))
+        value['rules'][0]['remedies'] = [nested]
+        with self.assertRaises(ValidationError):
+            Draft202012Validator(shape).validate(value)
+        value['rules'][0].pop('remedies')
+        value['rules'][0]['duties'] = [nested]
+        Draft202012Validator(shape).validate(value)
+        value['rules'][0]['kind'] = 'obligation'
+        with self.assertRaises(ValidationError):
+            Draft202012Validator(shape).validate(value)
+
+    def test_positive_only_restriction_compiles_to_the_correct_complement(self):
+        item = dict(self.item, text='Provider must only use supplied data for analysis or as approved by Owner.',
+                    context=[dict(chunk('context', 'No external Background is required.'), relationship='definition')])
+        answer = plan(item, 'restriction', action='use', conditions=[],
+            allowed_when=[dict(leftOperand='purpose', operator='eq', rightOperand='analysis'),
+                          dict(leftOperand='approval', operator='eq', rightOperand='approved by Owner')],
+            evidence=dict(primary='c1', supporting=['context']))
+        answer['rules'][0].pop('duties')
+        answer['rules'][0].pop('remedies')
+        Draft202012Validator(clause_decoder_schema(response_schema(ROOT), item)).validate(answer)
+        output = compile_plan(answer, 'contract', item)
+        validate_fragment(output, 'contract', item, ROOT)
+        constraints = output['odrlPolicy']['prohibition'][0]['constraint']
+        for purpose in ('analysis', 'advertising'):
+            for approval in ('approved by Owner', 'absent'):
+                state = dict(purpose=purpose, approval=approval)
+                active = all(state[row['leftOperand']] != row['rightOperand'] for row in constraints)
+                self.assertEqual(active, not (purpose == 'analysis' or approval == 'approved by Owner'))
+        self.assertEqual(answer['rules'][0]['kind'], 'restriction')  # Compilation does not mutate the plan.
+        permitted = dict(item, text='Provider may use supplied data for analysis.')
+        with self.assertRaisesRegex(ValueError, 'explicit ONLY'):
+            compile_plan(answer, 'contract', permitted)
+
+    def test_vague_targets_hidden_conditions_and_changed_custom_actions_need_repair(self):
+        item = dict(self.item, text='Provider may read supplied data necessary for research. Provider must store this information.')
+        for asset in ('this information',):
+            with self.subTest(asset=asset), self.assertRaisesRegex(ValueError, 'antecedent|conditions'):
+                compile_plan(plan(item, 'permission', action='read', asset=asset, conditions=[]), 'contract', item)
+        normalized = compile_plan(plan(item, 'permission', action='read', asset='supplied data necessary for research',
+                                       conditions=[]), 'contract', item)['odrlPolicy']['permission'][0]
+        self.assertEqual(normalized['target'], 'supplied data')
+        self.assertIn(dict(leftOperand='scope', operator='eq', rightOperand='necessary for research'), normalized['constraint'])
+        fixed = plan(item, 'permission', action='read', asset='supplied data',
+                     conditions=[dict(leftOperand='scope', operator='eq', rightOperand='necessary for research')])
+        self.assertIsNotNone(compile_plan(fixed, 'contract', item))
+        item = dict(self.item, text='Provider may implement protection solutions.')
+        changed = plan(item, 'permission', action='establish', asset='protection solutions', conditions=[])
+        with self.assertRaisesRegex(ValueError, 'retain a verb'):
+            compile_plan(changed, 'contract', item)
+        changed['rules'][0]['action'] = 'implement'
+        self.assertIsNotNone(compile_plan(changed, 'contract', item))
+
+    def test_sharing_fragment_does_not_become_an_access_grant(self):
+        item = dict(self.item, text='share the supplied data with a competitor;',
+                    context=[dict(chunk('parent', 'Provider must not:'), relationship='parent')])
+        answer = plan(item, 'prohibition', action='provideAccess', conditions=[],
+                      evidence=dict(primary='c1', supporting=['parent']))
+        with self.assertRaisesRegex(ValueError, 'Retain action share'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['action'] = 'share'
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+
+    def test_literal_target_scope_and_recipient_alternatives_normalize_without_inference(self):
+        from xfed.common import constraint_truth
+        item = dict(self.item, text='Provider must provide Records discovered in System to Company or its authorized representatives.')
+        answer = plan(item, action='provide', asset='Records discovered in System',
+                      conditions=[dict(leftOperand='recipient',operator='eq',rightOperand='Company or its authorized representatives')])
+        output = compile_plan(answer, 'contract', item)['odrlPolicy']['obligation'][0]
+        self.assertEqual(output['target'], 'Records')
+        self.assertEqual(answer['rules'][0]['asset'], 'Records discovered in System')
+        for recipient in ('Company','its authorized representatives','Other'):
+            state=dict(recipient=recipient,scope='discovered in System')
+            self.assertIs(constraint_truth(output['constraint'],state),recipient!='Other')
+        invented=deepcopy(answer)
+        invented['rules'][0]['asset']='Records discovered in Another System'
+        with self.assertRaisesRegex(ValueError,'literal label'):
+            compile_plan(invented,'contract',item)
+        negative=dict(item,text='Provider must provide Records not necessary for research.')
+        with self.assertRaisesRegex(ValueError,'ambiguous or negative'):
+            compile_plan(plan(negative,action='provide',asset='Records not necessary for research',conditions=[]),'contract',negative)
+
+    def test_multiple_source_assets_expand_with_only_their_own_qualifiers(self):
+        item=dict(self.item,text='Provider must store (i) Records; (ii) Logs that could identify participants.')
+        answer=plan(item,action='store',asset=['Records','Logs that could identify participants'],conditions=[])
+        Draft202012Validator(clause_decoder_schema(response_schema(ROOT),item)).validate(answer)
+        output=compile_plan(answer,'contract',item)
+        rules=output['odrlPolicy']['obligation']
+        self.assertEqual([r['target'] for r in rules],['Records','Logs'])
+        self.assertFalse(rules[0].get('constraint'))
+        self.assertEqual(rules[1]['constraint'],[dict(leftOperand='scope',operator='eq',rightOperand='that could identify participants')])
+        validate_fragment(output,'contract',item,ROOT)
+
+    def test_single_active_operation_is_not_replaced_by_its_subordinate_goal(self):
+        item=dict(self.item,text='Provider must implement measures to ensure security is maintained during transfer of Data.')
+        shape=clause_decoder_schema(response_schema(ROOT),item)
+        answer=plan(item,action='maintain',asset='Data',conditions=[])
+        with self.assertRaises(ValidationError):Draft202012Validator(shape).validate(answer)
+        answer['rules'][0].update(action='implement',asset='measures')
+        Draft202012Validator(shape).validate(answer)
+        mixed=dict(item,text='Provider must implement measures and maintain Data.')
+        answer['rules'][0].update(action='maintain',asset='Data')
+        Draft202012Validator(clause_decoder_schema(response_schema(ROOT),mixed)).validate(answer)
+
+    def test_first_repair_receives_all_compiler_errors(self):
+        item=dict(self.item,text='Provider must delete supplied data and share records.')
+        answer=plan(item,asset='invented target',conditions=[])
+        answer['rules'].append(dict(answer['rules'][0],action='share',asset='another invented target'))
+        client=PlanClient(answer)
+        _,entry,failed=generate_item(item,client,'prompt','contract',response_schema(ROOT),ROOT)
+        self.assertTrue(failed)
+        feedback=client.calls[1][0]['correction']['feedback']
+        self.assertIn('invented target',feedback)
+        self.assertIn('another invented target',feedback)
+        self.assertIn('plan_index',feedback)
+
+    def test_coordinated_use_ban_preserves_shared_consent_and_local_purpose_exceptions(self):
+        item=dict(self.item,text="Provider shall not, without Owner's prior written consent, disclose to any third party, "
+                  'or, except to the extent necessary for performance under the Order, make any use of supplied data.')
+        answer=plan(item,'prohibition',action='use',conditions=[
+            dict(leftOperand='purpose',operator='neq',rightOperand='necessary for performance under the Order')])
+        with self.assertRaisesRegex(ValueError,'approval neq'):compile_plan(answer,'contract',item)
+        answer['rules'][0]['conditions'].append(dict(leftOperand='approval',operator='neq',rightOperand="Owner's prior written consent"))
+        self.assertIsNotNone(compile_plan(answer,'contract',item))
+        answer['rules'][0]['conditions'][0]['operator']='eq'
+        with self.assertRaisesRegex(ValueError,'scope neq'):compile_plan(answer,'contract',item)
+
+    def test_both_recipients_are_not_encoded_as_alternatives(self):
+        item=dict(self.item,text='Provider shall submit records to both Owner and Members.')
+        answer=plan(item,action='submit',asset='records',conditions=[
+            dict(leftOperand='recipient',operator='isAnyOf',rightOperand=['Owner','Members'])])
+        with self.assertRaisesRegex(ValueError,'cumulative'):compile_plan(answer,'contract',item)
+        answer['rules'][0]['conditions'][0]['operator']='isAllOf'
+        self.assertIsNotNone(compile_plan(answer,'contract',item))
+
+    def test_full_literal_notification_subject_can_contain_lowercase_name_words(self):
+        actor = 'Institute for Advanced Marine Research'
+        item = dict(self.item, text=actor + ' must notify Provider of any Incident within 24 hours of awareness.')
+        answer = plan(item, actor=actor, action='notify', asset='Incident', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Provider'),
+            dict(leftOperand='event', operator='eq', rightOperand='awareness'),
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT24H')])
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+        answer['rules'][0]['actor'] = 'Provider'
+        with self.assertRaisesRegex(ValueError, 'sender'): compile_plan(answer, 'contract', item)
+
+    def test_verbatim_numeric_timing_compiles_to_a_deadline_without_changing_boolean_scope(self):
+        from xfed.common import constraint_truth
+        item = dict(self.item, text='Provider must delete supplied data within 7 days after termination or as approved by Owner.')
+        answer = plan(item, conditions=[{'or':[
+            dict(leftOperand='timing', operator='eq', rightOperand='within 7 days after termination'),
+            dict(leftOperand='approval', operator='eq', rightOperand='approved by Owner')]}])
+        constraints = compile_plan(answer, 'contract', item)['odrlPolicy']['obligation'][0]['constraint']
+        self.assertTrue(constraint_truth(constraints, dict(elapsedTime='P7D', event='termination', approval='absent')))
+        self.assertFalse(constraint_truth(constraints, dict(elapsedTime='P8D', event='termination', approval='absent')))
+        self.assertTrue(constraint_truth(constraints, dict(elapsedTime='P8D', event='termination', approval='approved by Owner')))
+        self.assertIn('or', constraints[0])
+        self.assertIn('and', constraints[0]['or'][0])
+
+    def test_reused_records_keep_their_scope_without_an_invented_quality_gate(self):
+        item = dict(self.item, text='Supplier shall maintain complete calibration records for all instruments '
+                    'serviced under the Order and will make all such records available to Buyer upon request.')
+        answer = plan(item, actor='Supplier', action='provideAccess', asset='calibration records',
+            conditions=[dict(leftOperand='recipient', operator='eq', rightOperand='Buyer'),
+                        dict(leftOperand='event', operator='eq', rightOperand='upon request')])
+        with self.assertRaisesRegex(ValueError, 'original scope'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'].append(dict(leftOperand='scope', operator='eq',
+                                                   rightOperand='instruments serviced under the Order'))
+        output = compile_plan(answer, 'contract', item)
+        self.assertIsNotNone(output)
+        self.assertFalse(any(c['leftOperand']=='quality' for c in output['odrlPolicy']['obligation'][0]['constraint']))
+
+    def test_source_legal_exception_labels_are_consistent_without_weakening_polarity(self):
+        item = dict(self.item, text="Recipient must not share Data with any third party without Owner's prior written consent, unless disclosure is required by law.")
+        answer = plan(item, 'prohibition', actor='Recipient', action='share', asset='Data', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='third party'),
+            dict(leftOperand='approval', operator='neq', rightOperand="agreed by Owner's prior written consent"),
+            dict(leftOperand='compliance', operator='neq', rightOperand='required by law')])
+        compiled = compile_plan(answer, 'contract', item)['odrlPolicy']['prohibition'][0]['constraint']
+        self.assertIn(dict(leftOperand='approval', operator='neq', rightOperand="Owner's prior written consent"), compiled)
+        self.assertIn(dict(leftOperand='compliance', operator='neq', rightOperand='disclosure required by law'), compiled)
+        for change in ('missing', 'reversed', 'bypass'):
+            broken = deepcopy(answer)
+            if change == 'missing': broken['rules'][0]['conditions'].pop()
+            elif change == 'reversed': broken['rules'][0]['conditions'][-1]['operator'] = 'eq'
+            else: broken['rules'][0]['conditions'][-1] = {'or': [broken['rules'][0]['conditions'][-1], dict(leftOperand='purpose', operator='eq', rightOperand='other purpose')]}
+            with self.assertRaisesRegex(ValueError, 'legal exception'):
+                compile_plan(broken, 'contract', item)
+        item = dict(self.item, text='Recipient must delete Data within 14 days after termination, unless retention is required by law.')
+        answer = plan(item, actor='Recipient', action='delete', asset='Data', conditions=[
+            dict(leftOperand='timing', operator='eq', rightOperand='within 14 days after termination, unless retention is required by law')])
+        with self.assertRaisesRegex(ValueError, 'Separate the numeric deadline'):
+            compile_plan(answer, 'contract', item)
+
+    def test_research_condition_normalization_preserves_branch_scope_and_separate_clocks(self):
+        item = dict(self.item, text="Recipient may read Materials for internal analysis in accordance with the Work Plan or with Owner's prior written consent.")
+        answer = plan(item, 'permission', actor='Recipient', action='read', asset='Materials', conditions=[{'or': [
+            dict(leftOperand='scope', operator='eq', rightOperand='for internal analysis in accordance with the Work Plan'),
+            dict(leftOperand='approval', operator='eq', rightOperand='prior written consent from Owner')]}])
+        encoded = compile_plan(answer, 'contract', item)['odrlPolicy']['permission'][0]['constraint']
+        from xfed.common import constraint_truth
+        self.assertTrue(constraint_truth(encoded, dict(scope='unrelated', compliance='other plan', approval="Owner's prior written consent")))
+        self.assertFalse(constraint_truth(encoded, dict(scope='for internal analysis', compliance='other plan', approval='absent')))
+        self.assertTrue(constraint_truth(encoded, dict(scope='for internal analysis', compliance='in accordance with the Work Plan', approval='absent')))
+        item = dict(self.item, text='Owner may request a delay of publication of Results of no more than 90 days, within 30 days after the publication notice is issued.')
+        answer = plan(item, 'permission', actor='Owner', action='requestDelay', asset='Results', conditions=[
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='P30D'),
+            dict(leftOperand='postponementDuration', operator='lteq', rightOperand='P90D')])
+        encoded = compile_plan(answer, 'contract', item)['odrlPolicy']['permission'][0]['constraint']
+        state = dict(elapsedTime='P30D', postponementDuration='P90D', event='publication notice')
+        self.assertTrue(constraint_truth(encoded, state))
+        self.assertFalse(constraint_truth(encoded, dict(state, event='other event')))
+        self.assertFalse(constraint_truth(encoded, dict(state, postponementDuration='P91D')))
+        item = dict(self.item, text='Once 30 days have elapsed since the publication notice was issued, Recipient may publish Results if Owner has confirmed no objection and no Confidential Information is disclosed.')
+        answer = plan(item, 'permission', actor='Recipient', action='publish', asset='Results', conditions=[
+            dict(leftOperand='timing', operator='eq', rightOperand='Once 30 days have elapsed since the publication notice was issued'),
+            dict(leftOperand='approval', operator='eq', rightOperand='Owner confirmed no objection'),
+            dict(leftOperand='security', operator='eq', rightOperand='no Confidential Information is disclosed')])
+        encoded = compile_plan(answer, 'contract', item)['odrlPolicy']['permission'][0]['constraint']
+        state = dict(elapsedTime='P30D', event='publication notice', approval='Owner confirmation of no objection', compliance='no Confidential Information disclosed')
+        self.assertTrue(constraint_truth(encoded, state))
+        self.assertFalse(constraint_truth(encoded, dict(state, elapsedTime='P29D')))
+        self.assertFalse(constraint_truth(encoded, dict(state, compliance='Confidential Information disclosed')))
+        answer['rules'][0]['conditions'][1]['rightOperand'] = 'confirmed no objection'
+        encoded = compile_plan(answer, 'contract', item)['odrlPolicy']['permission'][0]['constraint']
+        self.assertTrue(constraint_truth(encoded, state))
+
+    def test_source_deadline_and_qualitative_timing_are_required_not_just_checked_when_present(self):
+        item = dict(self.item, text='Provider must notify Customer of Incidents without undue delay within 36 hours of awareness.')
+        answer = plan(item, action='notify', asset='Incidents', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Customer'),
+            dict(leftOperand='event', operator='eq', rightOperand='awareness')])
+        with self.assertRaisesRegex(ValueError, 'without undue delay.*upper bound'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'].extend([
+            dict(leftOperand='timing', operator='eq', rightOperand='without undue delay'),
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT36H')])
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+        answer['rules'][0]['conditions'][-1] = {'or': [answer['rules'][0]['conditions'][-1],
+            dict(leftOperand='approval', operator='eq', rightOperand='exception') ]}
+        with self.assertRaisesRegex(ValueError, 'every branch'):
+            compile_plan(answer, 'contract', item)
+
+    def test_source_period_and_record_completeness_cannot_disappear(self):
+        item = dict(self.item, text='For the duration of the Licence Term, Members shall have access to Records.')
+        answer = plan(item, 'permission', actor='Members', action='read', asset='Records', conditions=[])
+        with self.assertRaisesRegex(ValueError, 'complete source period'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'] = [dict(leftOperand='timing', operator='eq',
+                                               rightOperand='For the duration of the Licence Term')]
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+        item = dict(self.item, text='Carrier must maintain complete calibration records.')
+        answer = plan(item, actor='Carrier', action='maintain', asset='calibration records', conditions=[])
+        with self.assertRaisesRegex(ValueError, 'complete-records'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'] = [dict(leftOperand='completeness', operator='eq', rightOperand='complete')]
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+
+    def test_source_bound_restriction_completeness_units_and_inherited_record_scope(self):
+        item = dict(self.item, text='Recipient must not use Dataset for any purpose other than analysis.')
+        answer = plan(item, 'restriction', actor='Recipient', action='use', asset='Dataset', conditions=[],
+                      allowed_when=[dict(leftOperand='purpose', operator='eq', rightOperand='analysis')])
+        rule = compile_plan(answer, 'contract', item)['odrlPolicy']['prohibition'][0]
+        self.assertEqual(rule['constraint'], [dict(leftOperand='purpose', operator='neq', rightOperand='analysis')])
+        item = dict(self.item, text='Recipient must maintain complete Audit Records.')
+        answer = plan(item, actor='Recipient', action='maintain', asset='Audit Records', conditions=[
+            dict(leftOperand='completeness', operator='eq', rightOperand=True, dataType='boolean')])
+        rule = compile_plan(answer, 'contract', item)['odrlPolicy']['obligation'][0]
+        self.assertEqual(rule['constraint'][0]['rightOperand'], 'complete')
+        answer['rules'][0]['conditions'][0]['rightOperand'] = False
+        with self.assertRaisesRegex(ValueError, 'complete-records'): compile_plan(answer, 'contract', item)
+        item = dict(self.item, text='Provider must notify Customer of Incident within 48 hours after awareness.')
+        answer = plan(item, actor='Provider', action='notify', asset='Incident', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Customer'),
+            dict(leftOperand='event', operator='eq', rightOperand='awareness'),
+            dict(leftOperand='elapsedTime', operator='lteq', rightOperand='PT48H', unit='hours')])
+        rule = compile_plan(answer, 'contract', item)['odrlPolicy']['obligation'][0]
+        self.assertNotIn('unit', rule['constraint'][-1])
+        context = chunk('c0', '7.1 Recipient must maintain complete Audit Records for all processing of Dataset performed under this Agreement.', clause_id='7.1')
+        item = dict(self.item, text='Recipient must make the Audit Records described in clause 7.1 available to Provider upon request.', context=[context])
+        answer = plan(item, actor='Recipient', action='provideAccess', asset='Audit Records', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Provider'),
+            dict(leftOperand='event', operator='eq', rightOperand='request'),
+            dict(leftOperand='scope', operator='eq', rightOperand='processing of Dataset'),
+            dict(leftOperand='compliance', operator='eq', rightOperand='performed under this Agreement')])
+        answer['rules'][0]['evidence']['supporting'] = ['c0']
+        with self.assertRaisesRegex(ValueError, 'entire referenced records scope'): compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'][2:] = [dict(leftOperand='scope', operator='eq',
+            rightOperand='for all processing of Dataset performed under this Agreement')]
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+
+    def test_condition_truth_and_review_examples_preserve_negation_and_unknowns(self):
+        from xfed.common import constraint_truth
+        from xfed.policy_generation import rule_examples
+        constraints = [dict(leftOperand='purpose', operator='isNoneOf', rightOperand=['analysis', 'research']),
+                       dict(leftOperand='approval', operator='neq', rightOperand='approved')]
+        for purpose in ('analysis', 'research', 'advertising'):
+            for approval in ('approved', 'absent'):
+                self.assertEqual(constraint_truth(constraints, dict(purpose=purpose, approval=approval)),
+                                 purpose == 'advertising' and approval == 'absent')
+        self.assertIsNone(constraint_truth(constraints, dict(purpose='advertising')))
+        self.assertFalse(constraint_truth(constraints, dict(purpose='analysis')))
+        self.assertIsNone(constraint_truth([dict(leftOperand='elapsedTime', operator='lteq', rightOperandReference='t')],
+                                           dict(elapsedTime='PT30H')))
+        self.assertTrue(constraint_truth([dict(leftOperand='elapsedTime', operator='lteq', rightOperand='P2D')],
+                                         dict(elapsedTime='PT36H')))
+        self.assertFalse(constraint_truth([dict(leftOperand='flag', operator='eq', rightOperand=True)], dict(flag=1)))
+        examples = rule_examples('prohibition', dict(constraint=constraints))
+        self.assertEqual(len(examples), 6)
+        self.assertEqual(sum(row['prohibition_applies'] for row in examples), 1)
+        self.assertEqual(rule_examples('permission', dict(constraint=constraints)), [])
+
+    def test_separate_only_restriction_does_not_inherit_an_earlier_protection_period(self):
+        period = 'During the Licence Term, and for a subsequent period of two years'
+        item = dict(self.item, text=period + ', Members must keep Records confidential. '
+                    'Records shall only be used for analysis or as approved by Owner.')
+        answer = plan(item, 'restriction', actor='Members', action='use', asset='Records',
+            conditions=[dict(leftOperand='timing', operator='eq', rightOperand=period)],
+            allowed_when=[dict(leftOperand='purpose', operator='eq', rightOperand='analysis'),
+                          dict(leftOperand='approval', operator='eq', rightOperand='approved by Owner')])
+        with self.assertRaisesRegex(ValueError, 'earlier sentence'):
+            compile_plan(answer, 'contract', item)
+        explicit = dict(item, text=item['text'].replace('Records shall only', period + ', Records shall only'))
+        self.assertIsNotNone(compile_plan(answer, 'contract', explicit))
+        answer['rules'][0]['conditions'] = []
+        self.assertIsNotNone(compile_plan(answer, 'contract', item))
+
+    def test_native_timing_uses_source_words_and_fixed_operand_vocabulary(self):
+        item = dict(self.item, text='Provider must notify Customer of incidents without undue delay.')
+        answer = plan(item, action='notify', asset='incidents', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Customer'),
+            dict(leftOperand='timing', operator='eq', rightOperand='without undue delay')])
+        shape = clause_decoder_schema(response_schema(ROOT), item)
+        Draft202012Validator(shape).validate(answer)
+        for operator, value in [('lteq', 'without undue delay'), ('eq', 'immediately')]:
+            changed = deepcopy(answer)
+            changed['rules'][0]['conditions'][-1].update(operator=operator, rightOperand=value)
+            with self.subTest(operator=operator, value=value), self.assertRaises(ValidationError):
+                Draft202012Validator(shape).validate(changed)
+
+    def test_pure_definitions_do_not_invent_rules_but_embedded_duties_still_run(self):
+        item = dict(self.item, text='Records means the technical logs supplied by Provider.')
+        client = PlanClient(dict(rules=[], reason='A definition.', unrepresented=[]))
+        output, entry, failed = generate_item(item, client, 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertIsNone(output)
+        self.assertFalse(failed)
+        self.assertEqual(entry['deterministic_no_rule'], 'definition_without_operative_terms')
+        self.assertEqual(client.calls, [])
+        numbered = dict(item, text='1.1 Records means the technical logs supplied by Provider.')
+        generate_item(numbered, client, 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertEqual(client.calls, [])
+        item = dict(item, text='Records means the technical logs. Provider must delete Records.')
+        client = PlanClient(plan(item, asset='Records', conditions=[]))
+        output, _, failed = generate_item(item, client, 'prompt', 'contract', response_schema(ROOT), ROOT)
+        self.assertFalse(failed)
+        self.assertIsNotNone(output)
+        self.assertGreater(len(client.calls), 0)
+
+    def test_three_word_grantee_security_bundle_and_access_mode(self):
+        item = dict(self.item, text="Provider may grant Bergen Applied Analytics direct electronic access to Registry at Provider's sole discretion, provided Bergen Applied Analytics meets the Security Requirements.")
+        answer = plan(item, 'permission', actor='Provider', action='provideAccess', asset='Registry', conditions=[
+            dict(leftOperand='recipient', operator='eq', rightOperand='Bergen Applied Analytics'),
+            dict(leftOperand='security', operator='eq', rightOperand='met'),
+            dict(leftOperand='discretion', operator='eq', rightOperand='sole discretion'),
+            dict(leftOperand='scope', operator='eq', rightOperand='direct electronic access')])
+        encoded = compile_plan(answer,'contract',item)['odrlPolicy']['permission'][0]['constraint']
+        self.assertEqual(encoded[0]['rightOperand'], 'Bergen Applied Analytics')
+        self.assertEqual(encoded[1]['rightOperand'], 'Security Requirements')
+        answer['rules'][0]['conditions'][0]['rightOperand']='Bergen Applied'
+        with self.assertRaisesRegex(ValueError,'Bergen Applied Analytics'): compile_plan(answer,'contract',item)
+        answer['rules'][0]['conditions'][0]['rightOperand']='Bergen Applied Analytics'
+        answer['rules'][0]['conditions'].pop()
+        with self.assertRaisesRegex(ValueError,'direct electronic access'): compile_plan(answer,'contract',item)
+        answer['rules'][0]['conditions'].append(dict(leftOperand='scope',operator='eq',rightOperand='direct electronic access'))
+        comma = dict(item, text='Provider may grant Bergen Applied Analytics, in its sole discretion, direct electronic access to Registry provided the Security Requirements are met.')
+        self.assertIsNotNone(compile_plan(answer,'contract',comma))
+
+    def test_source_bound_day_durations_scope_attribution_and_signature_events(self):
+        from xfed.common import constraint_truth
+        item = dict(self.item,text='Provider may request a delay of Results of no more than 90 days, within 30 days after publication notice.')
+        answer = plan(item,'permission',actor='Provider',action='requestDelay',asset='Results',conditions=[
+            dict(leftOperand='elapsedTime',operator='lteq',rightOperand='PT30D'),
+            dict(leftOperand='postponementDuration',operator='lteq',rightOperand='PT90D')])
+        encoded=compile_plan(answer,'contract',item)['odrlPolicy']['permission'][0]['constraint']
+        self.assertTrue(constraint_truth(encoded,dict(elapsedTime='P30D',postponementDuration='P90D',event='publication notice')))
+        answer['rules'][0]['conditions'][1]['rightOperand']='PT45D'
+        with self.assertRaisesRegex(ValueError,'postponementDuration requires'): compile_plan(answer,'contract',item)
+        item=dict(self.item,text='Recipient must maintain complete Records for all processing of Data performed under this Agreement.')
+        answer=plan(item,actor='Recipient',action='maintain',asset='Records',conditions=[
+            dict(leftOperand='completeness',operator='eq',rightOperand='complete'),
+            dict(leftOperand='scope',operator='eq',rightOperand='processing of Data performed under this Agreement')])
+        encoded=compile_plan(answer,'contract',item)['odrlPolicy']['obligation'][0]['constraint']
+        self.assertEqual(encoded[1]['rightOperand'],'for all processing of Data performed under this Agreement')
+        item=dict(self.item,text='Recipient must attribute Provider when publishing Results.')
+        answer=plan(item,actor='Recipient',action='attribute',asset='Results',conditions=[
+            dict(leftOperand='attribution',operator='eq',rightOperand='Provider'),dict(leftOperand='event',operator='eq',rightOperand='publishing')])
+        encoded=compile_plan(answer,'contract',item)['odrlPolicy']['obligation'][0]['constraint']
+        self.assertTrue(constraint_truth(encoded,dict(recipient='Provider',timing='when publishing')))
+        item=dict(self.item,text='Provider must share Data with Recipient within 5 days after this Agreement is signed.')
+        answer=plan(item,actor='Provider',action='share',asset='Data',conditions=[
+            dict(leftOperand='recipient',operator='eq',rightOperand='Recipient'),dict(leftOperand='elapsedTime',operator='lteq',rightOperand='P5D'),
+            dict(leftOperand='event',operator='eq',rightOperand='Agreement is signed')])
+        encoded=compile_plan(answer,'contract',item)['odrlPolicy']['obligation'][0]['constraint']
+        self.assertTrue(constraint_truth(encoded,dict(recipient='Recipient',elapsedTime='P5D',event='this Agreement is signed')))
+
+    def test_ownership_declaration_does_not_invent_operations_or_hide_mixed_duties(self):
+        text='Each Party retains ownership of the materials it contributes. This Agreement transfers no ownership of Data or Background.'
+        item=dict(self.item,text=text)
+        client=PlanClient(dict(rules=[],reason='Ownership declaration.',unrepresented=[]))
+        output,entry,failed=generate_item(item,client,'prompt','contract',response_schema(ROOT),ROOT)
+        self.assertIsNone(output)
+        self.assertFalse(failed)
+        self.assertEqual(client.calls,[])
+        self.assertEqual(entry['deterministic_no_rule'],'ownership_declaration_requires_review')
+        mixed=dict(item,text=text+' Provider must delete Data.')
+        output,_,failed=generate_item(mixed,PlanClient(plan(mixed,asset='Data',conditions=[])),'prompt','contract',response_schema(ROOT),ROOT)
+        self.assertFalse(failed)
+        self.assertIsNotNone(output)
+        explicit=dict(item,text='Recipient must not transfer ownership of Data.')
+        self.assertIsNotNone(compile_plan(plan(explicit,'prohibition',actor='Recipient',action='transferOwnership',asset='Data',conditions=[]),'contract',explicit))
 
     def test_transitive_definitions_are_resolved_without_order_dependence(self):
         data = [chunk('c1', 'Provider may use Material.'),
@@ -386,8 +979,10 @@ class QualityTests(unittest.TestCase):
             self.assertEqual(len(pool.clients), 3)
             self.assertEqual(pool.metadata()['completed'], [3, 3, 3])
             self.assertTrue(all(worker['performance']['responses'] == 4 for worker in pool.metadata()['models']))
-            for payload in requests:
-                self.assertIs(payload['think'], False)
+            self.assertIs(pool.clients[0].auto_think, True)
+            self.assertIs(pool.clients[0].auto_relevance_think, False)
+            for index, payload in enumerate(requests):
+                self.assertIs(payload['think'], index >= 3)
                 self.assertIs(payload['truncate'], False)
                 self.assertIs(payload['shift'], False)
             with TemporaryDirectory() as directory:
@@ -683,6 +1278,7 @@ class QualityTests(unittest.TestCase):
 
     def test_dashboard_single_installed_model_can_have_parallel_workers(self):
         pipeline = Pipeline(ROOT, 'http://localhost:11434')
+        pipeline.service_settings = {}  # Explicitly configured private-worker mode.
         with patch.object(pipeline, 'models', return_value=[dict(name='only-model')]), \
              patch.object(OllamaServicePool, 'preflight') as preflight:
             pool = pipeline.make_client(dict(model='only-model', parallel=True, worker_count=3))
@@ -695,6 +1291,19 @@ class QualityTests(unittest.TestCase):
                 close.assert_called_once()
                 unload.assert_not_called()
                 self.assertEqual(pipeline.snapshot()['status'], 'complete')
+
+    def test_forwarded_api_parallelism_never_creates_private_services(self):
+        pipeline = Pipeline(ROOT, 'http://127.0.0.1:11435')
+        with patch.object(pipeline, 'models', return_value=[dict(name='only-model')]), \
+             patch('xfed.ui.OllamaServicePool') as private:
+            pool = pipeline.make_client(dict(model='only-model', parallel=True, worker_count=3))
+            self.assertIsInstance(pool, OllamaPool)
+            self.assertEqual(pool.workers, 3)
+            self.assertEqual(len({c.url for c in pool.clients}), 1)
+            private.assert_not_called()
+            pool.close()
+            with self.assertRaisesRegex(ValueError, 'at most 3'):
+                pipeline.make_client(dict(model='only-model', parallel=True, worker_count=4))
 
     def test_disabled_review_is_unavailable_and_stale_output_is_invalidated(self):
         from xfed.ui import STAGES
@@ -1521,7 +2130,8 @@ class QualityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'security prerequisite'):
             compile_plan(answer, 'contract', item)
         answer['rules'][0]['conditions'] = [dict(leftOperand='security', operator='eq',
-            rightOperand='Recipient meeting all security requirements')]
+            rightOperand='Recipient meeting all security requirements'),
+            dict(leftOperand='recipient', operator='eq', rightOperand='Recipient')]
         prerequisite = answer['rules'].pop()
         with self.assertRaisesRegex(ValueError, 'independent security obligation'):
             compile_plan(dict(answer, rules=[*answer['rules'], prerequisite]), 'contract', item)
@@ -1593,6 +2203,7 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(len(compile_plan(answer, 'contract', item)['odrlPolicy']['permission']), 2)
         example['conditions'] = deepcopy(answer['rules'][0]['conditions'])
         example['action'] = 'modify'
+        item = dict(item, text=item['text'] + ' Provider may also modify the software update.')
         self.assertEqual(len(compile_plan(answer, 'contract', item)['odrlPolicy']['permission']), 2)
 
 
@@ -1724,7 +2335,7 @@ class QualityTests(unittest.TestCase):
             dict(leftOperand='event', operator='eq', rightOperand='becoming aware of the Incident')])
         validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
         for field, replacement, message in [('recipient', 'Provider', 'explicit source recipient'),
-                ('event', 'Customer', 'timing trigger'), ('elapsedTime', 'PT720H', 'longer')]:
+                ('event', 'Customer', 'timing trigger'), ('elapsedTime', 'PT720H', 'upper bound|longer')]:
             changed = deepcopy(answer)
             next(c for c in changed['rules'][0]['conditions'] if c['leftOperand'] == field)['rightOperand'] = replacement
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, message):
@@ -1737,8 +2348,9 @@ class QualityTests(unittest.TestCase):
         item = dict(self.item, context=[dict(chunk('parent', 'Provider means the supplier.'), relationship='definition')])
         shape = clause_decoder_schema(response_schema(ROOT), item)
         Draft202012Validator(shape).validate(plan(item))
-        self.assertNotIn('enum', shape['properties']['rules']['items']['properties']['actor'])
-        self.assertNotIn('enum', shape['properties']['rules']['items']['properties']['asset'])
+        for variant in shape['properties']['rules']['items']['anyOf']:
+            self.assertNotIn('enum', variant['properties']['actor'])
+            self.assertNotIn('enum', variant['properties']['asset'])
         answer = plan(item)
         answer['rules'][0]['evidence'] = dict(primary='parent', supporting=[])
         with self.assertRaises(ValidationError):
@@ -1763,7 +2375,9 @@ class QualityTests(unittest.TestCase):
                      'Parties shall have access to supplied data and can publish results.',
                      'Parties shall have access to no supplied data.']:
             mixed = clause_decoder_schema(response_schema(ROOT), dict(item, text=text))
-            self.assertNotIn('const', mixed['properties']['rules']['items']['properties']['kind'])
+            self.assertEqual({branch['properties']['kind']['const']
+                              for branch in mixed['properties']['rules']['items']['anyOf']},
+                             {'permission', 'prohibition', 'obligation', 'restriction'})
 
     def test_coverage_review_cannot_import_a_missing_rule_from_parent_context(self):
         from xfed.policy_review import review_item

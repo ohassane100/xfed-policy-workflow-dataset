@@ -3,6 +3,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from time import sleep
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 
 
@@ -49,6 +50,66 @@ def constraint_branches(constraints):
             raise ValueError('Too many logical branches for safe qualification validation.')
         result = [left + right for left in result for right in paths]
     return result
+
+
+def constraint_truth(constraints, state, parameters=None):
+    """Three-valued evaluation of the supported comparison subset, not access control.
+
+    Missing values, unresolved parameters and unsupported operators stay unknown.
+    A false prohibition condition does not grant a permission.
+    """
+    def conjunction(values):
+        return False if False in values else None if None in values else True
+
+    def evaluate(entry):
+        for group in ('and', 'or', 'xone'):
+            if group in entry:
+                values = [evaluate(child) for child in entry[group]]
+                if group == 'and':
+                    return conjunction(values)
+                if group == 'or':
+                    return True if True in values else None if None in values else False
+                true_count = sum(value is True for value in values)
+                return False if true_count > 1 else None if None in values else true_count == 1
+        if entry['leftOperand'] not in state:
+            return None
+        left = state[entry['leftOperand']]
+        if 'rightOperandReference' in entry:
+            if entry['rightOperandReference'] not in (parameters or {}):
+                return None
+            right = parameters[entry['rightOperandReference']]
+        else:
+            right = entry['rightOperand']
+        operator = entry['operator']
+        if operator in ('eq', 'neq'):
+            same = left == right and (isinstance(left, bool) == isinstance(right, bool))
+            return same if operator == 'eq' else not same
+        if operator in ('isAnyOf', 'isNoneOf') and isinstance(right, list) and not isinstance(left, (list, dict)):
+            included = any(left == value and (isinstance(left, bool) == isinstance(value, bool)) for value in right)
+            return included if operator == 'isAnyOf' else not included
+        if operator == 'isAllOf' and isinstance(left, list) and isinstance(right, list):
+            return all(value in left for value in right)
+        if operator in ('lt', 'lteq', 'gt', 'gteq'):
+            from decimal import Decimal
+            def number(value):
+                if type(value) in (int, float):
+                    return Decimal(str(value))
+                if (entry['leftOperand'] == 'dateTime' and isinstance(value, str)
+                        and re.fullmatch(r'\d{4}-\d{2}-\d{2}', value)):
+                    from datetime import date
+                    try: return Decimal(date.fromisoformat(value).toordinal())
+                    except ValueError: return None
+                duration = DURATION.fullmatch(value) if isinstance(value, str) else None
+                if duration and not (duration['years'] or duration['months']):
+                    return sum(Decimal(duration[key] or '0') * multiplier for key, multiplier in
+                               (('days', 86400), ('hours', 3600), ('minutes', 60), ('seconds', 1)))
+                return None
+            left, right = number(left), number(right)
+            if left is None or right is None:
+                return None
+            return {'lt': left < right, 'lteq': left <= right, 'gt': left > right, 'gteq': left >= right}[operator]
+        return None
+    return conjunction([evaluate(entry) for entry in constraints])
 
 
 def clause_number(text):
@@ -100,6 +161,20 @@ def standalone_heading(chunk):
                                   r'delete|retain|notify|disclose|provide|return|process)\b|[;:]\s*\S', text, re.I))
 
 
+def definition_only(chunk):
+    """A named definition without an operative statement creates no policy rule."""
+    text = chunk['text'].strip()
+    number = CLAUSE.match(text)
+    if number:
+        text = text[number.end():].lstrip()
+    match = DEFINITION.match(text)
+    if not match:
+        return False
+    body = text[match.end():]
+    return not re.search(r'\b(?:shall|must|may|can|will|cannot|permitted|prohibited|required|'
+                         r'undertakes|obligation|only|entitled)\b|\b(?:has|have)\s+(?:the\s+)?right\b', body, re.I)
+
+
 def explicit_information_duty(chunk):
     """A primary duty to deliver information is in this pipeline's scope."""
     if re.search(r'\b(?:non[- ]binding|illustrative|example)\b', chunk['text'], re.I):
@@ -133,6 +208,9 @@ def schema(stage, root=Path('.')):
 
 def validate(value, stage, root=Path('.')):
     from jsonschema import Draft202012Validator
+    if stage == 5:
+        from xfed.policy import validate_odrl, validate_policy
+        return (validate_odrl if 'odrlPolicy' in value else validate_policy)(value, root)
     Draft202012Validator(schema(stage, root)).validate(value)
     return value
 
@@ -151,7 +229,16 @@ def write_json(path, value):
             temporary = Path(stream.name)
             json.dump(value, stream, ensure_ascii=False, indent=2)
             stream.write('\n')
-        temporary.replace(path)
+        for attempt in range(5):
+            try:
+                temporary.replace(path)
+                break
+            except PermissionError as error:
+                # Windows readers/antivirus can briefly lock the destination.
+                # Keep the old JSON intact and still fail on a persistent lock.
+                if getattr(error, 'winerror', None) not in (5, 32, 33) or attempt == 4:
+                    raise
+                sleep(.025 * 2 ** attempt)
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)

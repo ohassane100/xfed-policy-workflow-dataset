@@ -3,7 +3,7 @@ from copy import deepcopy
 from pathlib import Path
 import re
 
-from xfed.common import DEFINITION, NUMBER, scope_heading, scoped_chunks, standalone_heading, validate
+from xfed.common import CLAUSE, DEFINITION, NUMBER, scope_heading, scoped_chunks, standalone_heading, validate
 
 
 REFERENCES = re.compile(rf'\b(?:articles?|clauses?|sections?|paragraphs?|provisions?)\s+({NUMBER}(?:\s*(?:,|and|or|to|[-\u2013])\s*{NUMBER})*)', re.I)
@@ -80,21 +80,24 @@ class ContextIndex:
                 self.children[scope, chunk['parent_clause_id']].append(chunk)
             if 'clause_id' in chunk:
                 self.clauses[scope, chunk['clause_id']].append(chunk)
-            matches = list(DEFINITION.finditer(chunk['text']))
+            number = CLAUSE.match(chunk['text'])
+            offset = number.end() if number else 0
+            definition_text = chunk['text'][offset:]
+            matches = list(DEFINITION.finditer(definition_text))
             for i, match in enumerate(matches):
                 if re.search(r'\d', match[1]) or scope_heading(match[0]):
                     continue
-                end = matches[i + 1].start() if i + 1 < len(matches) else len(chunk['text'])
-                body = chunk['text'][match.end():end].strip()
+                end = matches[i + 1].start() if i + 1 < len(matches) else len(definition_text)
+                body = definition_text[match.end():end].strip()
                 # Empty form fields such as repeated "Date: ______" are not definitions.
                 if (not re.search(r'\w', re.sub(r'[_\[\].\-]', '', body))
                         or re.match(r'\s*[_\.]{3,}', body)):
                     continue
                 definition = {k: v for k, v in chunk.items() if k != 'classification'}
-                definition['text'] = chunk['text'][match.start():end].strip()
+                definition['text'] = chunk['text'][offset + match.start():offset + end].strip()
                 self.definitions[match[1].strip().casefold()].append((scope, definition))
         terms = sorted(self.definitions, key=len, reverse=True)
-        self.terms = {term: re.compile(r'(?<!\w)' + re.escape(term) + r'(?!\w)', re.I) for term in terms}
+        self.terms = {term: re.compile(r'(?<!\w)' + r'\s+'.join(map(re.escape, term.split())) + r'(?!\w)', re.I) for term in terms}
 
     def context_for(self, chunk, include_references=True):
         scope = self.scopes[chunk['chunk_id']]
