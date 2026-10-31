@@ -10,7 +10,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, ValidationError
 
 from xfed.common import DURATION, constraint_branches, constraint_leaves, constraint_truth, definition_only, map_chunks, standalone_heading, validate
-from xfed.policy import odrl_schema, to_compact, verify_sources
+from xfed.policy import policy_schema, to_compact, verify_sources
 
 
 OPERATORS = ('eq', 'neq', 'lt', 'lteq', 'gt', 'gteq', 'isA', 'hasPart',
@@ -505,7 +505,7 @@ def response_schema(root=Path('.')):
         required=['chunk_id'], properties=dict(chunk_id=text)))
     evidence = dict(anyOf=[dict(type='object', additionalProperties=False, required=['primary', 'supporting'],
         properties=dict(primary=text, supporting=dict(type='array', items=text))), legacy_evidence])
-    original = odrl_schema(root)
+    original = policy_schema(root)
     def inline(value):
         if isinstance(value, list):
             return [inline(child) for child in value]
@@ -514,10 +514,16 @@ def response_schema(root=Path('.')):
         if '$ref' in value:
             return inline(original['$defs'][value['$ref'].removeprefix('#/$defs/')])
         return {key: inline(child) for key, child in value.items() if key not in ('title', 'description')}
-    metadata = inline(original['properties']['osdu'])
+    metadata = inline(original['properties']['metadata']['properties']['osdu'])
     metadata.pop('minProperties', None)
-    atom = deepcopy(original['$defs']['atomicConstraint'])
-    atom['properties'].pop('uid', None)
+    comparison = original['$defs']['condition']['oneOf'][0]
+    names = dict(field='leftOperand', op='operator', value='rightOperand', parameter='rightOperandReference',
+                 type='dataType', unit='unit')
+    atom = dict(type='object', additionalProperties=False, required=['leftOperand', 'operator'],
+                properties={names[key]: deepcopy(value) for key, value in comparison['properties'].items() if key in names})
+    # Keep the established model grammar while sourcing types from the one saved schema.
+    for key in ('leftOperand', 'dataType', 'unit'):
+        atom['properties'][key].pop('minLength', None)
     atom['properties']['operator'] = dict(type='string', enum=[operator for operator in OPERATORS
         if operator not in ('isA', 'hasPart', 'isPartOf')])
     # Bounded, typed alternatives keep Ollama's grammar finite. Saved output
