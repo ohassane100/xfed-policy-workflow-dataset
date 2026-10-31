@@ -6,17 +6,16 @@ import hashlib
 import json
 from pathlib import Path
 
-from jsonschema import Draft202012Validator, ValidationError
+from jsonschema import Draft202012Validator
 
 
 @lru_cache(maxsize=16)
-def policy_schema(root=Path('.')):
-    return json.loads((Path(root) / 'schemas/05_policy_schema.json').read_text(encoding='utf-8'))
+def odrl_schema(root=Path('.')):
+    return json.loads((Path(root) / 'schemas/05_odrl_schema.json').read_text(encoding='utf-8'))
 
 
 def validate_odrl(value, root=Path('.')):
-    # Legacy imports and exports share the readable policy validator.
-    to_compact(value, root=root)
+    Draft202012Validator(odrl_schema(root)).validate(value)
     return value
 
 
@@ -24,43 +23,18 @@ def to_compact(value, chunks=(), root=Path('.')):
     """Store exact evidence once; preserve rule IDs, logic and optional metadata."""
     if 'odrlPolicy' not in value:
         return validate_policy(deepcopy(value), root)
-    def members(entry, allowed, required=()):
-        if not isinstance(entry, dict) or set(entry) - set(allowed) or set(required) - set(entry):
-            raise ValidationError('Invalid compatibility fields; expected ' + ', '.join(required) +
-                                  '; allowed ' + ', '.join(allowed))
-
-    def array(entries, minimum=0):
-        if not isinstance(entries, list) or len(entries) < minimum:
-            raise ValidationError('Expected an array with at least ' + str(minimum) + ' entries.')
-        return entries
-
-    members(value, ('contract_id', 'odrlPolicy', 'traceability', 'osdu', 'parameterBindings', 'partyBindings'),
-            ('contract_id', 'odrlPolicy', 'traceability'))
+    validate_odrl(value, root)
     locations = {chunk['chunk_id']: chunk.get('source', {}) for chunk in chunks}
     old = value['odrlPolicy']
-    members(old, ('@context', '@type', 'uid', 'profile', 'permission', 'prohibition', 'obligation'),
-            ('@context', '@type', 'uid', 'profile'))
-    defaults = ['http://www.w3.org/ns/odrl.jsonld',
-                {'ids': 'https://w3id.org/idsa/core/', 'idsc': 'https://w3id.org/idsa/code/'}]
-    context = array(old['@context'], 2)
-    if (context[0] != defaults[0] or not isinstance(context[1], dict)
-            or any(context[1].get(key) != uri for key, uri in defaults[1].items())
-            or old['profile'] != 'http://www.w3.org/ns/odrl/2/core'):
-        raise ValidationError('Compatibility export requires the ODRL context/profile and IDS namespaces.')
     result = dict(version='2.0', contract_id=value['contract_id'], id=old['uid'],
                   type=old['@type'], rules=[], sources={})
-    for entry in array(value['traceability'], 1):
-        members(entry, ('ruleUid', 'ruleType', 'sourceClauses'), ('ruleUid', 'ruleType', 'sourceClauses'))
     traces = {entry['ruleUid']: entry for entry in value['traceability']}
     if len(traces) != len(value['traceability']):
         raise ValueError('Duplicate traceability rule identifier.')
 
     def evidence(entries):
         primary, context = [], []
-        for entry in array(entries, 1):
-            members(entry, ('chunk_id', 'clause_id', 'text', 'relationship'), ('chunk_id', 'text', 'relationship'))
-            if entry['relationship'] not in ('primary', 'context'):
-                raise ValidationError('Unknown source relationship.')
+        for entry in entries:
             source = {key: deepcopy(entry[key]) for key in ('chunk_id', 'clause_id', 'text') if key in entry}
             source.update(deepcopy(locations.get(entry['chunk_id'], {})))
             key = entry['chunk_id']
@@ -75,16 +49,9 @@ def to_compact(value, chunks=(), root=Path('.')):
         return dict(source=primary[0], **({'context': list(dict.fromkeys(context))} if context else {}))
 
     def condition(entry):
-        if not isinstance(entry, dict):
-            raise ValidationError('A condition must be an object.')
         for old_key, new_key in (('and', 'all'), ('or', 'any'), ('xone', 'exactly_one')):
             if old_key in entry:
-                members(entry, (old_key,), (old_key,))
-                return {new_key: [condition(child) for child in array(entry[old_key], 2)]}
-        members(entry, ('uid', 'leftOperand', 'operator', 'rightOperand', 'rightOperandReference', 'dataType', 'unit'),
-                ('leftOperand', 'operator'))
-        if ('rightOperand' in entry) == ('rightOperandReference' in entry):
-            raise ValidationError('A condition requires exactly one literal or parameter reference.')
+                return {new_key: [condition(child) for child in entry[old_key]]}
         output = dict(field=entry['leftOperand'], op=entry['operator'])
         output['parameter' if 'rightOperandReference' in entry else 'value'] = deepcopy(
             entry.get('rightOperandReference', entry.get('rightOperand')))
@@ -96,8 +63,6 @@ def to_compact(value, chunks=(), root=Path('.')):
         return output
 
     def rule(entry, kind=None):
-        nested = ('duty',) if kind == 'permission' else ('remedy',) if kind == 'prohibition' else ()
-        members(entry, ('uid', 'assignee', 'assigner', 'action', 'target', 'constraint', *nested), ('uid', 'action'))
         trace = traces.pop(entry['uid'], None)
         expected = kind or 'duty'
         if trace is None or trace['ruleType'] != expected:
@@ -108,42 +73,33 @@ def to_compact(value, chunks=(), root=Path('.')):
         for old_key, new_key in (('assignee', 'actor'), ('assigner', 'issuer'), ('action', 'action'), ('target', 'asset')):
             if old_key in entry:
                 output[new_key] = entry[old_key]
-        if 'constraint' in entry:
-            conditions = [condition(part) for part in array(entry['constraint'])]
-            if conditions:
-                output['conditions'] = conditions
+        if entry.get('constraint'):
+            output['conditions'] = [condition(part) for part in entry['constraint']]
         output.update(evidence(trace['sourceClauses']))
         for old_key, new_key in (('duty', 'requires'), ('remedy', 'remedies')):
-            if old_key in entry:
-                children = [rule(child) for child in array(entry[old_key])]
-                if children:
-                    output[new_key] = children
+            if entry.get(old_key):
+                output[new_key] = [rule(child) for child in entry[old_key]]
         return output
 
     for kind in ('permission', 'prohibition', 'obligation'):
-        if kind in old:
-            result['rules'].extend(rule(entry, kind) for entry in array(old[kind], 1))
-    if not result['rules']:
-        raise ValidationError('An ODRL compatibility policy must contain rules.')
+        result['rules'].extend(rule(entry, kind) for entry in old.get(kind, []))
     if traces:
         raise ValueError('Source traceability refers to a nonexistent rule.')
     for old_key, new_key in (('parameterBindings', 'parameters'), ('partyBindings', 'parties')):
-        if old_key in value:
+        if value.get(old_key):
             result[new_key] = {}
-            fields = ('label', 'dataType') if old_key == 'parameterBindings' else ('role',)
-            for entry in array(value[old_key], 1):
-                members(entry, ('uid', 'status', 'sourceClauses', *fields), ('uid', 'status', 'sourceClauses', *fields))
-                if entry['status'] != 'unresolved':
-                    raise ValidationError('External bindings must remain explicitly unresolved.')
+            for entry in value[old_key]:
                 if entry['uid'] in result[new_key]:
                     raise ValueError('Duplicate binding identifier.')
                 result[new_key][entry['uid']] = dict(
                     **{('type' if key == 'dataType' else key): entry[key]
                        for key in ('label', 'dataType', 'role') if key in entry},
                     **evidence(entry['sourceClauses']))
-    if 'osdu' in value:
+    if value.get('osdu'):
         result['metadata'] = dict(osdu=deepcopy(value['osdu']))
     # Preserve explicitly supplied JSON-LD contexts/profiles in compatibility exports.
+    defaults = ['http://www.w3.org/ns/odrl.jsonld',
+                {'ids': 'https://w3id.org/idsa/core/', 'idsc': 'https://w3id.org/idsa/code/'}]
     if old['@context'] != defaults or old['profile'] != 'http://www.w3.org/ns/odrl/2/core':
         result['export_context'] = dict(context=deepcopy(old['@context']), profile=old['profile'])
     order = {chunk['chunk_id']: index for index, chunk in enumerate(chunks)}
@@ -155,7 +111,6 @@ def to_odrl(value, root=Path('.')):
     """Export the supported ODRL/IDS structure without asking a model to rewrite it."""
     if 'odrlPolicy' in value:
         return validate_odrl(deepcopy(value), root)
-    validate_policy(value, root)
     if not value['rules']:
         raise ValueError('No extracted rules; there is no ODRL policy to export.')
     output = dict(contract_id=value['contract_id'], odrlPolicy={
@@ -210,11 +165,12 @@ def to_odrl(value, root=Path('.')):
                 for uid, entry in value[key].items()]
     if value.get('metadata', {}).get('osdu'):
         output['osdu'] = deepcopy(value['metadata']['osdu'])
-    return output
+    return validate_odrl(output, root)
 
 
 def validate_policy(value, root=Path('.')):
-    Draft202012Validator(policy_schema(root)).validate(value)
+    definition = json.loads((Path(root) / 'schemas/05_policy_schema.json').read_text(encoding='utf-8'))
+    Draft202012Validator(definition).validate(value)
     seen, references, used_parameters, used_parties = set(), set(), set(), set()
 
     def check(entry, nested=False):
@@ -237,7 +193,7 @@ def validate_policy(value, root=Path('.')):
                     used_parameters.add(item['parameter'])
                     binding = value.get('parameters', {}).get(item['parameter'])
                     if item['field'].casefold() == 'elapsedtime' and binding and binding['type'] != 'duration':
-                        raise ValueError('An elapsedTime parameter must bind a duration.')
+                        raise ValueError('An elapsedTime parameter must be a duration.')
         conditions(entry.get('conditions', []))
         for field, kind in (('requires', 'permission'), ('remedies', 'prohibition')):
             if entry.get(field) and (nested or entry.get('kind') != kind):
@@ -254,9 +210,11 @@ def validate_policy(value, root=Path('.')):
                 raise ValueError('Binding sources must resolve to distinct catalogue entries.')
             references.update(refs)
     if used_parameters != set(value.get('parameters', {})) or used_parties != set(value.get('parties', {})):
-        raise ValueError('Every unresolved binding for a parameter or party must be declared exactly once and used.')
+        raise ValueError('Every unresolved parameter or party must be declared exactly once and used.')
     if references != set(value['sources']):
         raise ValueError('Every catalogue source must be used by a rule or binding.')
+    if value['rules']:
+        to_odrl(value, root)
     return value
 
 

@@ -2,9 +2,9 @@
 
 `05_policy_schema.json` defines the saved **v2** policy. It is an XFed application
 format, not a claim of complete ODRL conformance or an executable legal opinion.
-It is the single policy schema used for generation, validation and compatibility
-imports/exports. Conversion is deterministic in `xfed.policy`; extraction still
-uses a small source-backed plan and the existing compiler/checks internally.
+`05_odrl_schema.json` retains the previous compatibility format. Conversion is
+deterministic in `xfed.policy`; extraction still uses a small source-backed plan
+and the existing compiler/checks internally.
 
 | Readable field | Meaning / compatibility mapping |
 |---|---|

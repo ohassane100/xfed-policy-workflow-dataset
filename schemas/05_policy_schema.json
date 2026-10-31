@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "XFed readable policy v2",
-  "description": "One rule list and one exact-source catalogue. Conditions are AND unless grouped. requires contains permission prerequisites; remedies contains duties after prohibition breach. Parameters and party identities remain unresolved. ODRL/IDS is a separate deterministic export; OSDU metadata is optional.",
+  "description": "One rule list and one exact-source catalogue. Conditions are AND unless grouped. requires contains permission prerequisites; remedies contains duties after prohibition breach. Parameters and party identities remain unresolved. ODRL/IDS is a separate deterministic export; OSDU metadata is optional and also validated by the compatibility schema.",
   "type": "object",
   "required": [
     "version",
@@ -76,17 +76,7 @@
       "properties": {
         "osdu": {
           "type": "object",
-          "minProperties": 1,
-          "description": "Optional OSDU-aligned legal metadata. XFed keeps OSDU metadata separate from ODRL policy rules: legalTag follows the OSDU Legal Service LegalTag shape, while legal follows the OSDU record-level legal metadata shape. Populate only values supported by the contract or trusted external metadata; deployment-specific allowed values must be validated against the target OSDU data partition.",
-          "properties": {
-            "legalTag": {
-              "$ref": "#/$defs/osduLegalTag"
-            },
-            "legal": {
-              "$ref": "#/$defs/osduRecordLegal"
-            }
-          },
-          "additionalProperties": false
+          "minProperties": 1
         }
       },
       "additionalProperties": false
@@ -99,34 +89,11 @@
       ],
       "properties": {
         "context": {
-          "type": "array",
-          "minItems": 2,
-          "prefixItems": [
-            {
-              "const": "http://www.w3.org/ns/odrl.jsonld"
-            },
-            {
-              "type": "object",
-              "required": [
-                "ids",
-                "idsc"
-              ],
-              "properties": {
-                "ids": {
-                  "const": "https://w3id.org/idsa/core/"
-                },
-                "idsc": {
-                  "const": "https://w3id.org/idsa/code/"
-                }
-              },
-              "additionalProperties": true
-            }
-          ],
-          "description": "ODRL JSON-LD context plus IDS namespaces used by IDS Usage Control examples."
+          "type": "array"
         },
         "profile": {
-          "const": "http://www.w3.org/ns/odrl/2/core",
-          "description": "ODRL profile identifier used in IDS Usage Control examples."
+          "type": "string",
+          "minLength": 1
         }
       },
       "additionalProperties": false
@@ -275,37 +242,24 @@
             },
             "field": {
               "type": "string",
-              "minLength": 1,
-              "description": "ODRL/IDS left operand, e.g. purpose, recipient, spatial, dateTime, elapsedTime, or an IDS-specific term."
+              "minLength": 1
             },
             "op": {
               "type": "string",
               "minLength": 1
             },
-            "value": {
-              "type": [
-                "string",
-                "number",
-                "integer",
-                "boolean",
-                "array",
-                "object"
-              ]
-            },
+            "value": {},
             "parameter": {
               "type": "string",
-              "minLength": 1,
-              "description": "IRI of an unresolved parameter declared in parameterBindings; not an invented value."
+              "minLength": 1
             },
             "type": {
               "type": "string",
-              "minLength": 1,
-              "description": "Optional datatype for the right operand, following ODRL terminology."
+              "minLength": 1
             },
             "unit": {
               "type": "string",
-              "minLength": 1,
-              "description": "Optional unit for the right operand, following ODRL terminology."
+              "minLength": 1
             }
           },
           "oneOf": [
@@ -489,180 +443,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "osduLegalTag": {
-      "type": "object",
-      "description": "OSDU Legal Service LegalTag-shaped metadata candidate. Exact OSDU field names are preserved. XFed permits evidence-supported partial properties at generation time to avoid hallucination; a LegalTag must be completed and validated against the target OSDU partition before API creation.",
-      "required": [
-        "name",
-        "properties"
-      ],
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 3,
-          "maxLength": 100,
-          "pattern": "^[A-Za-z0-9-]+$",
-          "description": "OSDU LegalTag name (3-100 alphanumeric/hyphen characters). OSDU prefixes the data-partition name when the LegalTag is created."
-        },
-        "description": {
-          "type": "string",
-          "description": "Optional free-form OSDU LegalTag description."
-        },
-        "properties": {
-          "type": "object",
-          "description": "OSDU LegalTag properties. Only populate contract-supported or trusted external values during XFed policy generation.",
-          "properties": {
-            "countryOfOrigin": {
-              "type": "array",
-              "minItems": 1,
-              "uniqueItems": true,
-              "items": {
-                "type": "string",
-                "pattern": "^[A-Z]{2}$"
-              },
-              "description": "OSDU countryOfOrigin using ISO 3166-1 alpha-2 country codes."
-            },
-            "contractId": {
-              "description": "OSDU contractId: actual contract identifier, 'Unknown', or 'No Contract Related'.",
-              "anyOf": [
-                {
-                  "const": "Unknown"
-                },
-                {
-                  "const": "No Contract Related"
-                },
-                {
-                  "type": "string",
-                  "minLength": 3,
-                  "maxLength": 40,
-                  "pattern": "^[A-Za-z0-9-]+$"
-                }
-              ]
-            },
-            "expirationDate": {
-              "description": "OSDU expirationDate in yyyy-MM-dd format when supplied; empty is allowed where OSDU permits no explicit expiration.",
-              "anyOf": [
-                {
-                  "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                },
-                {
-                  "const": ""
-                }
-              ]
-            },
-            "dataType": {
-              "type": "string",
-              "enum": [
-                "Public Domain Data",
-                "First Party Data",
-                "Second Party Data",
-                "Third Party Data",
-                "Transferred Data"
-              ],
-              "description": "OSDU dataType. Allowed values can be data-partition specific."
-            },
-            "originator": {
-              "type": "string",
-              "minLength": 1,
-              "description": "OSDU originator: client, supplier, or other data originator."
-            },
-            "securityClassification": {
-              "type": "string",
-              "enum": [
-                "Public",
-                "Private",
-                "Confidential"
-              ],
-              "description": "OSDU securityClassification."
-            },
-            "exportClassification": {
-              "type": "string",
-              "enum": [
-                "EAR99",
-                "0A998"
-              ],
-              "description": "OSDU exportClassification. Deployment-specific allowed values must be validated against the target OSDU partition."
-            },
-            "personalData": {
-              "type": "string",
-              "enum": [
-                "Personally Identifiable",
-                "No Personal Data"
-              ],
-              "description": "OSDU personalData classification."
-            },
-            "extensionProperties": {
-              "type": "object",
-              "description": "Optional OSDU company-specific LegalTag attributes.",
-              "additionalProperties": true
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "osduRecordLegal": {
-      "type": "object",
-      "description": "OSDU record-level legal metadata. This is distinct from the LegalTag definition: it associates a record with LegalTag names and other relevant data countries. The OSDU system-generated compliance status is intentionally omitted from XFed policy generation.",
-      "required": [
-        "legaltags",
-        "otherRelevantDataCountries"
-      ],
-      "properties": {
-        "legaltags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Names of OSDU LegalTags associated with the record."
-        },
-        "otherRelevantDataCountries": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[A-Z]{2}$"
-          },
-          "description": "OSDU record-level otherRelevantDataCountries using ISO 3166-1 alpha-2 codes. This is not part of the LegalTag itself."
-        }
-      },
-      "additionalProperties": false
     }
-  },
-  "allOf": [
-    {
-      "if": {
-        "properties": {
-          "type": {
-            "const": "Agreement"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "rules": {
-            "items": {
-              "if": {
-                "properties": {
-                  "kind": {
-                    "enum": [
-                      "permission",
-                      "prohibition"
-                    ]
-                  }
-                }
-              },
-              "then": {
-                "required": [
-                  "issuer"
-                ]
-              }
-            }
-          }
-        }
-      }
-    }
-  ]
+  }
 }

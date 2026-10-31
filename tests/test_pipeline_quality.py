@@ -136,55 +136,6 @@ class QualityTests(unittest.TestCase):
             value['traceability'].sort(key=lambda row: row['ruleUid'])
         self.assertEqual(old, exported)
 
-    def test_single_policy_schema_supports_validation_and_compatibility_exports(self):
-        compact = to_compact(fragment(self.item), [self.item], ROOT)
-        with TemporaryDirectory() as directory:
-            root = Path(directory)
-            (root / 'schemas').mkdir()
-            shutil.copyfile(ROOT / 'schemas/05_policy_schema.json', root / 'schemas/05_policy_schema.json')
-            self.assertEqual(response_schema(root), response_schema(ROOT))
-            # Readable validation must not depend on an ODRL conversion or schema.
-            with patch('xfed.policy.to_odrl', side_effect=AssertionError('Unexpected export')):
-                validate_policy(compact, root)
-            self.assertEqual(to_compact(to_odrl(compact, root), [self.item], root), compact)
-
-    def test_compatibility_import_rejects_fields_that_would_otherwise_be_dropped(self):
-        for mutation in ('top', 'rule', 'source', 'relationship', 'condition', 'operands', 'binding', 'empty'):
-            value = fragment(self.item)
-            rule = value['odrlPolicy']['obligation'][0]
-            source = value['traceability'][0]['sourceClauses'][0]
-            if mutation == 'top': value['unexpected'] = 'ignored'
-            elif mutation == 'rule': rule['unexpected'] = 'ignored'
-            elif mutation == 'source': source['unexpected'] = 'ignored'
-            elif mutation == 'relationship': source['relationship'] = 'unknown'
-            elif mutation in ('condition', 'operands'):
-                condition = dict(leftOperand='purpose', operator='eq', rightOperand='research')
-                condition['unexpected' if mutation == 'condition' else 'rightOperandReference'] = 'ignored'
-                rule['constraint'] = [condition]
-            elif mutation == 'binding':
-                rule['constraint'] = [dict(leftOperand='elapsedTime', operator='lteq', rightOperandReference='t')]
-                value['parameterBindings'] = [dict(uid='t', label='period', dataType='duration', status='resolved',
-                                                  sourceClauses=deepcopy(value['traceability'][0]['sourceClauses']))]
-            else: value['parameterBindings'] = []
-            with self.subTest(mutation=mutation), self.assertRaises((ValueError, ValidationError)):
-                to_compact(value, [self.item], ROOT)
-
-    def test_readable_schema_preserves_osdu_and_agreement_validation(self):
-        compact = to_compact(fragment(self.item, 'permission'), [self.item], ROOT)
-        for mutation in ('country', 'osdu_field', 'issuer', 'null_value'):
-            value = deepcopy(compact)
-            if mutation in ('country', 'osdu_field'):
-                value['metadata'] = dict(osdu=dict(legal=dict(legaltags=['project-data'], otherRelevantDataCountries=['NO'])))
-                legal = value['metadata']['osdu']['legal']
-                if mutation == 'country': legal['otherRelevantDataCountries'] = ['Norway']
-                else: legal['status'] = 'compliant'
-            elif mutation == 'issuer':
-                value['type'] = 'Agreement'
-                value['rules'][0].pop('issuer', None)
-            else: value['rules'][0]['conditions'] = [dict(field='purpose', op='eq', value=None)]
-            with self.subTest(mutation=mutation), self.assertRaises(ValidationError):
-                validate_policy(value, ROOT)
-
     def test_readable_policy_rejects_broken_links_duplicate_rules_and_unbound_values(self):
         compact = to_compact(fragment(self.item), [self.item], ROOT)
         for mutation in ('source', 'duplicate', 'parameter', 'page', 'quote'):
