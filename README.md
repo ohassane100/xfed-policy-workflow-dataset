@@ -56,8 +56,8 @@ recorded. Rules with missing issuers use an ODRL Set. Context overflow fails
 explicitly. Rerun through policy creation after updating to rebuild extraction
 metadata and context.
 
-The **Evaluation** tab offers the Contract 05 classification benchmark and DCT
-agreement evaluation for tasks 1.3 and 2. **Policy review**
+The **Evaluation** tab offers DCT agreement evaluation for tasks 1.3 and 2.
+Contracts 01–05 remain on disk as research sources and are hidden from the UI. **Policy review**
 is a static visual demo with labelled sample content and inert buttons. It has
 no node connections, review actions, downloads or amendment logic.
 
@@ -76,6 +76,17 @@ objection and delay windows. Supporting clauses appear beside the extracted rule
 It also covers authorised users, re-identification, attribution, error reporting,
 data/documentation delivery and deletion certificates. New agreements freeze
 classification labels for every PDF chunk alongside their expected policy rules.
+The **30-page evaluation preset** adds operational schedules and 131 expected rules.
+Created DCT agreements appear in Contracts and Evaluation automatically.
+
+**Contracts → Reusable clause library** stores local clause–policy cases. Review
+the source/context and rules before approving exact reuse. New requirements are
+generated; related cases provide retrieved examples for a fresh interpretation;
+approved identical clauses and dependencies reuse a revalidated compiled plan.
+This MVP uses lexical retrieval, with no extra service or embedding model.
+Changed scope, definitions, model or extraction code blocks exact reuse. Fresh
+Evaluation runs disable both retrieval and clause reuse; normal runs report reuse
+counts. Approval is a reviewer decision, not evidence of legal correctness.
 
 To use the university model through the existing tunnel while keeping scripts and
 reports local, run locally (no server changes or remote commands):

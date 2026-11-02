@@ -2534,5 +2534,127 @@ class QualityTests(unittest.TestCase):
             thread.join()
             server.server_close()
 
+class ScheduleCompilerTests(unittest.TestCase):
+    def test_access_to_referenced_manifest_preserves_full_scope_including_parties(self):
+        item = dict(chunk('primary', '12.5 Recipient must make the Manifest described in clause 12.4 available to Provider upon request.'),
+                    context=[dict(chunk('support', '12.4 Recipient must maintain complete Manifest for a staged transfer from Provider to Recipient.', clause_id='12.4'), relationship='reference')])
+        answer = dict(rules=[dict(kind='obligation', actor='Recipient', action='provideAccess', asset=['Manifest'],
+            conditions=[dict(leftOperand='recipient', operator='eq', rightOperand='Provider'),
+                        dict(leftOperand='event', operator='eq', rightOperand='request'),
+                        dict(leftOperand='scope', operator='eq', rightOperand='a staged transfer')],
+            evidence=dict(primary='primary', supporting=['support']))], unrepresented=[], reason='Simulated')
+        with self.assertRaisesRegex(ValueError, 'full explicitly qualified record scope'):
+            compile_plan(answer, 'contract', item)
+        answer['rules'][0]['conditions'][-1]['rightOperand'] = 'a staged transfer from Provider to Recipient'
+        validate_fragment(compile_plan(answer, 'contract', item), 'contract', item, ROOT)
+
+    def test_duplicate_request_clock_labels_do_not_create_contradictory_events(self):
+        from xfed.common import constraint_truth
+        item = dict(chunk(text='Recipient must share Policy Register with Provider within 5 days after Provider requests Policy Register.'), context=[])
+        answer = dict(rules=[dict(kind='obligation', actor='Recipient', action='share', asset=['Policy Register'],
+            conditions=[dict(leftOperand='recipient', operator='eq', rightOperand='Provider'),
+                        dict(leftOperand='event', operator='eq', rightOperand='request by Provider'),
+                        dict(leftOperand='elapsedTime', operator='lteq', rightOperand='P5D'),
+                        dict(leftOperand='timing', operator='eq', rightOperand='within 5 days after Provider requests Policy Register')],
+            evidence=dict(primary=item['chunk_id'], supporting=[]))], unrepresented=[], reason='Simulated')
+        compiled = compile_plan(answer, 'contract', item)
+        conditions = compiled['odrlPolicy']['obligation'][0]['constraint']
+        state = dict(recipient='Provider', event='Provider requests Policy Register', elapsedTime='P5D')
+        self.assertTrue(constraint_truth(conditions, state))
+        self.assertFalse(constraint_truth(conditions, dict(state, elapsedTime='P6D')))
+        self.assertFalse(constraint_truth(conditions, dict(state, event='different request')))
+
+
+class ClauseReuseTests(unittest.TestCase):
+    """Exercise the actual compiler/review path; simulated answers are not accuracy results."""
+
+    def setUp(self):
+        from xfed.case_library import CaseLibrary
+        self.temp = TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.library = CaseLibrary(ROOT)
+        self.library.cases = {}
+        self.library.path = Path(self.temp.name) / 'cases.json'
+        self.item = dict(chunk(), context=[])
+
+    def run_generation(self, item=None, contract='contract', reuse=True):
+        from xfed.policy_generation import generate as readable_generate
+        item = item or self.item
+        client = PlanClient(plan(item))
+        policy, report = readable_generate(dict(contract_id=contract, items=[item]), client, ROOT,
+            case_library=self.library, reuse_cases=reuse)
+        return policy, report, client
+
+    def approve(self, report):
+        identifier = report['clauses'][0]['case_id']
+        self.library.review(identifier, True)
+        return identifier
+
+    def test_exact_approved_case_avoids_inference_and_rebinds_current_source_locations(self):
+        _, first, _ = self.run_generation()
+        identifier = self.approve(first)
+        current = dict(self.item, chunk_id='current-id', source=dict(pages=[9], block_ids=['new-block']))
+        policy, report, client = self.run_generation(current, 'revised-contract')
+        self.assertEqual(len(client.calls), 0)
+        self.assertEqual(report['case_reuse']['reused'], 1)
+        self.assertEqual(report['clauses'][0]['case_reuse']['category'], 'established')
+        self.assertEqual(policy['sources']['current-id']['pages'], [9])
+        self.assertEqual(policy['contract_id'], 'revised-contract')
+        self.assertIn('revised-contract:current-id', policy['rules'][0]['id'])
+        self.assertEqual(self.library.cases[identifier]['reuse_count'], 1)
+
+    def test_unapproved_or_revoked_case_never_bypasses_generation(self):
+        _, first, _ = self.run_generation()
+        _, second, client = self.run_generation()
+        self.assertGreater(len(client.calls), 0)
+        self.assertEqual(second['clauses'][0]['case_reuse']['category'], 'familiar')
+        identifier = self.approve(first)
+        self.library.review(identifier, False)
+        _, third, client = self.run_generation()
+        self.assertGreater(len(client.calls), 0)
+        self.assertEqual(third['case_reuse']['reused'], 0)
+
+    def test_changed_clause_or_definition_is_a_hint_not_an_exact_reuse(self):
+        self.item['context'] = [dict(chunk('definition', 'Data means supplied data.'), relationship='definition')]
+        _, first, _ = self.run_generation()
+        self.approve(first)
+        for current in (dict(self.item, text=self.item['text']+' This applies only to active copies.'),
+                        dict(self.item, context=[dict(self.item['context'][0], text='Data means archived data.')])):
+            with patch('xfed.policy_generation.generate_item', wraps=generate_item) as operation:
+                _, report, client = self.run_generation(current)
+            self.assertGreater(len(client.calls), 0)
+            self.assertEqual(report['case_reuse']['reused'], 0)
+            self.assertTrue(operation.call_args.kwargs['examples'])
+
+    def test_fresh_evaluation_disables_both_retrieval_and_reuse(self):
+        _, first, _ = self.run_generation()
+        self.approve(first)
+        with patch('xfed.policy_generation.generate_item', wraps=generate_item) as operation:
+            _, report, client = self.run_generation(reuse=False)
+        self.assertGreater(len(client.calls), 0)
+        self.assertFalse(operation.call_args.kwargs['examples'])
+        self.assertFalse(report['case_reuse']['enabled'])
+
+    def test_pipeline_or_model_change_invalidates_exact_reuse(self):
+        from xfed.case_library import profile
+        _, first, client = self.run_generation()
+        self.approve(first)
+        settings = profile(ROOT, client)
+        for key in ('code', 'model'):
+            changed = deepcopy(settings)
+            if key == 'model': changed['model']['model_digest'] = 'different'
+            else: changed['code'] = 'different'
+            self.assertFalse(self.library.lookup(self.item, changed)['reusable'])
+
+    def test_reuse_validation_failure_falls_back_to_generation(self):
+        _, first, _ = self.run_generation()
+        self.approve(first)
+        with patch('xfed.case_library.rebind', side_effect=ValueError('Ambiguous evidence')):
+            _, report, client = self.run_generation()
+        self.assertGreater(len(client.calls), 0)
+        self.assertFalse(report['clauses'][0]['case_reuse']['reusable'])
+        self.assertEqual(report['case_reuse']['reused'], 0)
+
+
 if __name__ == '__main__':
     unittest.main()

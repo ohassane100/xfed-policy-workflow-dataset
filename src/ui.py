@@ -26,6 +26,7 @@ from xfed.policy import to_odrl, readable_rules, validate_policy, verify_sources
 from xfed.benchmark import DEFAULT_VARIANTS, VARIANTS, compare_settings
 from xfed.evaluation import load_reference, reference_summary, run_evaluation
 from xfed import authoring
+from xfed.case_library import CaseLibrary
 
 
 STAGES = {
@@ -128,6 +129,7 @@ class Pipeline:
     def __init__(self, root, ollama_url, config=None):
         self.root = Path(root).resolve()
         self.active_client = None
+        self.case_library = CaseLibrary(self.root)
         self.ollama_url = ollama_url.rstrip('/')
         self.worker_config = load_client(config) if config else None
         self.service_settings = getattr(self.worker_config, 'service', None)
@@ -149,8 +151,10 @@ class Pipeline:
                                        and value.get('task') == 'classification'), None)
 
     def contracts(self):
+        # Keep Contracts 01–05 on disk as research sources, outside the demo UI.
         return sorted(p.name for p in (self.root / 'contracts').iterdir()
-                      if p.is_dir() and (p / 'input/contract.pdf').is_file())
+                      if p.is_dir() and (p / 'input/contract.pdf').is_file()
+                      and p.name not in {f'contract_{i:02d}' for i in range(1, 6)})
 
     def base(self, contract):
         if contract not in self.contracts():
@@ -295,6 +299,8 @@ class Pipeline:
         mode = request.get('mode', 'step')
         if mode not in ('step', 'through'):
             raise ValueError('Unknown run mode.')
+        if type(request.get('reuse_cases', True)) is not bool:
+            raise ValueError('reuse_cases must be true or false.')
         selected = list(STAGES)[:list(STAGES).index(stage) + 1] if mode == 'through' else [stage]
         if mode == 'step' and stage != '1.1':
             previous = list(STAGES)[list(STAGES).index(stage) - 1]
@@ -313,7 +319,7 @@ class Pipeline:
                             total=0, message='Preparing pipeline inputs', log=[])
         fresh_run = mode == 'through' and stage == '2'
         reuse = request.get('reuse', True) and not fresh_run
-        threading.Thread(target=self.run, args=(contract, selected, client, reuse, fresh_run),
+        threading.Thread(target=self.run, args=(contract, selected, client, reuse, fresh_run, request.get('reuse_cases', True)),
                          daemon=True).start()
         return self.snapshot()
 
@@ -400,7 +406,7 @@ class Pipeline:
             _, reference = authoring.load(self.base(request['contract']))
             if not reference.get('classification') or request.get('task') != 'dct':
                 raise ValueError('Choose a DCT revision with frozen classification and policy references.')
-            return self.start(dict(request, stage='2', mode='through', reuse=False))
+            return self.start(dict(request, stage='2', mode='through', reuse=False, reuse_cases=False))
         if request.get('split', 'test') != 'test':
             raise ValueError('The UI evaluates the test set only. Use the local CLI for development.')
         if request.get('task', 'classification') != 'classification' or 'policy_mode' in request:
@@ -519,7 +525,7 @@ class Pipeline:
                                 message='Ready', log=[])
         return self.state(contract)
 
-    def run(self, contract, selected, raw_client, reuse, fresh_run=False):
+    def run(self, contract, selected, raw_client, reuse, fresh_run=False, reuse_cases=True):
         base = self.base(contract)
         try:
             if raw_client:
@@ -554,7 +560,8 @@ class Pipeline:
                     write_output(self.path(contract, '1.3'), updated, 3, self.root)
                 elif stage == '2':
                     result, report = generate(source, client, self.root, self.progress,
-                                             classified=read_json(self.path(contract, '1.3')))
+                                             classified=read_json(self.path(contract, '1.3')),
+                                             case_library=self.case_library, reuse_cases=reuse_cases)
                     report['unresolved_chunks'] = self.state(contract)['labels']['NEEDS_CONTEXT']
                     self.progress(len(source['items']), len(source['items']), 'Saving policy')
                     write_json(self.output(contract) / '2 policy_generation/generation_report.json', report)
@@ -713,6 +720,8 @@ def handler(pipeline):
                                    same_model_workers=True,
                                    model_unloading=True,
                                    preferred_models=PREFERRED_MODELS))
+                elif route.path == '/api/cases':
+                    self.send(pipeline.case_library.summary())
                 elif route.path == '/api/models':
                     self.send(dict(models=pipeline.models()))
                 elif route.path == '/api/state':
@@ -725,7 +734,8 @@ def handler(pipeline):
                     self.send(pipeline.evaluation_result(query.get('contract', [None])[0]))
                 elif route.path == '/api/authoring':
                     self.send(pipeline.guided_result(query['contract'][0]) if 'contract' in query
-                              else dict(defaults=authoring.DEFAULTS, research_preset=authoring.RESEARCH_PRESET, template_version=authoring.VERSION))
+                              else dict(defaults=authoring.DEFAULTS, research_preset=authoring.RESEARCH_PRESET,
+                                        extended_preset=authoring.EXTENDED_PRESET, template_version=authoring.VERSION))
                 elif route.path in ('/api/output', '/api/pdf'):
                     contract = query['contract'][0]
                     if route.path == '/api/pdf':
@@ -773,6 +783,10 @@ def handler(pipeline):
                     self.send(dict(title=content['title'], clauses=content['clauses'], expected_rules=len(content['rules'])))
                 elif self.path == '/api/authoring/create':
                     self.send(pipeline.create_guided(request), 201)
+                elif self.path == '/api/cases/review':
+                    if pipeline.snapshot()['status'] in ('running', 'cancelling'):
+                        raise ValueError('Wait for the current run before changing case approvals.')
+                    self.send(pipeline.case_library.review(request['case_id'], request['approved']))
                 elif self.path == '/api/cancel':
                     self.send(pipeline.stop())
                 elif self.path == '/api/unload':

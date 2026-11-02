@@ -17,8 +17,8 @@ from xfed.policy import validate_policy, verify_sources
 from xfed.policy_evaluation import component_comparison, normalized
 
 
-VERSION = 'dct-3'
-SUPPORTED_VERSIONS = ('guided-1', 'guided-2', 'guided-3', 'dct-1', 'dct-2', VERSION)
+VERSION = 'dct-4'
+SUPPORTED_VERSIONS = ('guided-1', 'guided-2', 'guided-3', 'dct-1', 'dct-2', 'dct-3', VERSION)
 STORAGE_COUNTRIES = ('Norway', 'Sweden', 'Denmark', 'Finland', 'Iceland', 'Germany', 'France', 'Netherlands')
 DEFAULTS = dict(title='Data Collaboration Agreement', provider='North Research Institute',
     recipient='Harbour Analytics', data='Research Dataset', purpose='joint research',
@@ -37,6 +37,7 @@ STEWARDSHIP_DEFAULTS = dict(authorized_access=False, no_reidentification=False, 
     authorized_users='Approved Project Researchers', documentation='Dataset Documentation', certificate='Data Deletion Certificate',
     delivery_days=5, certificate_days=7, error_hours=24, data_description='')
 DEFAULTS.update(STEWARDSHIP_DEFAULTS)
+DEFAULTS['extended_agreement'] = False
 FLAGS = ('read', 'purpose_limit', 'sharing_limit', 'consent_exception', 'confidentiality',
          'secure_storage', 'deletion', 'notification', 'encryption', 'storage_limit',
          'legal_disclosure', 'legal_retention', 'competition_limit', 'platform_access', 'records_access', 'background_access', 'publication',
@@ -49,6 +50,8 @@ RESEARCH_PRESET = dict(DEFAULTS, **{key: True for key in FLAGS},
     authorized_users='Approved Energy Project Researchers', documentation='Energy Dataset Documentation',
     data_description='Pseudonymised turbine-performance, maintenance and personnel-occupancy observations from the North Sea research programme, together with the associated measurement metadata.',
     delete_days=14, notify_hours=48)
+EXTENDED_PRESET = dict(RESEARCH_PRESET, extended_agreement=True,
+    title='North Sea Federated Research Data Collaboration Agreement')
 
 
 def digest(value):
@@ -56,6 +59,8 @@ def digest(value):
 
 
 def validate_terms(value):
+    if isinstance(value, dict) and 'extended_agreement' not in value:
+        value = dict(value, extended_agreement=False)
     previous_fields = set(DEFAULTS) - set(STEWARDSHIP_DEFAULTS)
     legacy_fields = previous_fields - set(PROJECT_DEFAULTS)
     if isinstance(value, dict) and set(value) in (previous_fields, legacy_fields, legacy_fields - set(ADVANCED)):
@@ -63,6 +68,8 @@ def validate_terms(value):
     if not isinstance(value, dict) or set(value) != set(DEFAULTS):
         raise ValueError('Provide all DCT fields and no additional fields.')
     value = deepcopy(value)
+    if type(value['extended_agreement']) is not bool:
+        raise ValueError('extended_agreement must be true or false.')
     for key in ('title', 'provider', 'recipient', 'data', 'purpose', 'platform', 'records', 'background', 'results', 'work_plan',
                 'authorized_users', 'documentation', 'certificate'):
         text = value[key]
@@ -273,6 +280,9 @@ def draft(terms):
     clause('11.3', 'This Agreement is governed by Norwegian law. Disputes are submitted to the courts of Oslo.')
     clause('11.4', 'Neither Party warrants the commercial viability of the research project.')
     clause('11.5', 'This Agreement may be executed in counterparts.')
+    if t['extended_agreement']:
+        from xfed.dct_schedules import extend
+        extend(t, clauses, clause, condition, rule)
     return dict(template_version=VERSION, title=t['title'], clauses=clauses, rules=rules, classification_terms=classifications)
 
 
@@ -304,6 +314,8 @@ def render_pdf(terms):
     y += 13
     for entry in content['clauses']:
         heading = '.' not in entry['clause_id']
+        if terms.get('extended_agreement') and heading and int(entry['clause_id']) >= 12:
+            new_page()
         text = entry['clause_id'] + ('  ' if heading else ' ') + entry['text']
         size, font, leading = (12, 'hebo', 17) if heading else (10.5, 'helv', 15.5)
         wrapped = lines(text, size, font)
@@ -694,6 +706,24 @@ def evaluate(base, policy, chunks, root):
         check(clause, 'At deadline / '+asset, 'obligation', actor, action, asset, state, True, 'deadline satisfaction')
         check(clause, 'Beyond deadline / '+asset, 'obligation', actor, action, asset, dict(state, elapsedTime=prefix+str(amount+1)+suffix), False, 'deadline satisfaction')
         check(clause, 'Wrong clock / '+asset, 'obligation', actor, action, asset, dict(state, event='unrelated event'), False, 'deadline satisfaction')
+    # Schedule probes exercise every new rule: a satisfying state and one failed
+    # comparison at a time, including the opposite side of each deadline.
+    for rule in expected_rules:
+        if int(rule['source'].split('.')[0]) < 12:
+            continue
+        conditions = rule.get('conditions', [])
+        state = {c['field']: c['value'] for c in conditions}
+        args = (rule['source'], rule['kind'], rule['actor'], rule['action'], rule['asset'])
+        def probe(label, inputs, expected_result):
+            check(args[0], label, *args[1:], inputs, expected_result, 'schedule condition')
+        probe('Schedule / all requirements satisfied', state, True)
+        for c in conditions:
+            value = c['value']
+            if c['op'] == 'lteq' and c['field'] == 'elapsedTime':
+                value = 'P' + str(int(value[1:-1]) + 1) + 'D'
+            else:
+                value = 'unrelated value'
+            probe('Schedule / wrong ' + c['field'], dict(state, **{c['field']: value}), False)
     alignments = [row for clause in comparisons for row in clause['alignment']]
     diagnostics = dict(missing_rules=sum(len(c['missing_reference_rule_ids']) for c in comparisons),
         extra_rules=sum(len(c['unmatched_prediction_rule_ids']) for c in comparisons),

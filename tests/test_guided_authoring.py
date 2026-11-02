@@ -56,6 +56,34 @@ class GuidedTests(unittest.TestCase):
         self.assertIn('within 30 days', clauses['5.1'])
         self.assertIn('within 72 hours', clauses['5.2'])
 
+    def test_extended_agreement_has_thirty_pages_and_complete_reference_mapping(self):
+        import pymupdf
+        created = authoring.create(self.root, authoring.EXTENDED_PRESET)
+        base = self.root / 'contracts' / created['contract']
+        _, reference = authoring.load(base)
+        with pymupdf.open(base / 'input/contract.pdf') as pdf:
+            self.assertEqual(len(pdf), 30)
+            self.assertGreater(sum(len(p.get_text().split()) for p in pdf), 7500)
+        self.assertEqual(len(reference['rules']), 131)
+        self.assertEqual(len({c['clause_id'] for c in reference['clauses']}), len(reference['clauses']))
+        self.assertTrue({r['source'] for r in reference['rules']}.issubset(
+            {c['chunk'].get('clause_id') for c in reference['classification'] if c['label'] == 'RELEVANT'}))
+        self.assertTrue(any(c['chunk'].get('clause_id') == '37.7' for c in reference['classification']))
+        pipeline = Pipeline(self.root, 'http://127.0.0.1:11434')
+        for number in range(1, 6):
+            legacy = self.root / 'contracts' / f'contract_{number:02d}' / 'input'
+            legacy.mkdir(parents=True)
+            shutil.copy(base / 'input/contract.pdf', legacy / 'contract.pdf')
+        self.assertIn(created['contract'], pipeline.contracts())
+        self.assertFalse(any(c.startswith('contract_0') for c in pipeline.contracts()))
+
+    def test_dct_evaluation_forces_fresh_generation_even_when_reuse_is_requested(self):
+        pipeline = Pipeline(self.root, 'http://127.0.0.1:11434')
+        with patch.object(pipeline, 'start', return_value=dict(status='running')) as start:
+            pipeline.start_evaluation(dict(contract=self.created['contract'], task='dct', reuse_cases=True))
+        self.assertFalse(start.call_args.args[0]['reuse_cases'])
+        self.assertFalse(start.call_args.args[0]['reuse'])
+
     def test_reference_comparison_and_prohibition_examples_accept_the_authored_meaning(self):
         result = authoring.evaluate(self.base, self.reference_policy(), self.chunks, self.root)
         self.assertTrue(result['complete_policy'])
