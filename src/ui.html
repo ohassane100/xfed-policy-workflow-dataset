@@ -144,7 +144,12 @@
     <div class="pagehead"><div><div class="eyebrow">Tasks 1.3 and 2</div><h1>Evaluation</h1></div><span class="badge neutral">Frozen references</span></div>
     <section class="surface workspace-card"><div class="section-head"><div><h2>Run evaluation</h2><p id="evaluation-reference-note">Choose an agreement and model</p></div><div class="review-actions"><button id="evaluation-refresh">Refresh results</button><button id="evaluate" class="primary" disabled>Evaluate 1.3 and 2</button></div></div>
       <div class="field"><label for="evaluation-contract">Evaluation set</label><select id="evaluation-contract"><option value="">Choose a saved DCT agreement</option></select></div>
-      <div class="settings"><div class="field"><label for="evaluation-model">Model</label><select id="evaluation-model"><option value="">Choose an installed model</option></select></div><div class="field"><label for="evaluation-context">Context tokens</label><input id="evaluation-context" type="number" min="4096" max="262144" step="1024" value="32768"></div><div class="field"><label for="evaluation-workers">Concurrent requests</label><select id="evaluation-workers"><option>1</option><option>2</option><option selected>3</option></select></div></div>
+      <div class="settings">
+        <div class="field"><label for="evaluation-model">Model</label><select id="evaluation-model"><option value="">Choose an installed model</option></select></div>
+        <div class="field"><label for="evaluation-context">Context tokens</label><input id="evaluation-context" type="number" min="4096" max="262144" step="1024" value="32768"></div>
+        <div class="field"><label for="evaluation-workers">Concurrent requests</label><select id="evaluation-workers"><option>1</option><option>2</option><option selected>3</option></select></div>
+        <div class="field"><label for="evaluation-batch-size">Classification clauses per request</label><input id="evaluation-batch-size" type="number" min="1" max="16" value="4" required></div>
+      </div>
       <details class="advanced"><summary>About this evaluation</summary><p id="evaluation-scope">DCT agreements run from PDF through stages 1.1–2; authoring labels and expected policies remain outside model input. References are provisional and these agreements are development material.</p></details>
     </section>
     <div id="dct-evaluation-results" class="hidden"></div>
@@ -379,7 +384,11 @@ function updateJob(job){
  $('progress').classList.toggle('indeterminate',busy&&!job.total);
  $('progress').classList.toggle('failed',job.status==='failed');
  if(job.mode==='benchmark'&&!busy){const key=job.contract+'/'+job.status+'/'+(job.log||[]).length;if(key!==benchmarkKey){benchmarkKey=key;refreshBenchmark();}}
- if(job.mode==='evaluation'||screen==='evaluation'){const key=$('evaluation-contract').value+'/'+job.status+'/'+job.stage+'/'+job.completed+'/'+(job.log||[]).length;if(key!==evaluationKey){evaluationKey=key;refreshEvaluation();}}
+ if(job.mode==='evaluation'||screen==='evaluation'){
+  const progress=job.mode==='evaluation'?job.completed:'';
+  const key=[$('evaluation-contract').value,job.status,job.stage,progress,(job.log||[]).length].join('/');
+  if(key!==evaluationKey){evaluationKey=key;refreshEvaluation();}
+ }
  controls();
 }
 async function refreshBenchmark(){
@@ -404,20 +413,51 @@ function downloadEvaluationValue(value,name){const url=URL.createObjectURL(new B
 function renderDctEvaluation(data){
  const target=$('dct-evaluation-results');target.replaceChildren();evaluationReport=data;
  const pct=v=>v==null?'—':(100*v).toFixed(1)+'%';
- function card(title,values){const panel=element('section',undefined,'surface workspace-card');panel.append(element('h2',title));const grid=element('div',undefined,'metrics');for(const [label,value] of values){const box=element('div',undefined,'metric'),body=element('div');body.append(element('strong',String(value)),element('span',label));box.append(body);grid.append(box);}panel.append(grid);scores.append(panel);return panel;}
+ function card(title,values,stage){
+  const panel=element('section',undefined,'surface workspace-card');
+  panel.append(element('h2',title));
+  const run=data.stages?.[stage]?.run;
+  if(run?.model){
+   const seconds=Math.round(run.duration_seconds);
+   const duration=seconds>=60?Math.floor(seconds/60)+'m '+seconds%60+'s':seconds+'s';
+   panel.append(element('p',run.model+' · '+duration));
+  }
+  const grid=element('div',undefined,'metrics');
+  for(const [label,value] of values){
+   const box=element('div',undefined,'metric'),body=element('div');
+   body.append(element('strong',String(value)),element('span',label));
+   box.append(body);grid.append(box);
+  }
+  panel.append(grid);scores.append(panel);return panel;
+ }
  function table(panel,headings,rows){const grid=element('table',undefined,'data-table'),head=element('tr');headings.forEach(h=>head.append(element('th',h)));grid.append(head);for(const values of rows){const tr=element('tr');values.forEach(v=>tr.append(element('td',String(v))));grid.append(tr);}const scroll=element('div',undefined,'table-scroll');scroll.append(grid);panel.append(scroll);}
  const tools=element('section',undefined,'surface workspace-card'),actions=element('div',undefined,'review-actions');
  for(const [label,action] of [['Contract and policies',()=>{showScreen('authoring');$('author-saved').value=data.contract;$('author-saved').dispatchEvent(new Event('change'));}],['Download reference',()=>downloadEvaluationValue(data.reference,data.contract+'_reference.json')],['Download results',()=>downloadEvaluationValue(data,data.contract+'_evaluation.json')]]){const button=element('button',label);button.onclick=action;actions.append(button);}tools.append(actions);target.append(tools);
  if(data.job.contract===data.contract)tools.append(element('p',data.job.status+' · '+(data.job.stage?'Stage '+data.job.stage+' · ':'')+data.job.message));
  const scores=element('div',undefined,'dct-scorecards');target.append(scores);
  const cls=data.classification,m=cls?.metrics,policy=data.policy;
- const classification=card('1.3 · Relevance classification',[['Accuracy',pct(m?.accuracy)],['Macro precision',pct(m?.macro_precision)],['Macro recall',pct(m?.macro_recall)],['Macro F1',pct(m?.macro_f1)]]);
+ const classification=card('1.3 · Relevance classification',[['Accuracy',pct(m?.accuracy)],['Macro precision',pct(m?.macro_precision)],['Macro recall',pct(m?.macro_recall)],['Macro F1',pct(m?.macro_f1)]],'1.3');
  classification.append(element('p',cls?m.n+' frozen PDF chunks · '+m.errors+' missing or failed predictions':'No classification result saved. Run evaluation to classify this agreement.'));
  if(m){table(classification,['Class','Cases','Precision','Recall','F1'],Object.entries(m.per_class).map(([label,v])=>[label,v.support,pct(v.precision),pct(v.recall),pct(v.f1)]));classification.append(element('p','Definitions and ownership clauses can be relevant without creating policy rules. Classes with no reference examples have unmeasured recall.'));
   const details=element('details',undefined,'advanced');details.append(element('summary','Classification evidence and confusion matrix'),element('pre',JSON.stringify({confusion_matrix:m.confusion_matrix,mismatches:cls.mismatches},null,2),'code-preview'));classification.append(details);}
- const extraction=card('2 · Policy extraction',[['Complete-rule precision',pct(policy?.precision)],['Complete-rule recall',pct(policy?.recall)],['Complete-rule F1',pct(policy?.f1)],['Matched rules',policy?policy.matched_rules+'/'+policy.expected_rules:'—']]);
+ const extraction=card('2 · Policy extraction',[['Complete-rule precision',pct(policy?.precision)],['Complete-rule recall',pct(policy?.recall)],['Complete-rule F1',pct(policy?.f1)],['Matched rules',policy?policy.matched_rules+'/'+policy.expected_rules:'—']],'2');
  extraction.append(element('p',policy?policy.extracted_rules+' extracted rules · '+policy.routed_operative_clauses+'/'+policy.expected_operative_clauses+' operative clauses routed · '+policy.behavior_checks.filter(c=>c.passed).length+'/'+policy.behavior_checks.length+' behavior checks passed':'No policy result saved. The complete pipeline must finish before policy scoring.'));
- if(policy){const details=element('details',undefined,'advanced');details.append(element('summary','Clause comparisons and behavior checks'));table(details,['Clause','Expected','Extracted','Matched'],policy.clauses.map(r=>[r.clause_id||'Unnumbered',r.expected,r.extracted,r.matched_rules]));details.append(element('pre',JSON.stringify({diagnostics:policy.diagnostics,clauses:policy.clauses,behavior_checks:policy.behavior_checks},null,2),'code-preview'));extraction.append(details);}
+ if(policy){
+  const headings=['Clause','Expected','Extracted','Matched'];
+  const rowValues=row=>[row.clause_id||'Unnumbered',row.expected,row.extracted,row.matched_rules];
+  const mismatches=policy.clauses.filter(row=>row.expected!==row.matched_rules||row.extracted!==row.matched_rules);
+  if(mismatches.length){
+   const differences=element('details',undefined,'advanced');
+   differences.append(element('summary',mismatches.length+' clauses with missing, extra or mismatched rules'));
+   table(differences,headings,mismatches.map(rowValues));
+   extraction.append(differences);
+  }
+  const details=element('details',undefined,'advanced');
+  details.append(element('summary','All clause comparisons and behavior checks'));
+  table(details,headings,policy.clauses.map(rowValues));
+  details.append(element('pre',JSON.stringify({diagnostics:policy.diagnostics,clauses:policy.clauses,behavior_checks:policy.behavior_checks},null,2),'code-preview'));
+  extraction.append(details);
+ }
  target.append(element('p','Agreement-specific development evaluation against authored references. Missing or extra policies reduce the score. Valid sources and passing checks do not establish legal correctness or unseen-contract accuracy.','demo-note'));
 }
 async function refreshEvaluation(){
@@ -614,7 +654,24 @@ $('reset').onclick=async()=>{
 };
 $('benchmark').onclick=async()=>{clearError();benchmarkKey='';$('benchmark-results').classList.add('hidden');try{await api('/api/benchmark',{contract:contract(),model:$('model').value,limit:24,num_ctx:Number($('num_ctx').value),timeout:Number($('timeout').value),think:$('think').value==='auto'?'auto':$('think').value==='default'?null:$('think').value==='on'});await refreshState();}catch(error){showError(error);}};
 $('benchmark-download').onclick=()=>{if(!benchmarkReport)return;const url=URL.createObjectURL(new Blob([JSON.stringify(benchmarkReport,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=benchmarkReport.contract+'_benchmark.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-$('evaluate').onclick=async()=>{clearError();try{const settings=modelSettings(),target=$('evaluation-contract').value;if(!target)throw new Error('Create and select a DCT agreement first.');evaluationReport=null;for(const id of ['eval-accuracy','eval-precision','eval-recall','eval-f1'])$(id).textContent='—';$('evaluation-table').replaceChildren();$('evaluation-details').textContent='';$('eval-errors').textContent='';$('evaluation-download').disabled=true;$('evaluation-summary').textContent='Starting evaluation…';await api('/api/evaluation',{...settings,model:$('evaluation-model').value,num_ctx:Number($('evaluation-context').value),parallel:true,worker_count:Number($('evaluation-workers').value),worker_gpus:undefined,task:target?'dct':'classification',...(target?{contract:target}:{})});await refreshOverview();await refreshEvaluation();}catch(error){showError(error);}};
+$('evaluate').onclick=async()=>{
+ clearError();
+ if(!$('evaluation-context').reportValidity()||!$('evaluation-batch-size').reportValidity())return;
+ $('evaluate').disabled=true;
+ try{
+  const target=$('evaluation-contract').value;
+  if(!target)throw new Error('Create and select a DCT agreement first.');
+  const workerCount=Number($('evaluation-workers').value);
+  await api('/api/evaluation',{
+   ...modelSettings(),model:$('evaluation-model').value,task:'dct',contract:target,
+   num_ctx:Number($('evaluation-context').value),relevance_batch_size:Number($('evaluation-batch-size').value),
+   parallel:workerCount>1,worker_count:workerCount,worker_gpus:undefined
+  });
+  await refreshOverview();
+  await refreshEvaluation();
+ }catch(error){showError(error);}
+ finally{controls();}
+};
 $('evaluation-contract').onchange=()=>{clearError();evaluationKey='';refreshEvaluation();};
 $('evaluation-refresh').onclick=refreshEvaluation;
 $('evaluation-model').onchange=()=>{if(screen==='evaluation')$('model-label').textContent='Evaluation: '+$('evaluation-model').value;controls();};
