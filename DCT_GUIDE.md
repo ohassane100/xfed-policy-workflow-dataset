@@ -2,17 +2,6 @@
 
 Open **DCT authoring** to build a data collaboration agreement. Tick a box to include its terms. Text boxes name the parties, resources, and purpose. Use the number and date fields to set deadlines and project dates.
 
-## Start or save an agreement
-
-- **Saved DCT contracts** — load the terms of an existing agreement, or choose **Create a new agreement**. Saving edited terms creates a new revision.
-- **Research collaboration preset** — fill in an example with project resources, safeguards, publication terms, and close-out duties.
-- **30-page evaluation preset** — fill in the extended research example, including its operational schedules.
-- **Update preview** — see the contract text and expected rule count for the current choices.
-- **Create contract PDF** — save the agreement and its evaluation answer key. The extraction model reads the PDF. Evaluation uses the saved answer key to score the outputs.
-- **Open pipeline** — open the saved agreement for processing.
-- **View PDF** — open the saved agreement PDF.
-- **Refresh results** — reload the saved policy and evaluation results after processing.
-
 ## Parties and information
 
 - **Agreement title** — the title printed on the PDF.
@@ -82,7 +71,15 @@ Open **DCT authoring** to build a data collaboration agreement. Tick a box to in
 - **Dataset documentation** — the name of the data dictionary and processing notes. The delivery and error-reporting terms use it when selected.
 - **Delivery deadline in days after signature** — the number of days the Provider has to deliver the dataset and documentation after the agreement is signed.
 
-## Use the reusable clause library
+## Start or save an agreement
+
+- **Saved DCT contracts** — choose **Create a new agreement** for a blank form, **Default DCT example agreement** to load the basic example, or a saved agreement to edit its terms. Saving edited terms creates a new revision.
+- **Research collaboration preset** — fill in an example with an example preset contract.
+- **30-page evaluation preset** — fill in with the 30-page evaluation preset contract. This preset is for testing the extraction model and evaluation scoring.
+- **Update preview** — see the contract text and expected rule count for the current choices.
+- **Create contract PDF** — save the agreement and its evaluation answer key. The extraction model reads the PDF. Evaluation uses the saved answer key to score the outputs.
+
+# Use the reusable clause library
 
 1. Run the agreement through **Policy creation**. Eligible extractions appear as cases with the clause text, supporting context, and generated rules.
 2. Open **Step 3 · Policy review** in the pipeline, or expand **Reusable clause library** in **Contracts**.
@@ -95,18 +92,3 @@ Open **DCT authoring** to build a data collaboration agreement. Tick a box to in
 - **New clause** — XFed generates a rule from the current agreement. You can review the new interpretation for future reuse.
 - **Evaluation** runs the extraction with clause reuse and retrieval disabled, so the scores show how the pipeline interpreted the PDF on that run.
 
-## Read a policy condition
-
-The rule's `action` names the operation, such as `store`, `share`, or `delete`. A condition describes when or how the rule applies. In the portable and local copies schedule, the rule is a prohibition on storing **Local Research Working Copies** using unencrypted removable media.
-
-```json
-{
-  "field": "security",
-  "op": "eq",
-  "value": "unencrypted removable media"
-}
-```
-
-- **`field`** — the property being checked, such as security, purpose, location, or elapsed time.
-- **`op`** — how to compare that property with the value. The condition checks use `eq` and `neq` for equality and inequality, `lt` and `gt` for less and greater than, and `lteq` and `gteq` for at most and at least. For lists, `isAnyOf` means matches one of the listed values, `isNoneOf` means matches none of them, and `isAllOf` means includes every listed value.
-- **`value`** — what to compare against. Here the prohibition applies when the storage method is **unencrypted removable media**.

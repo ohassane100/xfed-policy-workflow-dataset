@@ -17,6 +17,11 @@
 @media(max-width:600px){#authoring-screen .pagehead{flex-direction:column;align-items:stretch}#authoring-screen .pagehead .field{min-width:0!important}.guided-results .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.guided-results .data-table{min-width:0}.guided-results .data-table th,.guided-results .data-table td{padding:10px 4px;font-size:9px}.guided-results .section-head{flex-wrap:wrap}.authoring-form,.guided-results{padding:18px}.document-preview{padding:22px}.authoring-rules input[type=number]{max-width:70px}}
 .policy-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border:1px solid var(--line);border-radius:6px;margin-top:16px;background:white}.policy-pair>div{padding:18px;min-width:0}.policy-pair>div+div{border-left:1px solid var(--line)}.policy-pair h3{margin-bottom:12px}.policy-pair blockquote{margin:0 0 12px;font-size:12px;line-height:1.8;white-space:pre-wrap;color:#34485b}.source-link{font-size:11px;color:var(--blue);display:inline-block;margin:4px 10px 0 0}.readable-conditions{font-size:12px;line-height:1.8;padding-left:18px;margin:10px 0}.policy-summary{font-size:13px;font-weight:600;color:var(--text)}@media(max-width:640px){.policy-pair{grid-template-columns:minmax(0,1fr)}.policy-pair>div+div{border-left:0;border-top:1px solid var(--line)}}
 .dct-scorecards{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}.dct-scorecards .metrics{grid-template-columns:repeat(2,minmax(0,1fr));margin:16px 0;gap:10px}.dct-scorecards .workspace-card{margin:0}.dct-scorecards p{font-size:12px;line-height:1.6}@media(max-width:900px){.dct-scorecards{grid-template-columns:minmax(0,1fr)}}
+.contract-group{margin-bottom:20px}.contract-group h2{margin-bottom:10px}
+.contract-group>summary{cursor:pointer;padding:14px 16px;font-weight:600}
+.contract-actions{display:flex;flex-wrap:wrap;gap:6px}
+.contract-star{font-size:17px;padding:6px 9px;line-height:1}
+.contract-star[aria-pressed=true]{color:#865700;background:#fff2d7;border-color:#ead7b0}
 </style>
 </head>
 
@@ -51,11 +56,15 @@
 <div class="latest"><div class="section-head"><h2>Latest stage results</h2></div><div id="latest-results"></div></div>
     </div><aside class="attention"><div class="section-head"><h2>Status centre</h2><span id="notice-count" class="badge neutral">0</span></div><div id="notices" class="attention-list"></div><div class="endpoint">Ollama endpoint<strong id="endpoint">localhost:11434</strong></div></aside></div>
   </section>
-  <section id="contracts-screen" class="screen hidden"><div class="pagehead"><div><div class="eyebrow">Source documents</div><h1>Contracts</h1><p id="contracts-note">Source PDFs</p></div></div><div class="filter-tools"><input id="contract-search" type="search" placeholder="Search contracts" aria-label="Search contracts"></div><div id="contracts-table" class="surface table-scroll"></div>
+  <section id="contracts-screen" class="screen hidden"><div class="pagehead"><div><div class="eyebrow">Source documents</div><h1>Contracts</h1><p id="contracts-note">Source PDFs</p></div></div><div class="filter-tools"><input id="contract-search" type="search" placeholder="Search contracts" aria-label="Search contracts"></div>
+    <section id="favourite-contracts" class="contract-group hidden"><h2>Favourites</h2><div id="favourite-contracts-table" class="surface table-scroll"></div></section>
+    <section id="active-contracts" class="contract-group hidden"><h2>Active</h2><div id="active-contracts-table" class="surface table-scroll"></div></section>
+    <details id="archived-contracts" class="contract-group surface hidden"><summary id="archived-contracts-summary">Archived</summary><div id="archived-contracts-table" class="table-scroll"></div></details>
+    <p id="contracts-empty" class="quiet hidden">No matching contracts.</p>
     <details class="surface workspace-card" id="case-library"><summary>Reusable clause library</summary><p>New requirements are generated. Familiar requirements are checked against approved examples. Established means a reviewer approved this exact interpretation for reuse; repeated use is counted. Review the clause, context and rules below before approving.</p><div id="case-summary"></div><div id="case-list"></div></details></section>
 
   <section id="authoring-screen" class="screen hidden">
-    <div class="pagehead"><div><div class="eyebrow">DCT / Data Contract Template</div><h1>Create a data collaboration agreement</h1></div><div class="field" style="min-width:220px"><label for="author-saved">Saved DCT contracts</label><select id="author-saved"><option value="">Create a new agreement</option></select></div></div>
+    <div class="pagehead"><div><div class="eyebrow">DCT / Data Contract Template</div><h1>Create a data collaboration agreement</h1></div><div class="field" style="min-width:220px"><label for="author-saved">Saved DCT contracts</label><select id="author-saved"><option value="">Create a new agreement</option><option value="default-example">Default DCT example agreement</option></select></div></div>
     <div class="authoring-layout">
       <form id="authoring-form" class="surface authoring-form">
         <div class="section-head"><h2>Parties and information</h2></div>
@@ -515,11 +524,47 @@ function savedResults(){
   contract:c.contract,stage:id,name,...c.stages[id].run,count:c.stages[id].count,ready:c.stages[id].ready
  }))).sort((a,b)=>String(b.time).localeCompare(String(a.time)));
 }
-function renderContractTable(target,filter=''){
+const contractPreferencesKey='xfed.contractPreferences';
+const defaultFavouriteContract='dct_f979b05bbedc';
+function loadContractPreferences(){
+ try{return new Map(Object.entries(JSON.parse(localStorage.getItem(contractPreferencesKey)||'{}')));}
+ catch{return new Map();}
+}
+let contractPreferences=loadContractPreferences();
+function isFavourite(id){return contractPreferences.get(id)?.favourite??(id===defaultFavouriteContract);}
+function isArchived(id){return contractPreferences.get(id)?.archived===true;}
+function setContractPreference(id,change,action){
+ contractPreferences.set(id,{...contractPreferences.get(id),...change});
+ try{localStorage.setItem(contractPreferencesKey,JSON.stringify(Object.fromEntries(contractPreferences)));}
+ catch{showError(new Error('Contract preferences could not be saved in this browser.'));}
+ renderContracts();
+ const button=$('contract-'+action+'-'+id);
+ if(change.archived&&!$('archived-contracts').open)$('archived-contracts-summary').focus();
+ else button?.focus();
+}
+function renderContracts(){
+ const query=$('contract-search').value.trim().toLowerCase();
+ const groups={favourite:[],active:[],archived:[]};
+ for(const c of overview?.contracts||[]){
+  if(!(c.contract+' '+prettyContract(c.contract)).toLowerCase().includes(query))continue;
+  if(isArchived(c.contract))groups.archived.push(c);
+  else if(isFavourite(c.contract))groups.favourite.push(c);
+  else groups.active.push(c);
+ }
+ for(const [group,contracts] of Object.entries(groups)){
+  const id=group+'-contracts';
+  $(id).classList.toggle('hidden',!contracts.length);
+  if(contracts.length)renderContractTable(id+'-table',contracts,true);
+  else $(id+'-table').replaceChildren();
+ }
+ if(!groups.archived.length)$('archived-contracts').open=false;
+ $('archived-contracts-summary').textContent='Archived ('+groups.archived.length+')';
+ $('contracts-empty').classList.toggle('hidden',Object.values(groups).some(contracts=>contracts.length));
+}
+function renderContractTable(target,contracts=overview?.contracts||[],manage=false){
  const table=element('table',undefined,'data-table');const head=element('thead'),headRow=element('tr');
  ['Contract','Pipeline','Chunks','Needs context','Policy',''].forEach(name=>headRow.append(element('th',name)));
  head.append(headRow);table.append(head);const body=element('tbody');
- const contracts=(overview?.contracts||[]).filter(c=>(c.contract+' '+prettyContract(c.contract)).toLowerCase().includes(filter.toLowerCase()));
  contracts.forEach(c=>{
   const row=element('tr'),identity=element('td');
   identity.append(element('strong',prettyContract(c.contract)),element('small',c.contract+' / PDF / '+(c.source_bytes/1048576).toFixed(1)+' MB'));
@@ -529,8 +574,27 @@ function renderContractTable(target,filter=''){
   const count=element('td',c.stages['1.2'].ready?String(c.stages['1.2'].count):'-','number');
   const pending=element('td');pending.append(c.labels.NEEDS_CONTEXT?pill(String(c.labels.NEEDS_CONTEXT),'warning'):element('span',c.stages['1.3'].ready?'0':'-','number'));
   const policy=element('td');policy.append(c.stages['3']?.ready?pill(c.stages['3'].run?.status==='reviewed_no_issues_found'?'Reviewed':'Review issues','warning'):c.stages['2'].ready?pill('Generated','neutral'):c.report?.status==='no_supported_rules'?pill('No supported rules','warning'):pill('Not generated'));
-  const action=element('td');const open=element('button','Open pipeline');
-  open.onclick=()=>openContract(c.contract,stages.find(([id])=>!c.stages[id].ready)?.[0]||'2');action.append(open);
+  const action=element('td'),open=element('button','Open pipeline');
+  open.onclick=()=>openContract(c.contract,stages.find(([id])=>!c.stages[id].ready)?.[0]||'2');
+  if(manage){
+   const id=c.contract,archived=isArchived(id),favourite=isFavourite(id);
+   const actions=element('div',undefined,'contract-actions');
+   if(!archived){
+    const star=element('button',favourite?'★':'☆','contract-star');
+    star.id='contract-favourite-'+id;
+    star.setAttribute('aria-label','Favourite '+prettyContract(id));
+    star.setAttribute('aria-pressed',String(favourite));
+    star.title=favourite?'Remove from favourites':'Add to favourites';
+    star.onclick=()=>setContractPreference(id,{favourite:!favourite},'favourite');
+    actions.append(star);
+   }
+   const archive=element('button',archived?'Restore':'Archive');
+   archive.id='contract-archive-'+id;
+   archive.setAttribute('aria-label',archive.textContent+' '+prettyContract(id));
+   archive.onclick=()=>setContractPreference(id,{archived:!archived},'archive');
+   actions.append(open,archive);
+   action.append(actions);
+  }else action.append(open);
   row.append(identity,progress,count,pending,policy,action);body.append(row);
  });
  if(!contracts.length){const cell=element('td','No matching contracts');cell.colSpan=6;const row=element('tr');row.append(cell);body.append(row);}
@@ -579,7 +643,7 @@ async function refreshOverview(){
   $('contract-overview-note').textContent=contracts.length+' source PDFs';
   $('contracts-note').textContent=contracts.length+' source PDFs';
   const key=JSON.stringify(contracts);
-  if(key!==overviewKey){overviewKey=key;renderContractTable('dashboard-contracts');renderContractTable('contracts-table',$('contract-search').value);renderLatestResults();}
+  if(key!==overviewKey){overviewKey=key;renderContractTable('dashboard-contracts');renderContracts();renderLatestResults();}
   renderNotices();
  }catch(error){showError(error);}
  finally{overviewLoading=false;}
@@ -690,12 +754,43 @@ $('unload').onclick=async()=>{
 $('run-step').onclick=()=>run('step');$('run-through').onclick=()=>run('through');$('cancel').onclick=async()=>{try{await api('/api/cancel',{});if(screen==='pipeline')await refreshState();else await refreshOverview();}catch(error){showError(error);}};$('refresh').onclick=refreshModels;$('model').onchange=renderWorkers;$('parallel').onchange=renderWorkers;$('worker-count').onchange=renderWorkers;$('placement').onchange=renderWorkers;$('search').oninput=()=>{page=0;renderRecords();};$('filter').onchange=()=>{page=0;renderRecords();};$('previous').onclick=()=>{page--;renderRecords();};$('next').onclick=()=>{page++;renderRecords();};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('contract').onchange=()=>{clearError();$('pdf').removeAttribute('src');outputKey='';selectStage(stage);if(view==='pdf')setView('pdf');};$('odrl-export').onclick=async()=>{try{const value=await api('/api/output?contract='+encodeURIComponent(contract())+'&stage=2&format=odrl');const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=contract()+'_policy_odrl.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(error){showError(error);}};$('download').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=contract()+'_'+stages.find(s=>s[0]===stage)[2];link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 
 
-let authoredContract=null,authorDefaults={},researchPreset={},extendedPreset={};
-function authorControls(){const f=$('authoring-form').elements;f.consent_exception.disabled=!f.sharing_limit.checked;f.legal_disclosure.disabled=!f.sharing_limit.checked;f.legal_retention.disabled=!f.deletion.checked;f.storage_countries.disabled=!f.storage_limit.checked;f.platform.disabled=!f.platform_access.checked;f.records.disabled=!f.records_access.checked;f.background.disabled=f.work_plan.disabled=!f.background_access.checked;f.project_start.disabled=f.project_end.disabled=!(f.background_access.checked||f.publication.checked);f.results.disabled=!(f.publication.checked||f.attribution.checked);f.publication_notice_days.disabled=f.publication_delay_days.disabled=!f.publication.checked;f.authorized_users.disabled=!f.authorized_access.checked;f.documentation.disabled=!(f.provider_delivery.checked||f.error_reporting.checked);f.delivery_days.disabled=!f.provider_delivery.checked;f.certificate.disabled=f.certificate_days.disabled=!f.deletion_certificate.checked;f.error_hours.disabled=!f.error_reporting.checked;}
+let authoredContract=null,authorDefaults={},researchPreset={},extendedPreset={},authorViewVersion=0;
+function authorControls(){const f=$('authoring-form').elements;f.consent_exception.disabled=!f.sharing_limit.checked;f.legal_disclosure.disabled=!f.sharing_limit.checked;f.legal_retention.disabled=!f.deletion.checked;f.delete_days.disabled=!f.deletion.checked;f.notify_hours.disabled=!f.notification.checked;f.storage_countries.disabled=!f.storage_limit.checked;f.storage_countries.required=f.storage_limit.checked;f.platform.disabled=!f.platform_access.checked;f.records.disabled=!f.records_access.checked;f.background.disabled=f.work_plan.disabled=!f.background_access.checked;f.project_start.disabled=f.project_end.disabled=!(f.background_access.checked||f.publication.checked);f.results.disabled=!(f.publication.checked||f.attribution.checked);f.publication_notice_days.disabled=f.publication_delay_days.disabled=!f.publication.checked;f.authorized_users.disabled=!f.authorized_access.checked;f.documentation.disabled=!(f.provider_delivery.checked||f.error_reporting.checked);f.delivery_days.disabled=!f.provider_delivery.checked;f.certificate.disabled=f.certificate_days.disabled=!f.deletion_certificate.checked;f.error_hours.disabled=!f.error_reporting.checked;}
 function setAuthorTerms(terms){const form=$('authoring-form');for(const [name,value] of Object.entries({...authorDefaults,...terms})){if(typeof value==='boolean')form.elements[name].checked=value;else form.elements[name].value=Array.isArray(value)?value.join(', '):value;}authorControls();}
-function authorTerms(){const fields=$('authoring-form').elements,result={};for(const [name,defaultValue] of Object.entries(authorDefaults)){const field=fields[name];result[name]=typeof defaultValue==='boolean'?field.checked:Array.isArray(defaultValue)?field.value.split(',').map(v=>v.trim()).filter(Boolean):typeof defaultValue==='number'?Number(field.value):field.value;}result.legal_disclosure&&=result.sharing_limit;result.legal_retention&&=result.deletion;return result;}
+function authorTerms(){
+ const fields=$('authoring-form').elements,result={};
+ for(const [name,defaultValue] of Object.entries(authorDefaults)){
+  const field=fields[name];
+  // The API still expects values for inactive fields, even though their clauses are omitted.
+  if(typeof defaultValue==='boolean')result[name]=field.checked;
+  else if(field.disabled&&!field.value)result[name]=defaultValue;
+  else if(Array.isArray(defaultValue))result[name]=field.value.split(',').map(v=>v.trim()).filter(Boolean);
+  else if(typeof defaultValue==='number')result[name]=Number(field.value);
+  else result[name]=field.value;
+ }
+ result.legal_disclosure&&=result.sharing_limit;result.legal_retention&&=result.deletion;
+ return result;
+}
+function resetAuthorDraft(){
+ authorViewVersion++;
+ authoredContract=null;
+ $('authoring-form').reset();
+ authorControls();
+ $('author-created').classList.add('hidden');
+ $('author-status').textContent='';
+ $('author-rule-count').textContent='';
+ $('author-document').replaceChildren(element('p','Enter the agreement details and select policy terms to preview the contract.'));
+}
 function renderAuthoringPreview(value){const target=$('author-document');target.replaceChildren(element('h2',value.title));for(const clause of value.clauses)target.append(element(clause.clause_id.includes('.')?'p':'h3',clause.clause_id+' '+clause.text));$('author-rule-count').textContent=value.expected_rules+' policy terms';}
-async function previewAuthoring(){clearError();try{const value=await api('/api/authoring/preview',authorTerms());renderAuthoringPreview(value);return value;}catch(error){showError(error);throw error;}}
+async function previewAuthoring(terms=authorTerms()){
+ clearError();
+ const version=authorViewVersion;
+ try{
+  const value=await api('/api/authoring/preview',terms);
+  if(version===authorViewVersion)renderAuthoringPreview(value);
+  return value;
+ }catch(error){if(version===authorViewVersion)showError(error);throw error;}
+}
 function renderAuthoredPolicy(rows){
  const target=$('author-policy');target.replaceChildren();if(!rows.length)return;
  target.append(element('h2','Source clauses and extracted policies'));
@@ -713,16 +808,66 @@ function renderAuthoredPolicy(rows){
  for(const row of rows)target.append(card(row));
 }
 async function refreshAuthored(){if(!authoredContract)return;try{const value=await api('/api/authoring?contract='+encodeURIComponent(authoredContract)),target=$('author-evaluation'),r=value.evaluation;target.replaceChildren();renderAuthoredPolicy(value.policy_preview||[]);if(!r){target.append(element('p','Run the complete pipeline to compare the extracted policy with your selected terms.'));return;}const metrics=element('div',undefined,'metrics');for(const [label,text] of [['Complete-rule F1',(r.f1*100).toFixed(1)+'%'],['Matched rules',r.matched_rules+'/'+r.expected_rules],['Routed clauses',r.routed_operative_clauses+'/'+r.expected_operative_clauses],['Behavior checks',r.behavior_checks.filter(x=>x.passed).length+'/'+r.behavior_checks.length]]){const box=element('div',undefined,'metric'),body=element('div');body.append(element('strong',text),element('span',label));box.append(body);metrics.append(box);}target.append(metrics,element('p','DCT reference agreement for this generated contract. This is not an accuracy estimate for arbitrary contracts.'));const table=element('table',undefined,'data-table'),head=element('tr');for(const text of ['Clause','Expected','Extracted','Matched'])head.append(element('th',text));table.append(head);for(const row of r.clauses){const tr=element('tr');for(const text of [row.clause_id||'Unnumbered',row.expected,row.extracted,row.matched_rules])tr.append(element('td',String(text)));table.append(tr);}target.append(table);const details=element('details',undefined,'advanced');details.append(element('summary','Comparison details'),element('pre',JSON.stringify(r,null,2),'code-preview'));target.append(details);}catch(error){showError(error);}}
-async function initializeAuthoring(){try{for(const [id,title] of Object.entries(contractTitles))$('author-saved').append(new Option(prettyContract(id),id));const {defaults,research_preset,extended_preset}=await api('/api/authoring');authorDefaults=defaults;researchPreset=research_preset;extendedPreset=extended_preset;setAuthorTerms(defaults);await previewAuthoring();}catch(error){showError(error);}}
-$('author-preview').onclick=()=>previewAuthoring().catch(()=>{});
-$('author-project').onclick=()=>{setAuthorTerms(researchPreset);authoredContract=null;$('author-saved').value='';$('author-created').classList.add('hidden');$('author-status').textContent='Complex research agreement. Create a new PDF to freeze its classification and policy references.';previewAuthoring().catch(()=>{});};
-$('author-extended').onclick=()=>{authoredContract=null;$('author-saved').value='';$('author-created').classList.add('hidden');setAuthorTerms(extendedPreset);previewAuthoring();};
+async function initializeAuthoring(){try{for(const id of Object.keys(contractTitles))$('author-saved').append(new Option(prettyContract(id),id));const {defaults,research_preset,extended_preset}=await api('/api/authoring');authorDefaults=defaults;researchPreset=research_preset;extendedPreset=extended_preset;$('author-saved').value='';resetAuthorDraft();}catch(error){showError(error);}}
+function loadAuthorPreset(terms){
+ resetAuthorDraft();
+ $('author-saved').selectedIndex=-1;
+ setAuthorTerms(terms);
+ previewAuthoring().catch(()=>{});
+}
+$('author-preview').onclick=()=>{if($('authoring-form').reportValidity())previewAuthoring().catch(()=>{});};
+$('author-project').onclick=()=>loadAuthorPreset(researchPreset);
+$('author-extended').onclick=()=>loadAuthorPreset(extendedPreset);
 $('authoring-form').oninput=()=>{authorControls();if(authoredContract)$('author-status').textContent='Unsaved changes. Create a new PDF to evaluate this revision.';};
-$('authoring-form').onsubmit=async event=>{event.preventDefault();if(!$('authoring-form').reportValidity())return;clearError();$('author-create').disabled=true;try{await previewAuthoring();const result=await api('/api/authoring/create',authorTerms());authoredContract=result.contract;contractTitles[result.contract]=result.title;$('author-saved').append(new Option(prettyContract(result.contract),result.contract));$('author-saved').value=result.contract;$('contract').append(new Option(prettyContract(result.contract),result.contract));$('author-created-title').textContent=result.title;$('author-created').classList.remove('hidden');$('author-status').textContent='Saved a new contract revision. Open the pipeline to extract its policies.';await refreshAuthored();await refreshOverview();}catch(error){showError(error);}finally{$('author-create').disabled=false;}};
+$('authoring-form').onsubmit=async event=>{
+ event.preventDefault();
+ if(!$('authoring-form').reportValidity())return;
+ $('author-create').disabled=true;
+ const version=authorViewVersion;
+ try{
+  const terms=authorTerms();
+  await previewAuthoring(terms);
+  if(version!==authorViewVersion)return;
+  const result=await api('/api/authoring/create',terms);
+  contractTitles[result.contract]=result.title;
+  $('author-saved').append(new Option(prettyContract(result.contract),result.contract));
+  $('contract').append(new Option(prettyContract(result.contract),result.contract));
+  if(version===authorViewVersion){
+   authoredContract=result.contract;
+   $('author-saved').value=result.contract;
+   $('author-created-title').textContent=result.title;
+   $('author-created').classList.remove('hidden');
+   $('author-status').textContent='Saved a new contract revision. Open the pipeline to extract its policies.';
+   await refreshAuthored();
+  }
+  await refreshOverview();
+ }catch(error){if(version===authorViewVersion)showError(error);}finally{$('author-create').disabled=false;}
+};
 $('author-open').onclick=()=>authoredContract&&openContract(authoredContract,'1.1');
 $('author-pdf').onclick=()=>authoredContract&&window.open('/api/pdf?contract='+encodeURIComponent(authoredContract),'_blank','noopener');
 $('author-refresh').onclick=refreshAuthored;
-$('author-saved').onchange=async()=>{clearError();const id=$('author-saved').value;if(!id){authoredContract=null;$('author-created').classList.add('hidden');return;}try{const value=await api('/api/authoring?contract='+encodeURIComponent(id));authoredContract=id;setAuthorTerms(value.terms);$('author-created-title').textContent=value.title;$('author-created').classList.remove('hidden');$('author-status').textContent='Viewing saved terms. Changes create a new contract revision.';renderAuthoringPreview(value);await refreshAuthored();}catch(error){showError(error);}};
+$('author-saved').onchange=async()=>{
+ clearError();
+ const id=$('author-saved').value;
+ resetAuthorDraft();
+ if(!id)return;
+ if(id==='default-example'){
+  setAuthorTerms(authorDefaults);
+  await previewAuthoring().catch(()=>{});
+  return;
+ }
+ const version=authorViewVersion;
+ try{
+  const value=await api('/api/authoring?contract='+encodeURIComponent(id));
+  if(version!==authorViewVersion)return;
+  authoredContract=id;
+  setAuthorTerms(value.terms);
+  $('author-created-title').textContent=value.title;
+  $('author-created').classList.remove('hidden');
+  renderAuthoringPreview(value);
+  await refreshAuthored();
+ }catch(error){if(version===authorViewVersion)showError(error);}
+};
 
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 $('brand').onclick=()=>showScreen('dashboard');
@@ -742,7 +887,15 @@ async function refreshCases(){
 }
 $('case-library').ontoggle=()=>{if($('case-library').open)refreshCases();};
 $('all-contracts').onclick=()=>showScreen('contracts');
-$('contract-search').oninput=()=>renderContractTable('contracts-table',$('contract-search').value);
+$('contract-search').oninput=()=>{
+ renderContracts();
+ if($('contract-search').value.trim()&&!$('archived-contracts').classList.contains('hidden'))$('archived-contracts').open=true;
+};
+window.addEventListener('storage',event=>{
+ if(event.key!==contractPreferencesKey&&event.key!==null)return;
+ contractPreferences=loadContractPreferences();
+ if(overview)renderContracts();
+});
 (async()=>{
  try{
   const config=await api('/api/config');
