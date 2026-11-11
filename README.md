@@ -62,6 +62,7 @@ is a static visual demo with labelled sample content and inert buttons. It has
 no node connections, review actions, downloads or amendment logic.
 
 **DCT authoring (Data Contract Template)** creates a contract PDF from selected data-sharing terms.
+See the [DCT Authoring guide](DCT_GUIDE.md) for every form option and the review workflow.
 The PDF passes through the same stages 1.1–2. Terms and the frozen reference stay
 outside the extraction input and are used only for post-run comparison. Results
 appear in DCT authoring after selecting the saved contract. They measure
