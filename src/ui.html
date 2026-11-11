@@ -22,6 +22,7 @@
 .contract-actions{display:flex;flex-wrap:wrap;gap:6px}
 .contract-star{font-size:17px;padding:6px 9px;line-height:1}
 .contract-star[aria-pressed=true]{color:#865700;background:#fff2d7;border-color:#ead7b0}
+.dct-scorecards>section:only-child{grid-column:1/-1}
 </style>
 </head>
 
@@ -159,7 +160,11 @@
         <div class="field"><label for="evaluation-workers">Concurrent requests</label><select id="evaluation-workers"><option>1</option><option>2</option><option selected>3</option></select></div>
         <div class="field"><label for="evaluation-batch-size">Classification clauses per request</label><input id="evaluation-batch-size" type="number" min="1" max="16" value="4" required></div>
       </div>
-      <details class="advanced"><summary>About this evaluation</summary><p id="evaluation-scope">DCT agreements run from PDF through stages 1.1–2; authoring labels and expected policies remain outside model input. References are provisional and these agreements are development material.</p></details>
+      <details class="advanced">
+        <summary>About this evaluation</summary>
+        <p id="evaluation-scope">When XFed creates a DCT agreement, it saves an answer key with the expected relevance labels and policy rules. For example, if you set a 30-day deletion deadline, XFed writes that deadline into the PDF, marks the clause as relevant, and saves the expected deletion rule with the same deadline.</p>
+        <p>XFed runs the PDF through stages 1.1–2 and keeps the answer key separate from the model’s input. It then compares the model’s relevance labels and extracted rules with the saved answers.</p>
+      </details>
     </section>
     <div id="dct-evaluation-results" class="hidden"></div>
     <div id="classification-evaluation-results">
@@ -182,7 +187,6 @@
 }</pre></div></div></section>
     <p class="demo-note">Visual mockup only. Buttons are placeholders; no model requests, decisions, downloads or policy changes are performed.</p>
   </section>
-  <footer class="footer"><span>XFed &middot; Contract-to-policy workspace</span><span>Policy extraction with source traceability</span></footer>
 </main>
 
 <script>
@@ -450,11 +454,13 @@ function renderDctEvaluation(data){
  const cls=data.classification,m=cls?.metrics,policy=data.policy;
  const classification=card('1.3 · Relevance classification',[['Accuracy',pct(m?.accuracy)],['Macro precision',pct(m?.macro_precision)],['Macro recall',pct(m?.macro_recall)],['Macro F1',pct(m?.macro_f1)]],'1.3');
  classification.append(element('p',cls?m.n+' frozen PDF chunks · '+m.errors+' missing or failed predictions':'No classification result saved. Run evaluation to classify this agreement.'));
- if(m){table(classification,['Class','Cases','Precision','Recall','F1'],Object.entries(m.per_class).map(([label,v])=>[label,v.support,pct(v.precision),pct(v.recall),pct(v.f1)]));classification.append(element('p','Definitions and ownership clauses can be relevant without creating policy rules. Classes with no reference examples have unmeasured recall.'));
-  const details=element('details',undefined,'advanced');details.append(element('summary','Classification evidence and confusion matrix'),element('pre',JSON.stringify({confusion_matrix:m.confusion_matrix,mismatches:cls.mismatches},null,2),'code-preview'));classification.append(details);}
- const extraction=card('2 · Policy extraction',[['Complete-rule precision',pct(policy?.precision)],['Complete-rule recall',pct(policy?.recall)],['Complete-rule F1',pct(policy?.f1)],['Matched rules',policy?policy.matched_rules+'/'+policy.expected_rules:'—']],'2');
- extraction.append(element('p',policy?policy.extracted_rules+' extracted rules · '+policy.routed_operative_clauses+'/'+policy.expected_operative_clauses+' operative clauses routed · '+policy.behavior_checks.filter(c=>c.passed).length+'/'+policy.behavior_checks.length+' behavior checks passed':'No policy result saved. The complete pipeline must finish before policy scoring.'));
+ if(m)table(classification,['Class','Cases','Precision','Recall','F1'],Object.entries(m.per_class).map(([label,v])=>[label,v.support,pct(v.precision),pct(v.recall),pct(v.f1)]));
  if(policy){
+  const extraction=card('2 · Policy extraction',[
+   ['Complete-rule precision',pct(policy.precision)],['Complete-rule recall',pct(policy.recall)],
+   ['Complete-rule F1',pct(policy.f1)],['Matched rules',policy.matched_rules+'/'+policy.expected_rules],
+  ],'2');
+  extraction.append(element('p',policy.extracted_rules+' extracted rules · '+policy.routed_operative_clauses+'/'+policy.expected_operative_clauses+' operative clauses routed · '+policy.behavior_checks.filter(c=>c.passed).length+'/'+policy.behavior_checks.length+' behavior checks passed'));
   const headings=['Clause','Expected','Extracted','Matched'];
   const rowValues=row=>[row.clause_id||'Unnumbered',row.expected,row.extracted,row.matched_rules];
   const mismatches=policy.clauses.filter(row=>row.expected!==row.matched_rules||row.extracted!==row.matched_rules);
@@ -470,7 +476,6 @@ function renderDctEvaluation(data){
   details.append(element('pre',JSON.stringify({diagnostics:policy.diagnostics,clauses:policy.clauses,behavior_checks:policy.behavior_checks},null,2),'code-preview'));
   extraction.append(details);
  }
- target.append(element('p','Agreement-specific development evaluation against authored references. Missing or extra policies reduce the score. Valid sources and passing checks do not establish legal correctness or unseen-contract accuracy.','demo-note'));
 }
 async function refreshEvaluation(){
  if(screen==='evaluation')$('model-label').textContent='Evaluation: '+($('evaluation-model').value||'choose a model');
